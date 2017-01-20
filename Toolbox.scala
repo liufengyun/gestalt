@@ -352,6 +352,14 @@ trait Toolbox { t =>
       def apply(): Tree = ???
     }
 
+    object Contravariant {
+      def apply(): Tree = ???
+    }
+
+    object Covariant {
+      def apply(): Tree = ???
+    }
+
     object Annot {
       def apply(body: Tree): Tree = ???
     }
