@@ -2,8 +2,9 @@ package meta.eden
 package gestalt
 
 trait Toolbox { t =>
-  // portable trees
+  // portable trees -- minimum assumptions
   type Tree <: { def tpe: Type } // TODO: structural types performance penalty.
+  type TypeTree                  // avoid errors in mixing type and term -- implementation can have TypeTree = Tree
   type Type
 
   // type operations
@@ -37,93 +38,93 @@ trait Toolbox { t =>
   }
 
   object Type {
-    def apply(mods: List[Tree], variance: Int, name: String, tparams: List[Tree], rhs: Tree) = ???
+    def apply(mods: List[Tree], name: String, tparams: List[Tree], rhs: TypeTree): Tree = ???
   }
 
   object DefDef {
-    def apply(mods: List[Tree], name: String, tparams: List[Tree], tpe: Option[Tree], rhs: Option[Tree]): Tree = ???
+    def apply(mods: List[Tree], name: String, tparams: List[Tree], tpe: Option[TypeTree], rhs: Option[Tree]): Tree = ???
   }
 
   object ValDef {
-    def apply(mods: List[Tree], lhs: Tree, tpe: Option[Tree], rhs: Option[Tree]): Tree = ???
+    def apply(mods: List[Tree], lhs: Tree, tpe: Option[TypeTree], rhs: Option[Tree]): Tree = ???
   }
 
   object PrimaryCtor {
-    def apply(mods: List[Tree], paramss: List[List[Tree]]) = ???
+    def apply(mods: List[Tree], paramss: List[List[Tree]]): Tree = ???
   }
 
   object SecondaryCtor {
-    def apply(mods: List[Tree], name: String, paramss: List[List[Tree]], rhs: Tree) = ???
+    def apply(mods: List[Tree], paramss: List[List[Tree]], rhs: Tree): Tree = ???
   }
 
   // qual.T[A, B](x, y)(z)
   object ParentCall {
-    def apply(qual: Option[Tree], name: String, tparams: List[Tree], args: List[List[Tree]]): Tree = ???
+    def apply(qual: Option[Tree], name: String, tparams: List[TypeTree], args: List[List[Tree]]): Tree = ???
   }
 
   // types
   object TypeIdent {
-    def apply(name: String): Tree = ???
+    def apply(name: String): TypeTree = ???
   }
 
   object TypeSelect {
-    def apply(qual: Tree, name: String): Tree = ???
+    def apply(qual: Tree, name: String): TypeTree = ???
   }
 
   object TypeProject {
-    def apply(qual: Tree, name: String): Tree = ???
+    def apply(qual: Tree, name: String): TypeTree = ???
   }
 
   object TypeSingleton {
-    def apply(ref: Tree): Tree = ???
+    def apply(ref: Tree): TypeTree = ???
   }
 
   object TypeApply {
-    def apply(tpe: Tree, args: List[Tree]) = ???
+    def apply(tpe: TypeTree, args: List[TypeTree]): TypeTree = ???
   }
 
-  object TypeApplyFix {
-    def apply(lhs: Tree, op: String, rhs: Tree) = ???
+  object TypeApplyInFix {
+    def apply(lhs: TypeTree, op: String, rhs: TypeTree): TypeTree = ???
   }
 
   object TypeFunction {
-    def apply(params: List[Tree], res: Tree) = ???
+    def apply(params: List[TypeTree], res: TypeTree): TypeTree = ???
   }
 
   object TypeTuple {
-    def apply(args: List[Tree]) = ???
+    def apply(args: List[TypeTree]): TypeTree = ???
   }
 
   object TypeAnd {
-    def apply(lhs: Tree, rhs: Tree) = ???
+    def apply(lhs: TypeTree, rhs: TypeTree): TypeTree = ???
   }
 
   object TypeOr {
-    def apply(lhs: Tree, rhs: Tree) = ???
+    def apply(lhs: TypeTree, rhs: TypeTree): TypeTree = ???
   }
 
   object TypeRefine {
-    def apply(tpe : Tree, stats: List[Tree]) = ???
+    def apply(tpe : TypeTree, stats: List[Tree]): TypeTree = ???
   }
 
   object TypeWildcard {
-    def apply(lo: Option[Tree], hi: Option[Tree]): Tree = ???
+    def apply(lo: Option[TypeTree], hi: Option[TypeTree]): TypeTree = ???
   }
 
   object TypeBounds {
-    def apply(lo: Option[Tree], hi: Option[Tree]): Tree = ???
+    def apply(lo: Option[TypeTree], hi: Option[TypeTree]): TypeTree = ???
   }
 
   object TypeRepeated {
-    def apply(tpe: Tree): Tree = ???
+    def apply(tpe: TypeTree): TypeTree = ???
   }
 
   object TypeByName {
-    def apply(tpe: Tree): Tree = ???
+    def apply(tpe: TypeTree): TypeTree = ???
   }
 
   object TypeParam {
-    def apply(mods: List[Tree], name: String, tparams: List[Tree], tbounds: Tree, vbounds: List[Tree], cbounds: List[Tree]) = ???
+    def apply(mods: List[Tree], name: String, tparams: List[Tree], tbounds: TypeTree, vbounds: List[TypeTree], cbounds: List[TypeTree]): Tree = ???
   }
 
   // terms
@@ -152,7 +153,7 @@ trait Toolbox { t =>
   }
 
   object Interpolate {
-    def apply(prefix: String, parts: List[String], args: List[Tree]) = ???
+    def apply(prefix: String, parts: List[String], args: List[Tree]): Tree = ???
   }
 
   object Apply {
