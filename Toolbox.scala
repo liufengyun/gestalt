@@ -7,7 +7,7 @@ trait Toolbox { t =>
   type Type
 
   // type operations
-  implicit class TypeHelper(val tp1: Type) {
+  implicit class TypeOps(val tp1: Type) {
     def =:=(tp2: Type) = t.=:=(tp1, tp2)
     def <:<(tp2: Type) = t.<:<(tp1, tp2)
   }
@@ -21,157 +21,193 @@ trait Toolbox { t =>
   def error(message: String): Nothing = throw new Exception(message)
 
   // standard constructors and extractors
-  object Object {
+  val Object: ObjectHelper
+  trait ObjectHelper {
     def apply(mods: Seq[Tree], name: String, parents: Seq[Tree], self: Option[Tree], stats: Option[Seq[Tree]]): Tree = ???
     def unapply(tree: Tree): Option[(Seq[Tree], String, Seq[Tree], Option[Tree], Option[Seq[Tree]])] = ???
   }
 
-  object Class {
+  val Class: ClassHelper
+  trait ClassHelper {
     def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], self: Option[Tree], stats: Option[Seq[Tree]]): Tree = ???
     def unapply(tree: Tree): Option[(Seq[Tree], String, Seq[Tree], Option[Tree], Seq[Tree], Option[Tree], Option[Seq[Tree]])] = ???
   }
 
-  object AnonymClass {
+  val AnonymClass: AnonymClassHelper
+  trait AnonymClassHelper {
     def apply(parents: Seq[Tree], self: Option[Tree], stats: Option[Seq[Tree]]): Tree = ???
   }
 
-  object Trait {
+  val Trait: TraitHelper
+  trait TraitHelper {
     def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], self: Option[Tree], stats: Option[Seq[Tree]]): Tree = ???
     def unapply(tree: Tree): Option[(Seq[Tree], String, Seq[Tree], Option[Tree], Seq[Tree], Option[Tree], Option[Seq[Tree]])] = ???
   }
 
-  object Type {
+  val Type: TypeHelper
+  trait TypeHelper {
     def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], rhs: TypeTree): Tree = ???
   }
 
-  object DefDef {
+  val DefDef: DefDefHelper
+  trait DefDefHelper {
     def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], paramss: Seq[Seq[Tree]], tpe: Option[TypeTree], rhs: Option[Tree]): Tree = ???
   }
 
-  object ValDef {
+  val ValDef: ValDefHelper
+  trait ValDefHelper {
     def apply(mods: Seq[Tree], name: String, tpe: Option[TypeTree], rhs: Option[Tree]): Tree = ???
     def apply(mods: Seq[Tree], lhs: Tree, tpe: Option[TypeTree], rhs: Option[Tree]): Tree = ???
     def apply(mods: Seq[Tree], lhs: Seq[Tree], tpe: Option[TypeTree], rhs: Option[Tree]): Tree = ???
   }
 
-  object PrimaryCtor {
+  val PrimaryCtor: PrimaryCtorHelper
+  trait PrimaryCtorHelper {
     def apply(mods: Seq[Tree], paramss: Seq[Seq[Tree]]): Tree = ???
   }
 
-  object SecondaryCtor {
+  val SecondaryCtor: SecondaryCtorHelper
+  trait SecondaryCtorHelper {
     def apply(mods: Seq[Tree], paramss: Seq[Seq[Tree]], rhs: Tree): Tree = ???
   }
 
   // qual.T[A, B](x, y)(z)
-  object InitCall {
+  val InitCall: InitCallHelper
+  trait InitCallHelper {
     def apply(qual: Option[Tree], name: String, tparams: Seq[TypeTree], argss: Seq[Seq[Tree]]): Tree = ???
   }
 
-  object Param {
+  val Param: ParamHelper
+  trait ParamHelper {
     def apply(mods: Seq[Tree], name: String, tpe: Option[TypeTree], default: Option[Tree]): Tree = ???
   }
 
-  object TypeParam {
+  val TypeParam: TypeParamHelper
+  trait TypeParamHelper {
     def apply(mods: Seq[Tree], name: String, tparams: Seq[TypeTree], tbounds: TypeTree, cbounds: Seq[TypeTree]): TypeTree = ???
   }
 
-  object Self {
+  val Self: SelfHelper
+  trait SelfHelper {
     def apply(name: String, tpe: Option[TypeTree]): Tree = ???
   }
 
   // types
-  object TypeIdent {
+  val TypeIdent: TypeIdentHelper
+  trait TypeIdentHelper {
     def apply(name: String): TypeTree = ???
   }
 
-  object TypeSelect {
+  val TypeSelect: TypeSelectHelper
+  trait TypeSelectHelper {
     def apply(qual: Tree, name: String): TypeTree = ???
   }
 
-  object TypeSingleton {
+  val TypeSingleton: TypeSingletonHelper
+  trait TypeSingletonHelper {
     def apply(ref: Tree): TypeTree = ???
   }
 
-  object TypeApply {
+  val TypeApply: TypeApplyHelper
+  trait TypeApplyHelper {
     def apply(tpe: TypeTree, args: Seq[TypeTree]): TypeTree = ???
   }
 
-  object TypeApplyInfix {
+  val TypeApplyInfix: TypeApplyInfixHelper
+  trait TypeApplyInfixHelper {
     def apply(lhs: TypeTree, op: String, rhs: TypeTree): TypeTree = ???
   }
 
-  object TypeFunction {
+  val TypeFunction: TypeFunctionHelper
+  trait TypeFunctionHelper {
     def apply(params: Seq[TypeTree], res: TypeTree): TypeTree = ???
   }
 
-  object TypeTuple {
+  val TypeTuple: TypeTupleHelper
+  trait TypeTupleHelper {
     def apply(args: Seq[TypeTree]): TypeTree = ???
   }
 
-  object TypeAnd {
+  val TypeAnd: TypeAndHelper
+  trait TypeAndHelper {
     def apply(lhs: TypeTree, rhs: TypeTree): TypeTree = ???
   }
 
-  object TypeOr {
+  val TypeOr: TypeOrHelper
+  trait TypeOrHelper {
     def apply(lhs: TypeTree, rhs: TypeTree): TypeTree = ???
   }
 
-  object TypeRefine {
+  val TypeRefine: TypeRefineHelper
+  trait TypeRefineHelper {
     def apply(tpe : Option[TypeTree], stats: Seq[Tree]): TypeTree = ???
   }
 
-  object TypeWildcard {
+  val TypeWildcard: TypeWildcardHelper
+  trait TypeWildcardHelper {
     def apply(): TypeTree = apply(TypeBounds(None, None))
     def apply(bounds: t.Tree): TypeTree = ???
   }
 
-  object TypeBounds {
+  val TypeBounds: TypeBoundsHelper
+  trait TypeBoundsHelper {
     def apply(lo: Option[TypeTree], hi: Option[TypeTree]): TypeTree = ???
   }
 
-  object TypeRepeated {
+  val TypeRepeated: TypeRepeatedHelper
+  trait TypeRepeatedHelper {
     def apply(tpe: TypeTree): TypeTree = ???
   }
 
-  object TypeByName {
+  val TypeByName: TypeByNameHelper
+  trait TypeByNameHelper {
     def apply(tpe: TypeTree): TypeTree = ???
   }
 
-  object TypeAnnotated {
+  val TypeAnnotated: TypeAnnotatedHelper
+  trait TypeAnnotatedHelper {
     def apply(tpe: TypeTree, annots: Seq[Tree]): TypeTree = ???
   }
 
   // terms
-  object Lit {
+  val Lit: LitHelper
+  trait LitHelper {
     def apply(value: Any): Tree = ???
     def unapply(value: Any): Option[Any] = ???
   }
 
-  object Wildcard {
+  val Wildcard: WildcardHelper
+  trait WildcardHelper {
     def apply(): Tree = ???
   }
 
-  object Ident {
+  val Ident: IdentHelper
+  trait IdentHelper {
     def apply(name: String): Tree = ???
   }
 
-  object Select {
+  val Select: SelectHelper
+  trait SelectHelper {
     def apply(qual: Tree, name: String): Tree = ???
   }
 
-  object This {
+  val This: ThisHelper
+  trait ThisHelper {
     def apply(qual: String): Tree = ???
   }
 
-  object Super {
+  val Super: SuperHelper
+  trait SuperHelper {
     def apply(thisp: String, superp: String): Tree = ???
   }
 
-  object Interpolate {
+  val Interpolate: InterpolateHelper
+  trait InterpolateHelper {
     def apply(prefix: String, parts: Seq[String], args: Seq[Tree]): Tree = ???
   }
 
-  object Apply {
+  val Apply: ApplyHelper
+  trait ApplyHelper {
     def apply(fun: Tree, args: Seq[Tree]): Tree = ???
     def unapply(tree: Tree): Option[(Tree, Seq[Tree])] = ???
   }
@@ -193,210 +229,261 @@ trait Toolbox { t =>
     }
   }
 
-  object ApplyType {
+  val ApplyType: ApplyTypeHelper
+  trait ApplyTypeHelper {
     def apply(fun: Tree, args: Seq[TypeTree]): Tree = ???
   }
 
   // a + (b, c)  =>  Infix(a, +, Tuple(b, c))
-  object Infix {
+  val Infix: InfixHelper
+  trait InfixHelper {
     def apply(lhs: Tree, op: String, rhs: Tree): Tree = ???
   }
 
-  object Prefix {
+  val Prefix: PrefixHelper
+  trait PrefixHelper {
     def apply(op: String, od: Tree): Tree = ???
   }
 
-  object Postfix {
+  val Postfix: PostfixHelper
+  trait PostfixHelper {
     def apply(od: Tree, op: String): Tree = ???
   }
 
-  object Assign {
+  val Assign: AssignHelper
+  trait AssignHelper {
     def apply(lhs: Tree, rhs: Tree): Tree = ???
   }
 
-  object Return {
+  val Return: ReturnHelper
+  trait ReturnHelper {
     def apply(expr: Tree): Tree = ???
   }
 
-  object Throw {
+  val Throw: ThrowHelper
+  trait ThrowHelper {
     def apply(expr: Tree): Tree = ???
   }
 
-  object Ascribe {
+  val Ascribe: AscribeHelper
+  trait AscribeHelper {
     def apply(expr: Tree, tpe: Tree): Tree = ???
   }
 
-  object Annotated {
+  val Annotated: AnnotatedHelper
+  trait AnnotatedHelper {
     def apply(expr: Tree, annots: Seq[Tree]): Tree = ???
   }
 
-  object Tuple {
+  val Tuple: TupleHelper
+  trait TupleHelper {
     def apply(args: Seq[Tree]): Tree = ???
   }
 
-  object Block {
+  val Block: BlockHelper
+  trait BlockHelper {
     def apply(stats: Seq[Tree]): Tree = ???
   }
 
-  object If {
+  val If: IfHelper
+  trait IfHelper {
     def apply(cond: Tree, thenp: Tree, elsep: Option[Tree]): Tree = ???
   }
 
-  object Match {
+  val Match: MatchHelper
+  trait MatchHelper {
     def apply(expr: Tree, cases: Seq[Tree]): Tree = ???
   }
 
-  object Case {
+  val Case: CaseHelper
+  trait CaseHelper {
     def apply(pat: Tree, cond: Option[Tree], body: Tree): Tree = ???
   }
 
-  object Try {
+  val Try: TryHelper
+  trait TryHelper {
     def apply(expr: Tree, cases: Seq[Tree], finallyp: Option[Tree]): Tree = ???
     def apply(expr: Tree, catchp: Tree, finallyp: Option[Tree]): Tree = ???
   }
 
-  object Function {
+  val Function: FunctionHelper
+  trait FunctionHelper {
     def apply(params: Seq[Tree], body: Tree): Tree = ???
   }
 
-  object PartialFunction {
+  val PartialFunction: PartialFunctionHelper
+  trait PartialFunctionHelper {
     def apply(cases: Seq[Tree]): Tree = ???
   }
 
-  object While {
+  val While: WhileHelper
+  trait WhileHelper {
     def apply(expr: Tree, body: Tree): Tree = ???
   }
 
-  object DoWhile {
+  val DoWhile: DoWhileHelper
+  trait DoWhileHelper {
     def apply(body: Tree, expr: Tree): Tree = ???
   }
 
-  object For {
+  val For: ForHelper
+  trait ForHelper {
     def apply(enums: Seq[Tree], body: Tree): Tree = ???
   }
 
-  object GenFrom {
+  val GenFrom: GenFromHelper
+  trait GenFromHelper {
     def apply(pat: Tree, rhs: Tree): Tree = ???
   }
 
-  object GenAlias {
+  val GenAlias: GenAliasHelper
+  trait GenAliasHelper {
     def apply(pat: Tree, rhs: Tree): Tree = ???
   }
 
-  object Guard {
+  val Guard: GuardHelper
+  trait GuardHelper {
     def apply(cond: Tree): Tree = ???
   }
 
-  object Yield {
+  val Yield: YieldHelper
+  trait YieldHelper {
     def apply(expr: Tree): Tree = ???
   }
 
   // can be InitCall or AnonymClass
-  object New {
+  val New: NewHelper
+  trait NewHelper {
     def apply(tpe: Tree): Tree = ???
   }
 
-  object Named {
+  val Named: NamedHelper
+  trait NamedHelper {
     def apply(name: String, expr: Tree): Tree = ???
   }
 
-  object Repeated {
+  val Repeated: RepeatedHelper
+  trait RepeatedHelper {
     def apply(expr: Tree): Tree = ???
   }
 
   // patterns
-  object Bind {
+  val Bind: BindHelper
+  trait BindHelper {
     def apply(name: String, expr: Tree): Tree = ???
   }
 
-  object Alternative {
+  val Alternative: AlternativeHelper
+  trait AlternativeHelper {
     def apply(lhs: Tree, rhs: Tree): Tree = ???
   }
 
   // importees
-  object Import {
+  val Import: ImportHelper
+  trait ImportHelper {
     def apply(items: Seq[Tree]): Tree = ???
   }
 
-  object ImportItem {
+  val ImportItem: ImportItemHelper
+  trait ImportItemHelper {
     def apply(ref: Tree, importees: Seq[Tree]): Tree = ???
   }
 
-  object ImportName {
+  val ImportName: ImportNameHelper
+  trait ImportNameHelper {
     def apply(name: String): Tree = ???
   }
 
-  object ImportRename {
+  val ImportRename: ImportRenameHelper
+  trait ImportRenameHelper {
     def apply(from: String, to: String): Tree = ???
   }
 
-  object ImportHide {
+  val ImportHide: ImportHideHelper
+  trait ImportHideHelper {
     def apply(name: String): Tree = ???
   }
 
   // modifiers
-  object Mod {
-    object Private {
+  val Mod: ModHelper
+  trait ModHelper {
+    val Private: PrivateHelper
+    trait PrivateHelper {
       def apply(within: Tree): Tree = ???
     }
 
-    object Protected {
+    val Protected: ProtectedHelper
+    trait ProtectedHelper {
       def apply(within: Tree): Tree = ???
     }
 
-    object Val {
+    val Val: ValHelper
+    trait ValHelper {
       def apply(): Tree = ???
     }
 
-    object Var {
+    val Var: VarHelper
+    trait VarHelper {
       def apply(): Tree = ???
     }
 
-    object Implicit {
+    val Implicit: ImplicitHelper
+    trait ImplicitHelper {
       def apply(): Tree = ???
     }
 
-    object Final {
+    val Final: FinalHelper
+    trait FinalHelper {
       def apply(): Tree = ???
     }
 
-    object Sealed {
+    val Sealed: SealedHelper
+    trait SealedHelper {
       def apply(): Tree = ???
     }
 
-    object Override {
+    val Override: OverrideHelper
+    trait OverrideHelper {
       def apply(): Tree = ???
     }
 
-    object Abstract {
+    val Abstract: AbstractHelper
+    trait AbstractHelper {
       def apply(): Tree = ???
     }
 
-    object Lazy {
+    val Lazy: LazyHelper
+    trait LazyHelper {
       def apply(): Tree = ???
     }
 
-    object Inline {
+    val Inline: InlineHelper
+    trait InlineHelper {
       def apply(): Tree = ???
     }
 
-    object Type {
+    val Type: TypeHelper
+    trait TypeHelper {
       def apply(): Tree = ???
     }
 
-    object Case {
+    val Case: CaseHelper
+    trait CaseHelper {
       def apply(): Tree = ???
     }
 
-    object Contravariant {
+    val Contravariant: ContravariantHelper
+    trait ContravariantHelper {
       def apply(): Tree = ???
     }
 
-    object Covariant {
+    val Covariant: CovariantHelper
+    trait CovariantHelper {
       def apply(): Tree = ???
     }
 
-    object Annot {
+    val Annot: AnnotHelper
+    trait AnnotHelper {
       def apply(body: Tree): Tree = ???
     }
   }
