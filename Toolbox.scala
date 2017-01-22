@@ -1,4 +1,4 @@
-package meta.eden
+package scala.meta
 package gestalt
 
 trait Toolbox { t =>
@@ -42,11 +42,13 @@ trait Toolbox { t =>
   }
 
   object DefDef {
-    def apply(mods: List[Tree], name: String, tparams: List[Tree], tpe: Option[TypeTree], rhs: Option[Tree]): Tree = ???
+    def apply(mods: List[Tree], name: String, tparams: List[Tree], paramss: List[List[Tree]], tpe: Option[TypeTree], rhs: Option[Tree]): Tree = ???
   }
 
   object ValDef {
+    def apply(mods: List[Tree], name: String, tpe: Option[TypeTree], rhs: Option[Tree]): Tree = ???
     def apply(mods: List[Tree], lhs: Tree, tpe: Option[TypeTree], rhs: Option[Tree]): Tree = ???
+    def apply(mods: List[Tree], lhs: List[Tree], tpe: Option[TypeTree], rhs: Option[Tree]): Tree = ???
   }
 
   object PrimaryCtor {
@@ -62,16 +64,20 @@ trait Toolbox { t =>
     def apply(qual: Option[Tree], name: String, tparams: List[TypeTree], args: List[List[Tree]]): Tree = ???
   }
 
+  object Param {
+    def apply(mods: List[Tree], name: String, tpe: Option[TypeTree], default: Option[Tree]): Tree = ???
+  }
+
+  object TypeParam {
+    def apply(mods: List[Tree], name: String, tparams: List[TypeTree], tbounds: TypeTree, cbounds: List[TypeTree]): TypeTree = ???
+  }
+
   // types
   object TypeIdent {
     def apply(name: String): TypeTree = ???
   }
 
   object TypeSelect {
-    def apply(qual: Tree, name: String): TypeTree = ???
-  }
-
-  object TypeProject {
     def apply(qual: Tree, name: String): TypeTree = ???
   }
 
@@ -83,7 +89,7 @@ trait Toolbox { t =>
     def apply(tpe: TypeTree, args: List[TypeTree]): TypeTree = ???
   }
 
-  object TypeApplyInFix {
+  object TypeApplyInfix {
     def apply(lhs: TypeTree, op: String, rhs: TypeTree): TypeTree = ???
   }
 
@@ -123,8 +129,8 @@ trait Toolbox { t =>
     def apply(tpe: TypeTree): TypeTree = ???
   }
 
-  object TypeParam {
-    def apply(mods: List[Tree], name: String, tparams: List[Tree], tbounds: TypeTree, vbounds: List[TypeTree], cbounds: List[TypeTree]): Tree = ???
+  object TypeAnnotated {
+    def apply(tpe: TypeTree, annots: List[Tree]): TypeTree = ???
   }
 
   // terms
@@ -145,11 +151,11 @@ trait Toolbox { t =>
   }
 
   object This {
-    def apply(qual: Tree): Tree = ???
+    def apply(qual: String): Tree = ???
   }
 
   object Super {
-    def apply(thisp: Tree, superp: Tree): Tree = ???
+    def apply(thisp: String, superp: String): Tree = ???
   }
 
   object Interpolate {
@@ -158,6 +164,10 @@ trait Toolbox { t =>
 
   object Apply {
     def apply(fun: Tree, args: List[Tree]): Tree = ???
+  }
+
+  object ApplyType {
+    def apply(fun: Tree, args: List[TypeTree]): Tree = ???
   }
 
   object Infix {
@@ -170,10 +180,6 @@ trait Toolbox { t =>
 
   object Postfix {
     def apply(od: Tree, op: String): Tree = ???
-  }
-
-  object Parens {
-    def apply(tree: Tree): Tree = ???
   }
 
   object Assign {
@@ -266,6 +272,10 @@ trait Toolbox { t =>
 
   object Named {
     def apply(name: String, expr: Tree): Tree = ???
+  }
+
+  object Repeated {
+    def apply(expr: Tree): Tree = ???
   }
 
   // patterns
