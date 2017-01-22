@@ -1,8 +1,8 @@
 import scala.annotation.StaticAnnotation
-
 import scala.collection.immutable.Seq
 
-/*
+import scala.gestalt._
+
 class main extends StaticAnnotation {
   inline def apply(defn: Any): Any = meta {
     val q"object $name { ..$stats }" = defn
@@ -13,6 +13,7 @@ class main extends StaticAnnotation {
   }
 }
 
+/*
 class data extends StaticAnnotation {
   inline def apply(defn: Any): Any = meta {
     defn match {

@@ -4,7 +4,7 @@ package object gestalt {
 
   /** Placeholder for quasiquotes
    */
-  implicit class QuasiquoteHelper(val sc: StringContext) {
+  implicit class QuasiquoteHelper(val sc: StringContext) extends AnyVal {
     def q(args: Any*): Any = ???
     def t(args: Any*): Any = ???
   }

@@ -1,5 +1,4 @@
 class MacrosTest extends TestSuite {
-  /*
   test("main") {
     @main object Test {
       "hello world!"
@@ -8,6 +7,7 @@ class MacrosTest extends TestSuite {
     assert(Test.stub(null) == "hello world!")
   }
 
+  /*
   test("data") {
     @data class Point(x: Int, y: Int)
 
