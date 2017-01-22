@@ -1,10 +1,9 @@
-package scala.meta
-package gestalt
+package scala.gestalt
 
 trait Toolbox { t =>
   // portable trees -- minimum assumptions
   type Tree <: { def tpe: Type } // TODO: structural types performance penalty.
-  type TypeTree                  // avoid errors in mixing type and term -- implementation can have TypeTree = Tree
+  type TypeTree <: Tree          // avoid errors in mixing type and term -- implementation can have TypeTree = Tree
   type Type
 
   // type operations
@@ -17,59 +16,67 @@ trait Toolbox { t =>
   def <:<(tp1: Type, tp2: Type): Boolean
   def typeOf(path: String): Type
 
+  // diagnostics
+  // TODO: should take pos as param -- need to introduce Pos as type param
+  def error(message: String): Nothing = throw new Exception(message)
+
   // standard constructors and extractors
   object Object {
-    def apply(mods: List[Tree], name: String, parents: List[Tree], self: Option[Tree], stats: List[Tree]): Tree = ???
-    def unapply(tree: Tree): Option[(List[Tree], String, List[Tree], Option[Tree], List[Tree])] = ???
+    def apply(mods: Seq[Tree], name: String, parents: Seq[Tree], self: Option[Tree], stats: Option[Seq[Tree]]): Tree = ???
+    def unapply(tree: Tree): Option[(Seq[Tree], String, Seq[Tree], Option[Tree], Option[Seq[Tree]])] = ???
   }
 
   object Class {
-    def apply(mods: List[Tree], name: String, tparams: List[Tree], ctor: Option[Tree], parents: List[Tree], self: Option[Tree], stats: List[Tree]): Tree = ???
-    def unapply(tree: Tree): Option[(List[Tree], String, List[Tree], Option[Tree], List[Tree], Option[Tree], List[Tree])] = ???
+    def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], self: Option[Tree], stats: Option[Seq[Tree]]): Tree = ???
+    def unapply(tree: Tree): Option[(Seq[Tree], String, Seq[Tree], Option[Tree], Seq[Tree], Option[Tree], Option[Seq[Tree]])] = ???
   }
 
   object AnonymClass {
-    def apply(parents: List[Tree], self: Option[Tree], stats: List[Tree]): Tree = ???
+    def apply(parents: Seq[Tree], self: Option[Tree], stats: Option[Seq[Tree]]): Tree = ???
   }
 
   object Trait {
-    def apply(mods: List[Tree], name: String, tparams: List[Tree], paramss: List[List[Tree]], parents: List[Tree], self: Option[Tree], stats: List[Tree]): Tree = ???
-    def unapply(tree: Tree): Option[(List[Tree], String, List[Tree], List[List[Tree]], List[Tree], Option[Tree], List[Tree])] = ???
+    def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], self: Option[Tree], stats: Option[Seq[Tree]]): Tree = ???
+    def unapply(tree: Tree): Option[(Seq[Tree], String, Seq[Tree], Option[Tree], Seq[Tree], Option[Tree], Option[Seq[Tree]])] = ???
   }
 
   object Type {
-    def apply(mods: List[Tree], name: String, tparams: List[Tree], rhs: TypeTree): Tree = ???
+    def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], rhs: TypeTree): Tree = ???
   }
 
   object DefDef {
-    def apply(mods: List[Tree], name: String, tparams: List[Tree], paramss: List[List[Tree]], tpe: Option[TypeTree], rhs: Option[Tree]): Tree = ???
+    def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], paramss: Seq[Seq[Tree]], tpe: Option[TypeTree], rhs: Option[Tree]): Tree = ???
   }
 
   object ValDef {
-    def apply(mods: List[Tree], name: String, tpe: Option[TypeTree], rhs: Option[Tree]): Tree = ???
-    def apply(mods: List[Tree], lhs: Tree, tpe: Option[TypeTree], rhs: Option[Tree]): Tree = ???
-    def apply(mods: List[Tree], lhs: List[Tree], tpe: Option[TypeTree], rhs: Option[Tree]): Tree = ???
+    def apply(mods: Seq[Tree], name: String, tpe: Option[TypeTree], rhs: Option[Tree]): Tree = ???
+    def apply(mods: Seq[Tree], lhs: Tree, tpe: Option[TypeTree], rhs: Option[Tree]): Tree = ???
+    def apply(mods: Seq[Tree], lhs: Seq[Tree], tpe: Option[TypeTree], rhs: Option[Tree]): Tree = ???
   }
 
   object PrimaryCtor {
-    def apply(mods: List[Tree], paramss: List[List[Tree]]): Tree = ???
+    def apply(mods: Seq[Tree], paramss: Seq[Seq[Tree]]): Tree = ???
   }
 
   object SecondaryCtor {
-    def apply(mods: List[Tree], paramss: List[List[Tree]], rhs: Tree): Tree = ???
+    def apply(mods: Seq[Tree], paramss: Seq[Seq[Tree]], rhs: Tree): Tree = ???
   }
 
   // qual.T[A, B](x, y)(z)
-  object ParentCall {
-    def apply(qual: Option[Tree], name: String, tparams: List[TypeTree], args: List[List[Tree]]): Tree = ???
+  object InitCall {
+    def apply(qual: Option[Tree], name: String, tparams: Seq[TypeTree], argss: Seq[Seq[Tree]]): Tree = ???
   }
 
   object Param {
-    def apply(mods: List[Tree], name: String, tpe: Option[TypeTree], default: Option[Tree]): Tree = ???
+    def apply(mods: Seq[Tree], name: String, tpe: Option[TypeTree], default: Option[Tree]): Tree = ???
   }
 
   object TypeParam {
-    def apply(mods: List[Tree], name: String, tparams: List[TypeTree], tbounds: TypeTree, cbounds: List[TypeTree]): TypeTree = ???
+    def apply(mods: Seq[Tree], name: String, tparams: Seq[TypeTree], tbounds: TypeTree, cbounds: Seq[TypeTree]): TypeTree = ???
+  }
+
+  object Self {
+    def apply(name: String, tpe: Option[TypeTree]): Tree = ???
   }
 
   // types
@@ -86,7 +93,7 @@ trait Toolbox { t =>
   }
 
   object TypeApply {
-    def apply(tpe: TypeTree, args: List[TypeTree]): TypeTree = ???
+    def apply(tpe: TypeTree, args: Seq[TypeTree]): TypeTree = ???
   }
 
   object TypeApplyInfix {
@@ -94,11 +101,11 @@ trait Toolbox { t =>
   }
 
   object TypeFunction {
-    def apply(params: List[TypeTree], res: TypeTree): TypeTree = ???
+    def apply(params: Seq[TypeTree], res: TypeTree): TypeTree = ???
   }
 
   object TypeTuple {
-    def apply(args: List[TypeTree]): TypeTree = ???
+    def apply(args: Seq[TypeTree]): TypeTree = ???
   }
 
   object TypeAnd {
@@ -110,11 +117,12 @@ trait Toolbox { t =>
   }
 
   object TypeRefine {
-    def apply(tpe : TypeTree, stats: List[Tree]): TypeTree = ???
+    def apply(tpe : Option[TypeTree], stats: Seq[Tree]): TypeTree = ???
   }
 
   object TypeWildcard {
-    def apply(lo: Option[TypeTree], hi: Option[TypeTree]): TypeTree = ???
+    def apply(): TypeTree = apply(TypeBounds(None, None))
+    def apply(bounds: t.Tree): TypeTree = ???
   }
 
   object TypeBounds {
@@ -130,12 +138,13 @@ trait Toolbox { t =>
   }
 
   object TypeAnnotated {
-    def apply(tpe: TypeTree, annots: List[Tree]): TypeTree = ???
+    def apply(tpe: TypeTree, annots: Seq[Tree]): TypeTree = ???
   }
 
   // terms
   object Lit {
     def apply(value: Any): Tree = ???
+    def unapply(value: Any): Option[Any] = ???
   }
 
   object Wildcard {
@@ -159,17 +168,36 @@ trait Toolbox { t =>
   }
 
   object Interpolate {
-    def apply(prefix: String, parts: List[String], args: List[Tree]): Tree = ???
+    def apply(prefix: String, parts: Seq[String], args: Seq[Tree]): Tree = ???
   }
 
   object Apply {
-    def apply(fun: Tree, args: List[Tree]): Tree = ???
+    def apply(fun: Tree, args: Seq[Tree]): Tree = ???
+    def unapply(tree: Tree): Option[(Tree, Seq[Tree])] = ???
+  }
+
+  // helper
+  object ApplySeq {
+    def apply(fun: Tree, argss: Seq[Seq[Tree]]): Tree = argss match {
+      case args :: rest => rest.foldLeft(Apply(fun, args)) { (acc, args) => Apply(acc, args) }
+      case _ => Apply(fun, Nil)
+    }
+
+    def unapply(call: Tree):  Option[(Tree, Seq[Seq[Tree]])] = {
+      def recur(acc: Seq[Seq[Tree]], term: Tree): (Tree, Seq[Seq[Tree]])  = term match {
+        case Apply(fun, args) => recur(args +: acc, fun) // inner-most is in the front
+        case fun => (fun, acc)
+      }
+
+      Some(recur(Nil, call))
+    }
   }
 
   object ApplyType {
-    def apply(fun: Tree, args: List[TypeTree]): Tree = ???
+    def apply(fun: Tree, args: Seq[TypeTree]): Tree = ???
   }
 
+  // a + (b, c)  =>  Infix(a, +, Tuple(b, c))
   object Infix {
     def apply(lhs: Tree, op: String, rhs: Tree): Tree = ???
   }
@@ -199,15 +227,15 @@ trait Toolbox { t =>
   }
 
   object Annotated {
-    def apply(expr: Tree, annots: List[Tree]): Tree = ???
+    def apply(expr: Tree, annots: Seq[Tree]): Tree = ???
   }
 
   object Tuple {
-    def apply(args: List[Tree]): Tree = ???
+    def apply(args: Seq[Tree]): Tree = ???
   }
 
   object Block {
-    def apply(stats: List[Tree]): Tree = ???
+    def apply(stats: Seq[Tree]): Tree = ???
   }
 
   object If {
@@ -215,7 +243,7 @@ trait Toolbox { t =>
   }
 
   object Match {
-    def apply(expr: Tree, cases: List[Tree]): Tree = ???
+    def apply(expr: Tree, cases: Seq[Tree]): Tree = ???
   }
 
   object Case {
@@ -223,19 +251,16 @@ trait Toolbox { t =>
   }
 
   object Try {
-    def apply(expr: Tree, cases: List[Tree], finallyp: Option[Tree]): Tree = ???
-  }
-
-  object TryWithTerm {
+    def apply(expr: Tree, cases: Seq[Tree], finallyp: Option[Tree]): Tree = ???
     def apply(expr: Tree, catchp: Tree, finallyp: Option[Tree]): Tree = ???
   }
 
   object Function {
-    def apply(params: List[Tree], body: Tree): Tree = ???
+    def apply(params: Seq[Tree], body: Tree): Tree = ???
   }
 
   object PartialFunction {
-    def apply(cases: List[Tree]): Tree = ???
+    def apply(cases: Seq[Tree]): Tree = ???
   }
 
   object While {
@@ -247,7 +272,7 @@ trait Toolbox { t =>
   }
 
   object For {
-    def apply(enums: List[Tree], body: Tree): Tree = ???
+    def apply(enums: Seq[Tree], body: Tree): Tree = ???
   }
 
   object GenFrom {
@@ -266,6 +291,7 @@ trait Toolbox { t =>
     def apply(expr: Tree): Tree = ???
   }
 
+  // can be InitCall or AnonymClass
   object New {
     def apply(tpe: Tree): Tree = ???
   }
@@ -289,11 +315,11 @@ trait Toolbox { t =>
 
   // importees
   object Import {
-    def apply(items: List[Tree]): Tree = ???
+    def apply(items: Seq[Tree]): Tree = ???
   }
 
   object ImportItem {
-    def apply(ref: Tree, importees: List[Tree]): Tree = ???
+    def apply(ref: Tree, importees: Seq[Tree]): Tree = ???
   }
 
   object ImportName {

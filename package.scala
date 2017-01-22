@@ -1,4 +1,4 @@
-package scala.meta
+package scala
 
 package object gestalt {
 
@@ -13,5 +13,5 @@ package object gestalt {
    *
    *  This method is intended to be reflectively called by the compiler
    */
-  def expand(tb: Toolbox)(tree: tb.Tree, isPattern: Boolean): tb.Tree = ???
+  def expand(t: Toolbox)(label: String, parts: List[t.Tree], unquotes: List[t.Tree], isPattern: Boolean): t.Tree = ???
 }
