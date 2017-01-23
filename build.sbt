@@ -1,5 +1,5 @@
 lazy val metaVersion = "1.5.0.585"
-lazy val dottyVersion = "0.1.2-SNAPSHOT"
+lazy val dottyVersion = "0.1.1-SNAPSHOT"
 
 lazy val common = Seq(
   resolvers ++= Seq(
@@ -60,8 +60,10 @@ lazy val gestalt = (project in file(".")).
 
 lazy val macrosSetting = Seq(
   scalacOptions := {
-    Seq() // "-Yplain-printer", "-Xprint:frontend,parser", "-Ylog:frontend",
+    Seq("-Xprint:frontend,parser") // "-Yplain-printer", "-Xprint:frontend,parser", "-Ylog:frontend",
   },
+
+  traceLevel := 0,
 
   // Dotty version
   scalaVersion := dottyVersion,

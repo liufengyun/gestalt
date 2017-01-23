@@ -1,10 +1,18 @@
 package scala.gestalt
 
+import scala.collection.immutable.Seq
 import scala.{meta => m}
 import scala.compat.Platform.EOL
 
+object Flatten {
+  def unapply[T](x: Option[Seq[T]]): Option[Seq[T]] = x match {
+    case Some(xs) => Some(xs)
+    case None => Some(Nil)
+  }
+}
+
 /** Lift scala.meta trees as t.trees */
-abstract class Quote(val t: Toolbox) {
+abstract class Quote(val t: Toolbox, val toolboxName: String) {
   import Quasiquote.Hole
 
   type Quasi = m.internal.ast.Quasi
@@ -27,11 +35,13 @@ abstract class Quote(val t: Toolbox) {
   lazy val scalaList = select("scala.List")
   lazy val scalaSome = select("scala.Some")
   lazy val scalaNone = select("scala.None")
+  lazy val toolbox   = t.Ident(toolboxName)
+  lazy val root      = t.Ident("_root_")
 
   private def select(path: String, isTerm: Boolean = true): t.Tree = {
     val parts = path.split('.')
 
-    val qual = parts.init.foldLeft[t.Tree](t.Ident("_root_")) { (prefix, name) =>
+    val qual = parts.init.foldLeft[t.Tree](root) { (prefix, name) =>
       prefix.select(name)
     }
 
@@ -41,7 +51,7 @@ abstract class Quote(val t: Toolbox) {
   private def selectToolbox(path: String): t.Tree = {
     val parts = path.split('.')
 
-    val qual = parts.init.foldLeft[t.Tree](t.Ident("_toolbox")) { (prefix, name) =>
+    val qual = parts.init.foldLeft[t.Tree](toolbox) { (prefix, name) =>
       prefix.select(name)
     }
 
@@ -108,7 +118,7 @@ abstract class Quote(val t: Toolbox) {
 
   def liftOptSeq(treesOpt: Option[Seq[m.Tree]]): t.Tree = treesOpt match {
     case Some(Seq(quasi: Quasi)) if quasi.rank > 0 && !isTerm =>
-      select("scala.meta.internal.quasiquotes.Flatten").appliedTo(liftQuasi(quasi))
+      select("scala.gestalt.Flatten").appliedTo(liftQuasi(quasi))
     case Some(trees) =>
       scalaSome.appliedTo(liftSeq(trees))
     case None =>
@@ -132,11 +142,11 @@ abstract class Quote(val t: Toolbox) {
   def liftInitCall(tree: m.Tree): t.Tree = {
     def extractFun(tree: m.Tree): (t.Tree, t.Tree, t.Tree) = tree match {
       case m.Type.Apply(m.Ctor.Ref.Select(qual, m.Ctor.Ref.Name(name)), targs) =>
-        (scalaSome.appliedTo(lift(qual)), liftLit(name), liftSeq(targs))
+        (scalaSome.appliedTo(lift(qual)), t.Lit(name), liftSeq(targs))
       case m.Type.Apply(m.Ctor.Ref.Name(name), targs) =>
-        (scalaNone, liftLit(name), liftSeq(targs))
+        (scalaNone, t.Lit(name), liftSeq(targs))
       case m.Ctor.Ref.Name(name) =>
-        (scalaNone, liftLit(name), liftSeq(Nil))
+        (scalaNone, t.Lit(name), liftSeq(Nil))
     }
 
     def initCall(ctor: m.Tree, argss: Seq[Seq[m.Tree]]): t.Tree = {
@@ -157,23 +167,42 @@ abstract class Quote(val t: Toolbox) {
     case _ => scalaNil
   }
 
+  def liftValDef(mods: t.Tree, pats: Seq[m.Pat], tpe: t.Tree, rhs: t.Tree): t.Tree = {
+    if (pats.size == 1) {
+      val left = pats(0) match {
+        case quasi: Quasi =>
+          liftQuasi(quasi)
+        case m.Term.Name(name) =>
+          t.Lit(name)
+        case pat =>
+          lift(pat)
+      }
+
+      selectToolbox("ValDef").appliedTo(mods, left, tpe, scalaNone)
+    }
+    else
+      selectToolbox("ValDef").appliedTo(mods, liftSeq(pats), tpe, rhs)
+  }
+
   /** Lift self annotation in class definition */
   def liftSelf(tree: m.Tree): t.Tree = tree match {
     case m.Term.Param(_, m.Name.Anonymous(), _, _) =>
       scalaNone
     case m.Term.Param(_, m.Term.Name(name), tpOpt, _) =>
-      scalaSome appliedTo selectToolbox("Self").appliedTo(liftLit(name), liftOpt(tpOpt))
+      scalaSome appliedTo selectToolbox("Self").appliedTo(t.Lit(name), liftOpt(tpOpt))
   }
 
-  def liftLit(value: Any): t.Tree = {
-    selectToolbox("Lit").appliedTo(t.Lit(value))
+  // lift name to either Lit or Quasi
+  def liftName(name: m.Name): t.Tree = name match {
+    case quasi: Quasi => liftQuasi(quasi)
+    case _ => t.Lit(name.value)
   }
 
   def lift(tree: m.Tree): t.Tree = tree match {
     case quasi: Quasi  =>
       liftQuasi(quasi)
 
-    case m.Lit(value) => liftLit(value)
+    case m.Lit(value) => t.Lit(value)
 
     // case m.Name.Anonymous() =>
     // case m.Name.Indeterminate(name) =>
@@ -184,7 +213,7 @@ abstract class Quote(val t: Toolbox) {
         case m.Name.Indeterminate(name) => name
       }
 
-      selectToolbox("This").appliedTo(liftLit(name))
+      selectToolbox("This").appliedTo(t.Lit(name))
     case m.Term.Super(thisp, superp) =>
       val qual = thisp match {
         case m.Name.Anonymous() => ""
@@ -195,13 +224,13 @@ abstract class Quote(val t: Toolbox) {
         case m.Name.Anonymous() => ""
         case m.Name.Indeterminate(name) => name
       }
-      selectToolbox("Super").appliedTo(liftLit(qual), liftLit(mix))
+      selectToolbox("Super").appliedTo(t.Lit(qual), t.Lit(mix))
     case m.Term.Name(name) =>
-      selectToolbox("Ident").appliedTo(liftLit(name))
+      selectToolbox("Ident").appliedTo(t.Lit(name))
     case m.Term.Select(qual, m.Term.Name(name)) =>
-      selectToolbox("Select").appliedTo(lift(qual), liftLit(name))
+      selectToolbox("Select").appliedTo(lift(qual), t.Lit(name))
     case m.Term.Interpolate(m.Term.Name(tag), parts, args) =>
-      selectToolbox("Interpolate").appliedTo(liftLit(tag), liftSeq(parts), liftSeq(args))
+      selectToolbox("Interpolate").appliedTo(t.Lit(tag), liftSeq(parts), liftSeq(args))
     // case m.Term.Xml(parts, args) =>
     case m.Term.Apply(fun, args) =>
       // magic happens here with ...$args
@@ -214,13 +243,13 @@ abstract class Quote(val t: Toolbox) {
     case m.Term.ApplyInfix(lhs, m.Term.Name(name), targs, args) =>
       require(targs.length == 0) // no targs for now
       if (args.size == 1)
-        selectToolbox("Infix").appliedTo(lift(lhs), liftLit(name), lift(args(0)))
+        selectToolbox("Infix").appliedTo(lift(lhs), t.Lit(name), lift(args(0)))
       else
-        selectToolbox("Infix").appliedTo(lift(lhs), liftLit(name), selectToolbox("Tuple").appliedTo(liftSeq(args)))
+        selectToolbox("Infix").appliedTo(lift(lhs), t.Lit(name), selectToolbox("Tuple").appliedTo(liftSeq(args)))
     case m.Term.ApplyType(fun, targs) =>
       selectToolbox("ApplyType").appliedTo(lift(fun), liftSeq(targs))
     case m.Term.ApplyUnary(m.Term.Name(op), arg) =>
-      selectToolbox("Prefix").appliedTo(liftLit(op), lift(arg))
+      selectToolbox("Prefix").appliedTo(t.Lit(op), lift(arg))
     case m.Term.Assign(lhs, rhs) =>
       selectToolbox("Assign").appliedTo(lift(lhs), lift(rhs))
     case m.Term.Update(fun, argss, rhs) =>
@@ -268,26 +297,26 @@ abstract class Quote(val t: Toolbox) {
     case m.Term.Placeholder() =>
       selectToolbox("Wildcard").appliedTo()
     case m.Term.Eta(expr) =>
-      selectToolbox("Postfix").appliedTo(lift(expr), liftLit("_"))
+      selectToolbox("Postfix").appliedTo(lift(expr), t.Lit("_"))
     case m.Term.Arg.Named(m.Term.Name(name), expr) =>
-      selectToolbox("Named").appliedTo(liftLit(name), lift(expr))
+      selectToolbox("Named").appliedTo(t.Lit(name), lift(expr))
     case m.Term.Arg.Repeated(expr) =>
       selectToolbox("Repeated").appliedTo(lift(expr))
     case m.Term.Param(mods, m.Term.Name(name), tpe, default) =>
-      selectToolbox("Param").appliedTo(liftSeq(mods), liftLit(name), liftOpt(tpe), liftOpt(default))
+      selectToolbox("Param").appliedTo(liftSeq(mods), t.Lit(name), liftOpt(tpe), liftOpt(default))
 
     // types
     case m.Type.Name(name) =>
-      selectToolbox("TypeIdent").appliedTo(liftLit(name))
+      selectToolbox("TypeIdent").appliedTo(t.Lit(name))
     case m.Type.Select(qual, m.Type.Name(name)) =>
-      selectToolbox("TypeSelect").appliedTo(lift(qual), liftLit(name))
+      selectToolbox("TypeSelect").appliedTo(lift(qual), t.Lit(name))
     // case m.Type.Project(qual, name) =>
     case m.Type.Singleton(ref) =>
       selectToolbox("TypeSingleton").appliedTo(lift(ref))
     case m.Type.Apply(tpe, args) =>
       selectToolbox("TypeApply").appliedTo(lift(tpe), liftSeq(args))
     case m.Type.ApplyInfix(lhs, m.Type.Name(op), rhs) =>
-      selectToolbox("ApplyInfix").appliedTo(lift(lhs), liftLit(op), lift(rhs))
+      selectToolbox("ApplyInfix").appliedTo(lift(lhs), t.Lit(op), lift(rhs))
     case m.Type.Function(params, res) =>
       selectToolbox("Function").appliedTo(liftSeq(params), lift(res))
     case m.Type.Tuple(args) =>
@@ -318,14 +347,14 @@ abstract class Quote(val t: Toolbox) {
       }
 
       selectToolbox("TypeParam").appliedTo(
-        liftSeq(mods), liftLit(nameStr), liftSeq(tparams), lift(tbounds), scalaNil, liftSeq(cbounds)
+        liftSeq(mods), t.Lit(nameStr), liftSeq(tparams), lift(tbounds), scalaNil, liftSeq(cbounds)
       )
 
     // patterns
     case m.Pat.Var.Term(m.Term.Name(name)) =>
-      selectToolbox("Ident").appliedTo(liftLit(name))
+      selectToolbox("Ident").appliedTo(t.Lit(name))
     case m.Pat.Var.Type(m.Type.Name(name)) =>
-      selectToolbox("TypeIdent").appliedTo(liftLit(name))
+      selectToolbox("TypeIdent").appliedTo(t.Lit(name))
     case m.Pat.Wildcard() =>
       selectToolbox("Wildcard").appliedTo()
     case m.Pat.Bind(lhs, rhs) =>
@@ -343,9 +372,9 @@ abstract class Quote(val t: Toolbox) {
           liftSeq(args)
         )
     case m.Pat.ExtractInfix(lhs, m.Term.Name(op), rhs) =>
-      selectToolbox("Infix").appliedTo(lift(lhs), liftLit(op), liftSeq(rhs))
+      selectToolbox("Infix").appliedTo(lift(lhs), t.Lit(op), liftSeq(rhs))
     case m.Pat.Interpolate(m.Term.Name(tag), parts, args) =>
-      selectToolbox("Interpolate").appliedTo(liftLit(tag), liftSeq(parts), liftSeq(args))
+      selectToolbox("Interpolate").appliedTo(t.Lit(tag), liftSeq(parts), liftSeq(args))
     // case m.Pat.Xml(parts, args) =>
     case m.Pat.Typed(lhs, rhs) =>
       selectToolbox("Ascribe").appliedTo(lift(lhs), lift(rhs))
@@ -376,44 +405,12 @@ abstract class Quote(val t: Toolbox) {
 
     case m.Decl.Val(mods, pats, tpe) =>
       require(pats.size > 0)
-      val modifiers = selectToolbox("Infix").appliedTo(liftSeq(mods), liftLit(":+"), selectToolbox("Mod.Val").appliedTo())
-      if (pats.size == 1) {
-        val left = pats(0) match {
-          case m.Term.Name(name) =>
-            liftLit(name)
-          case pat =>
-            lift(pat)
-        }
-
-        selectToolbox("ValDef").appliedTo(
-          modifiers,
-          left,
-          scalaSome.appliedTo(lift(tpe)),
-          scalaNone
-        )
-      }
-      else
-        selectToolbox("ValDef").appliedTo(modifiers, liftSeq(pats), scalaSome.appliedTo(lift(tpe)), scalaNone)
+      val modifiers = t.Infix(liftSeq(mods), ":+", selectToolbox("Mod.Val").appliedTo())
+      liftValDef(modifiers, pats, scalaSome.appliedTo(lift(tpe)), scalaNone)
     case m.Decl.Var(mods, pats, tpe) =>
       require(pats.size > 0)
-      val modifiers = selectToolbox("Infix").appliedTo(liftSeq(mods), liftLit(":+"), selectToolbox("Mod.Var").appliedTo())
-      if (pats.size == 1) {
-        val left = pats(0) match {
-          case m.Term.Name(name) =>
-            liftLit(name)
-          case pat =>
-            lift(pat)
-        }
-
-        selectToolbox("ValDef").appliedTo(
-          modifiers,
-          left,
-          scalaSome.appliedTo(lift(tpe)),
-          scalaNone
-        )
-      }
-      else
-        selectToolbox("ValDef").appliedTo(modifiers, liftSeq(pats), scalaSome.appliedTo(lift(tpe)), scalaNone)
+      val modifiers = t.Infix(liftSeq(mods), ":+", selectToolbox("Mod.Var").appliedTo())
+      liftValDef(modifiers, pats, scalaSome.appliedTo(lift(tpe)), scalaNone)
     case m.Decl.Def(mods, name, tparams, paramss, tpe) =>
       selectToolbox("scala.meta.Decl.Def").appliedTo(liftSeq(mods), lift(name), liftSeq(tparams), liftSeqSeq(paramss), lift(tpe))
     case m.Decl.Type(mods, name, tparams, bounds) =>
@@ -421,73 +418,41 @@ abstract class Quote(val t: Toolbox) {
 
     case m.Defn.Val(mods, pats, tpe, rhs) =>
       require(pats.size > 0)
-      val modifiers = selectToolbox("Infix").appliedTo(liftSeq(mods), liftLit(":+"), selectToolbox("Mod.Val").appliedTo())
-      if (pats.size == 1) {
-        val left = pats(0) match {
-          case m.Term.Name(name) =>
-            liftLit(name)
-          case pat =>
-            lift(pat)
-        }
-
-        selectToolbox("ValDef").appliedTo(
-          modifiers,
-          left,
-          liftOpt(tpe),
-          scalaSome.appliedTo(lift(rhs))
-        )
-      }
-      else
-        selectToolbox("ValDef").appliedTo(modifiers, liftSeq(pats), liftOpt(tpe), lift(rhs))
+      val modifiers = t.Infix(liftSeq(mods), ":+", selectToolbox("Mod.Val").appliedTo())
+      liftValDef(modifiers, pats, liftOpt(tpe), lift(rhs))
     case m.Defn.Var(mods, pats, tpe, rhs) =>
       require(pats.size > 0)
-      val modifiers = selectToolbox("Infix").appliedTo(liftSeq(mods), liftLit(":+"),  selectToolbox("Mod.Var").appliedTo())
-      if (pats.size == 1) {
-        val left = pats(0) match {
-          case m.Term.Name(name) =>
-            liftLit(name)
-          case pat =>
-            lift(pat)
-        }
-
-        selectToolbox("ValDef").appliedTo(
-          modifiers,
-          left,
-          liftOpt(tpe),
-          liftOpt(rhs)
-        )
-      }
-      else
-        selectToolbox("ValDef").appliedTo(modifiers, liftSeq(pats), liftOpt(tpe), liftOpt(rhs))
-    case m.Defn.Def(mods, m.Term.Name(name), tparams, paramss, tpe, body) =>
-      selectToolbox("DefDef").appliedTo(liftSeq(mods), liftLit(name), liftSeq(tparams), liftSeqSeq(paramss), liftOpt(tpe), lift(body))
+      val modifiers = t.Infix(liftSeq(mods), ":+",  selectToolbox("Mod.Var").appliedTo())
+      liftValDef(modifiers, pats, liftOpt(tpe), liftOpt(rhs))
+    case m.Defn.Def(mods, name, tparams, paramss, tpe, body) =>
+      selectToolbox("DefDef").appliedTo(liftSeq(mods), liftName(name), liftSeq(tparams), liftSeqSeq(paramss), liftOpt(tpe), lift(body))
     // case m.Defn.Macro(mods, name, tparams, paramss, tpe, body) =>
-    case m.Defn.Type(mods, m.Type.Name(name), tparams, body) =>
-      selectToolbox("Type").appliedTo(liftSeq(mods), liftLit(name), liftSeq(tparams), lift(body))
-    case m.Defn.Class(mods, m.Type.Name(name), tparams, ctor, m.Template(_, parents, self, stats)) =>
+    case m.Defn.Type(mods, name, tparams, body) =>
+      selectToolbox("Type").appliedTo(liftSeq(mods), liftName(name), liftSeq(tparams), lift(body))
+    case m.Defn.Class(mods, name, tparams, ctor, m.Template(_, parents, self, stats)) =>
       selectToolbox("Class").appliedTo(
         liftSeq(mods),
-        liftLit(name),
+        liftName(name),
         liftSeq(tparams),
         scalaSome.appliedTo(lift(ctor)),
         liftSeqTrees(parents.map(liftInitCall)),
         liftSelf(self),
         liftOptSeq(stats)
       )
-    case m.Defn.Trait(mods, m.Type.Name(name), tparams, ctor, m.Template(_, parents, self, stats)) =>
-      selectToolbox("trait").appliedTo(
+    case m.Defn.Trait(mods, name, tparams, ctor, m.Template(_, parents, self, stats)) =>
+      selectToolbox("Trait").appliedTo(
         liftSeq(mods),
-        liftLit(name),
+        liftName(name),
         liftSeq(tparams),
         scalaSome.appliedTo(lift(ctor)),
         liftSeqTrees(parents.map(liftInitCall)),
         liftSelf(self),
         liftOptSeq(stats)
       )
-    case m.Defn.Object(mods, m.Type.Name(name), m.Template(_, parents, self, stats)) =>
+    case m.Defn.Object(mods, name, m.Template(_, parents, self, stats)) =>
       selectToolbox("Object").appliedTo(
         liftSeq(mods),
-        liftLit(name),
+        liftName(name),
         liftSeqTrees(parents.map(liftInitCall)),
         liftSelf(self),
         liftOptSeq(stats)
@@ -550,13 +515,13 @@ abstract class Quote(val t: Toolbox) {
     case m.Importer(ref, importees) =>
       selectToolbox("ImportItem").appliedTo(lift(ref), liftSeq(importees))
     case m.Importee.Wildcard() =>
-      selectToolbox("ImportName").appliedTo(liftLit("_"))
+      selectToolbox("ImportName").appliedTo(t.Lit("_"))
     case m.Importee.Name(m.Name.Indeterminate(name)) =>
-      selectToolbox("ImportName").appliedTo(liftLit(name))
+      selectToolbox("ImportName").appliedTo(t.Lit(name))
     case m.Importee.Rename(m.Name.Indeterminate(name), m.Name.Indeterminate(rename)) =>
-      selectToolbox("ImportRename").appliedTo(liftLit(name), liftLit(rename))
+      selectToolbox("ImportRename").appliedTo(t.Lit(name), t.Lit(rename))
     case m.Importee.Unimport(m.Name.Indeterminate(name)) =>
-      selectToolbox("ImportHide").appliedTo(liftLit(name))
+      selectToolbox("ImportHide").appliedTo(t.Lit(name))
 
     case m.Case(pat, cond, body) =>
       selectToolbox("Case").appliedTo(lift(pat), liftOpt(cond), lift(body))

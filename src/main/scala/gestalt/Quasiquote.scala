@@ -55,7 +55,12 @@ object Quasiquote {
   }
 }
 
-class Quasiquote(val t: Toolbox) {
+/** Implementation of quasiquotes
+ *
+ * @param t           the toolbox to use
+ * @param toolboxName the name of the toolbox in the local environment
+ */
+class Quasiquote(val t: Toolbox, val toolboxName: String) {
   import t._
   import Quasiquote._
 
@@ -63,7 +68,7 @@ class Quasiquote(val t: Toolbox) {
     val code = resugar(for (Lit(part: String) <- parts) yield part)
     val parser = instantiateParser(parserMap(label))
     val mTree = parser(m.Input.String(code), quasiquoteTermDialect)
-    val quote = new Quote(t) {
+    val quote = new Quote(t, toolboxName) {
       val args = unquotes.asInstanceOf[List[this.t.Tree]]    // fix compiler stupidity
       val isTerm = !isPattern
     }

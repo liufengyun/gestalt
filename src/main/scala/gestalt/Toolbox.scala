@@ -173,7 +173,7 @@ trait Toolbox { t =>
   val Lit: LitHelper
   trait LitHelper {
     def apply(value: Any): Tree
-    def unapply(value: Any): Option[Any]
+    def unapply(tree: Tree): Option[Any]
   }
 
   val Wildcard: WildcardHelper

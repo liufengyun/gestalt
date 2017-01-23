@@ -1,4 +1,6 @@
-package scala.gestalt
+package scala.gestalt.dotty
+
+import scala.gestalt.Toolbox
 
 import dotty.tools.dotc._
 import core._
@@ -8,11 +10,12 @@ import NameOps._
 import Flags._
 import Contexts._
 import Decorators._
+import Constants._
 
 
 class DottyToolbox(implicit ctx: Context) extends Toolbox {
   type Tree = d.Tree
-  type TypeTree = d.TypeTree
+  type TypeTree = d.Tree
   type Type = Types.Type
 
   def =:=(tp1: Type, tp2: Type): Boolean = ???
@@ -103,11 +106,11 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
 
   // types
   object TypeIdent extends TypeIdentHelper {
-    def apply(name: String): TypeTree = ???
+    def apply(name: String): TypeTree = d.Ident(name.toTypeName)
   }
 
   object TypeSelect extends TypeSelectHelper {
-    def apply(qual: Tree, name: String): TypeTree = ???
+    def apply(qual: Tree, name: String): TypeTree = d.Select(qual, name.toTypeName)
   }
 
   object TypeSingleton extends TypeSingletonHelper {
@@ -164,8 +167,11 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
 
   // terms
   object Lit extends LitHelper {
-    def apply(value: Any): Tree = ???
-    def unapply(value: Any): Option[Any] = ???
+    def apply(value: Any): Tree = d.Literal(Constant(value))
+    def unapply(tree: Tree): Option[Any] = tree match {
+      case c.Literal(Constant(v)) => Some(v)
+      case _ => None
+    }
   }
 
   object Wildcard extends WildcardHelper {
@@ -173,11 +179,11 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
   }
 
   object Ident extends IdentHelper {
-    def apply(name: String): Tree = ???
+    def apply(name: String): Tree = d.Ident(name.toTermName)
   }
 
   object Select extends SelectHelper {
-    def apply(qual: Tree, name: String): Tree = ???
+    def apply(qual: Tree, name: String): Tree = d.Select(qual, name.toTermName)
   }
 
   object This extends ThisHelper {
@@ -193,7 +199,7 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
   }
 
   object Apply extends ApplyHelper {
-    def apply(fun: Tree, args: Seq[Tree]): Tree = ???
+    def apply(fun: Tree, args: Seq[Tree]): Tree = d.Apply(fun, args.toList)
     def unapply(tree: Tree): Option[(Tree, Seq[Tree])] = ???
   }
 
@@ -203,7 +209,7 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
 
   // a + (b, c)  =>  Infix(a, +, Tuple(b, c))
   object Infix extends InfixHelper {
-    def apply(lhs: Tree, op: String, rhs: Tree): Tree = ???
+    def apply(lhs: Tree, op: String, rhs: Tree): Tree = d.Apply(d.Select(lhs, op.toTermName), List(rhs))
   }
 
   object Prefix extends PrefixHelper {
