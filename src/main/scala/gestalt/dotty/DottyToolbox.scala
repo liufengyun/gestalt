@@ -28,7 +28,7 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
     def apply(mods: Seq[Tree], name: String, parents: Seq[Tree], selfOpt: Option[Tree], stats: Option[Seq[Tree]]): Tree = {
       // TODO mods
       val constr = d.DefDef(nme.CONSTRUCTOR, Nil, Nil, d.TypeTree(), d.EmptyTree)
-      val self = if (selfOpt.isEmpty) d.ValDef(nme.WILDCARD, d.TypeTree(), d.EmptyTree) else selfOpt.get.asInstanceOf[d.ValDef]
+      val self = if (selfOpt.isEmpty) d.EmptyValDef else selfOpt.get.asInstanceOf[d.ValDef]
       val body = if (stats.isEmpty) Nil else stats.get
       val templ = d.Template(constr, parents.toList, self, body)
       d.ModuleDef(name.toTermName, templ)
@@ -92,7 +92,7 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
   object Param extends ParamHelper {
     def apply(mods: Seq[Tree], name: String, tpe: Option[TypeTree], default: Option[Tree]): Tree = {
       // TODO mods
-      d.ValDef(name.toTermName, getOrEmpty(tpe), getOrEmpty(default))
+      d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), getOrEmpty(default)).withFlags(TermParam)
     }
   }
 
