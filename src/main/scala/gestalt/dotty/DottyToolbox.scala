@@ -27,8 +27,8 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
   object Object extends ObjectHelper {
     def apply(mods: Seq[Tree], name: String, parents: Seq[Tree], selfOpt: Option[Tree], stats: Option[Seq[Tree]]): Tree = {
       // TODO mods
-      val constr = d.DefDef(nme.CONSTRUCTOR, Nil, Nil, d.EmptyTree, d.EmptyTree)
-      val self = if (selfOpt.isEmpty) d.ValDef(nme.WILDCARD, d.EmptyTree, d.EmptyTree) else selfOpt.get.asInstanceOf[d.ValDef]
+      val constr = d.DefDef(nme.CONSTRUCTOR, Nil, Nil, d.TypeTree(), d.EmptyTree)
+      val self = if (selfOpt.isEmpty) d.ValDef(nme.WILDCARD, d.TypeTree(), d.EmptyTree) else selfOpt.get.asInstanceOf[d.ValDef]
       val body = if (stats.isEmpty) Nil else stats.get
       val templ = d.Template(constr, parents.toList, self, body)
       d.ModuleDef(name.toTermName, templ)
@@ -66,7 +66,7 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
       // TODO mods
       val types = tparams.toList.asInstanceOf[List[d.TypeDef]]
       val params = paramss.map(_.toList).toList.asInstanceOf[List[List[d.ValDef]]]
-      d.DefDef(name.toTermName, types, params, getOrEmpty(tpe), getOrEmpty(rhs))
+      d.DefDef(name.toTermName, types, params, tpe.getOrElse(d.TypeTree()), getOrEmpty(rhs))
     }
   }
 

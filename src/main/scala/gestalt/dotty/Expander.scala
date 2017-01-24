@@ -37,7 +37,7 @@ object Expander {
   }
 
   /** Expand annotation macros */
-  def expandAnnot(mdef: untpd.MemberDef)(implicit ctx: Context): untpd.Tree = {
+  def expandAnnotMacro(mdef: untpd.MemberDef)(implicit ctx: Context): untpd.Tree = {
     val ann = mdef.mods.annotations.filter(macros.isAnnotMacro).headOption
     val expansion = ann.flatMap {
       case ann @ Apply(Select(New(tpt), init), _) =>
@@ -64,7 +64,7 @@ object Expander {
   }
 
   /** Expand def macros */
-  def expandDef(tree: tpd.Tree)(implicit ctx: Context): untpd.Tree = tree match {
+  def expandDefMacro(tree: tpd.Tree)(implicit ctx: Context): untpd.Tree = tree match {
     case ExtractApply(Select(obj, method), targs, argss) =>
       val className = obj.symbol.info.classSymbol.fullName + "$inline$"
       // reflect macros definition

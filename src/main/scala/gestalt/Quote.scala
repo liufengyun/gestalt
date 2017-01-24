@@ -55,7 +55,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
       prefix.select(name)
     }
 
-    if (isTerm) t.Select(qual, parts.last) else t.TypeSelect(qual, parts.last)
+    t.Select(qual, parts.last)
   }
 
   // lifts: m.Tree => t.Tree[t.Tree]

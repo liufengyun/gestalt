@@ -33,4 +33,8 @@ package object gestalt {
     val argsTyped  = unquotes.asInstanceOf[List[quote.t.Tree]]
     quote.expand(label, partsTyped, argsTyped, isPattern).asInstanceOf[t.Tree]
   }
+
+
+  // implicit helpers
+  implicit def toOption(t: toolbox.Tree): Option[toolbox.Tree] = Some(t)
 }

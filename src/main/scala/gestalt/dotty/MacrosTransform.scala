@@ -49,7 +49,7 @@ class MacrosTransform extends MiniPhaseTransform {
     val macros = template.body.filter {
       case mdef : DefDef =>
         val rhsValid = mdef.rhs match {
-          case Apply(Select(meta, nme.apply), _) => meta.symbol == ctx.definitions.meta
+          case Apply(meta, _) => meta.symbol == ctx.definitions.meta
           case _ => false
         }
 
@@ -129,6 +129,8 @@ class MacrosTransform extends MiniPhaseTransform {
             case Some(origSym) =>
               val index = fromSyms.indexOf(origSym)
               ref(toSyms(index))
+            case _ if tree.symbol == ctx.definitions.toolbox =>
+              ref(toolboxSym)
             case _ => tree
           }
         case tree: Select if tree.symbol == ctx.definitions.toolbox =>
