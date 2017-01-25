@@ -64,8 +64,8 @@ class Quasiquote(val t: Toolbox, val toolboxName: String) {
   import t._
   import Quasiquote._
 
-  def expand(label: String, parts: List[Tree], unquotes: List[Tree], isPattern: Boolean): Tree = {
-    val code = resugar(for (Lit(part: String) <- parts) yield part)
+  def expand(label: String, parts: List[String], unquotes: List[Tree], isPattern: Boolean): Tree = {
+    val code = resugar(parts)
     val parser = instantiateParser(parserMap(label))
     val mTree = parser(m.Input.String(code), quasiquoteTermDialect)
     val quote = new Quote(t, toolboxName) {
