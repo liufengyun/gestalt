@@ -120,9 +120,9 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     case Some(Seq(quasi: Quasi)) if quasi.rank > 0 && !isTerm =>
       select("scala.gestalt.Flatten").appliedTo(liftQuasi(quasi))
     case Some(trees) =>
-      scalaSome.appliedTo(liftSeq(trees))
+      liftSeq(trees)
     case None =>
-      scalaNone
+      scalaNil
   }
 
   def liftQuasi(quasi: Quasi, expectedRank: Int = 0, optional: Boolean = false): t.Tree = {

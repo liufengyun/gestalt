@@ -1,6 +1,7 @@
 package scala.gestalt.dotty
 
 import scala.gestalt.Toolbox
+import scala.collection.immutable.Seq
 
 import dotty.tools.dotc._
 import core._
@@ -11,7 +12,9 @@ import Flags._
 import Contexts._
 import Decorators._
 import Constants._
+import d.modsDeco
 
+import scala.collection.mutable.ListBuffer
 
 class DottyToolbox(implicit ctx: Context) extends Toolbox {
   type Tree = d.Tree
@@ -24,37 +27,163 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
 
   def getOrEmpty(treeOpt: Option[Tree]): Tree = treeOpt.getOrElse(d.EmptyTree)
 
-  object Object extends ObjectHelper {
-    def apply(mods: Seq[Tree], name: String, parents: Seq[Tree], selfOpt: Option[Tree], stats: Option[Seq[Tree]]): Tree = {
-      // TODO mods
-      val constr = d.DefDef(nme.CONSTRUCTOR, Nil, Nil, d.TypeTree(), d.EmptyTree)
-      val self = if (selfOpt.isEmpty) d.EmptyValDef else selfOpt.get.asInstanceOf[d.ValDef]
-      val body = if (stats.isEmpty) Nil else stats.get
-      val templ = d.Template(constr, parents.toList, self, body)
-      d.ModuleDef(name.toTermName, templ)
+  private implicit def fromMods(mods: Seq[Tree]): d.Modifiers = {
+    def addMod(modifiers: d.Modifiers, mod: d.Mod): d.Modifiers =
+      modifiers.withAddedMod(mod) | mod.flags
+
+    mods.foldLeft(d.Modifiers()) { (modifiers, mod) =>
+      mod match {
+        case Mod.Annot(body) =>
+          modifiers.withAddedAnnotation(body)
+        case Mod.Private(within) =>
+          val modifiers2 = within match {
+            case "this" => modifiers | Local
+            case  _     => modifiers.withPrivateWithin(within.toTypeName)
+          }
+          addMod(modifiers2, d.Mod.Private())
+        case Mod.Protected(within) =>
+          val modifiers2 = within match {
+            case "this" => modifiers | Local
+            case  _     => modifiers.withPrivateWithin(within.toTypeName)
+          }
+          addMod(modifiers2, d.Mod.Protected())
+        case Mod.Implicit() =>
+          addMod(modifiers, d.Mod.Implicit())
+        case Mod.Final() =>
+          addMod(modifiers, d.Mod.Final())
+        case Mod.Sealed() =>
+          addMod(modifiers, d.Mod.Sealed())
+        case Mod.Override() =>
+          addMod(modifiers, d.Mod.Override())
+        case Mod.Case() =>
+          modifiers | Flags.Case
+        case Mod.Abstract() =>
+          addMod(modifiers, d.Mod.Abstract())
+        case Mod.Covariant() =>
+          modifiers | Covariant
+        case Mod.Contravariant() =>
+          modifiers | Contravariant
+        case Mod.Lazy() =>
+          addMod(modifiers, d.Mod.Lazy())
+        case Mod.Val() =>
+          addMod(modifiers, d.Mod.Val())
+        case Mod.Var() =>
+          addMod(modifiers, d.Mod.Var())
+        case Mod.Inline() =>
+          addMod(modifiers, d.Mod.Inline())
+      }
+    }
+  }
+
+  private def toMods(modifiers: d.Modifiers): List[Tree] = {
+    val lb = new ListBuffer[Tree]
+
+    if (modifiers.hasAnnotations) {
+      lb ++= modifiers.annotations.map(Mod.Annot(_))
     }
 
-    def unapply(tree: Tree): Option[(Seq[Tree], String, Seq[Tree], Option[Tree], Option[Seq[Tree]])] = tree match {
+    if (modifiers.is(Flags.Case))
+      lb += Mod.Case()
+
+    import d.{Mod => mod}
+    lb ++= modifiers.mods.map { modScala =>
+      modScala match {
+        case _: mod.Override =>
+          Mod.Override()
+        case _: mod.Abstract =>
+          Mod.Abstract()
+        case _: mod.Final =>
+          Mod.Final()
+        case _: mod.Implicit =>
+          Mod.Implicit()
+        case _: mod.Inline =>
+          Mod.Inline()
+        case _: mod.Lazy =>
+          Mod.Lazy()
+        case _: mod.Private =>
+          if (modifiers.hasPrivateWithin)
+            Mod.Private(modifiers.privateWithin.show)
+          else if (modifiers is Local)
+            Mod.Private("this")
+          else
+            Mod.Private("")
+        case _: mod.Protected =>
+          if (modifiers.hasPrivateWithin)
+            Mod.Protected(modifiers.privateWithin.show)
+          else if (modifiers is Local)
+            Mod.Protected("this")
+          else
+            Mod.Protected("")
+        case _: mod.Sealed =>
+          Mod.Sealed()
+        case _: mod.Type =>
+          Mod.Type()
+        case _: mod.Val =>
+          Mod.Val()
+        case _: mod.Var =>
+          Mod.Var()
+      }
+    }
+
+    if (modifiers.is(Covariant)) lb += Mod.Covariant()
+    if (modifiers.is(Contravariant)) lb += Mod.Contravariant()
+
+    lb.toList
+  }
+
+  object Object extends ObjectHelper {
+    def apply(mods: Seq[Tree], name: String, parents: Seq[Tree], selfOpt: Option[Tree], stats: Seq[Tree]): Tree = {
+      val constr = d.DefDef(nme.CONSTRUCTOR, Nil, Nil, d.TypeTree(), d.EmptyTree)
+      val self = if (selfOpt.isEmpty) d.EmptyValDef else selfOpt.get.asInstanceOf[d.ValDef]
+      val templ = d.Template(constr, parents.toList, self, stats)
+      d.ModuleDef(name.toTermName, templ).withMods(fromMods(mods))
+    }
+
+    def unapply(tree: Tree): Option[(Seq[Tree], String, Seq[Tree], Option[Tree], Seq[Tree])] = tree match {
       case obj @ d.ModuleDef(name, templ @ c.Template(constr, parents, self, body)) =>
-        // TODO mods
         val selfOpt = if (self.name == nme.WILDCARD) None else Some(self)
-        Some((Nil, name.toString, parents, selfOpt, Some(templ.body)))
+        Some((toMods(obj.mods), name.toString, parents, selfOpt, templ.body))
       case _ => None
     }
   }
 
   object Class extends ClassHelper {
-    def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], self: Option[Tree], stats: Option[Seq[Tree]]): Tree = ???
-    def unapply(tree: Tree): Option[(Seq[Tree], String, Seq[Tree], Option[Tree], Seq[Tree], Option[Tree], Option[Seq[Tree]])] = ???
+    def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], selfOpt: Option[Tree], stats: Seq[Tree]): Tree = {
+      val constr =
+        if (ctor.isEmpty) d.DefDef(nme.CONSTRUCTOR, Nil, Nil, d.TypeTree(), d.EmptyTree)
+        else {
+          val PrimaryCtor(mods, paramss) = ctor.get
+          val tparamsCast = tparams.toList.asInstanceOf[List[d.TypeDef]]
+          val paramssCast = paramss.map(_.toList).toList.asInstanceOf[List[List[d.ValDef]]]
+          d.DefDef(nme.CONSTRUCTOR, tparamsCast, paramssCast, d.TypeTree(), d.EmptyTree).withMods(fromMods(mods))
+        }
+
+      val self = if (selfOpt.isEmpty) d.EmptyValDef else selfOpt.get.asInstanceOf[d.ValDef]
+      val templ = d.Template(constr, parents.toList, self, stats)
+      d.TypeDef(name.toTypeName, templ).withMods(fromMods(mods))
+    }
+
+    def unapply(tree: Tree): Option[(Seq[Tree], String, Seq[Tree], Option[Tree], Seq[Tree], Option[Tree], Seq[Tree])] = tree match {
+      case cdef @ c.TypeDef(name, templ @ c.Template(constr, parents, self, body)) =>
+        var tparams: List[Tree] = Nil
+        val ctor = constr match {
+          case c.DefDef(nme.CONSTRUCTOR, Nil, Nil, c.TypeTree(), d.EmptyTree) => None
+          case pctor @ c.DefDef(nme.CONSTRUCTOR, tps, paramss, c.TypeTree(), d.EmptyTree) =>
+            tparams = tps
+            Some(PrimaryCtor(toMods(pctor.mods), paramss))
+        }
+        Some((toMods(cdef.mods), name.show, tparams, ctor, tparams, Some(self), templ.body))  // TODO: parents and self
+      case _ => None
+    }
   }
 
   object AnonymClass extends AnonymClassHelper {
-    def apply(parents: Seq[Tree], self: Option[Tree], stats: Option[Seq[Tree]]): Tree = ???
+    def apply(parents: Seq[Tree], self: Option[Tree], stats: Seq[Tree]): Tree = ???
   }
 
   object Trait extends TraitHelper {
-    def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], self: Option[Tree], stats: Option[Seq[Tree]]): Tree = ???
-    def unapply(tree: Tree): Option[(Seq[Tree], String, Seq[Tree], Option[Tree], Seq[Tree], Option[Tree], Option[Seq[Tree]])] = ???
+    def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], self: Option[Tree], stats: Seq[Tree]): Tree = ???
+    def unapply(tree: Tree): Option[(Seq[Tree], String, Seq[Tree], Option[Tree], Seq[Tree], Option[Tree], Seq[Tree])] = ???
   }
 
   object Type extends TypeHelper {
@@ -77,7 +206,15 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
   }
 
   object PrimaryCtor extends PrimaryCtorHelper {
-    def apply(mods: Seq[Tree], paramss: Seq[Seq[Tree]]): Tree = ???
+    // Dummy trees to retrofit Dotty AST
+    private case class PrimaryCtorTree(mods: Seq[Tree], paramss: Seq[Seq[Tree]]) extends d.Tree
+
+    def apply(mods: Seq[Tree], paramss: Seq[Seq[Tree]]): Tree = PrimaryCtorTree(mods, paramss)
+
+    def unapply(tree: Tree): Option[(Seq[Tree], Seq[Seq[Tree]])] = tree match {
+      case PrimaryCtorTree(mods, paramss) => Some((mods, paramss))
+      case _                              => None
+    }
   }
 
   object SecondaryCtor extends SecondaryCtorHelper {
@@ -94,6 +231,8 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
       // TODO mods
       d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), getOrEmpty(default)).withFlags(TermParam)
     }
+
+    def unapply(tree: Tree): Option[(Seq[Tree], String, Option[TypeTree], Option[Tree])] = ???
   }
 
   object TypeParam extends TypeParamHelper {
@@ -351,68 +490,142 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
 
   // modifiers
   object Mod extends ModHelper {
+
     object Private extends PrivateHelper {
-      def apply(within: Tree): Tree = ???
+      // Dummy trees to retrofit Dotty AST
+      private case class PrivateTree(within: String) extends d.Tree
+
+      def apply(within: String): Tree = PrivateTree(within)
+      def unapply(tree: Tree): Option[String] = tree match {
+        case PrivateTree(within) => Some(within)
+        case _                   => None
+      }
     }
 
     object Protected extends ProtectedHelper {
-      def apply(within: Tree): Tree = ???
+      // Dummy trees to retrofit Dotty AST
+      private case class ProtectedTree(within: String) extends d.Tree
+
+      def apply(within: String): Tree = ProtectedTree(within)
+      def unapply(tree: Tree): Option[String] = tree match {
+        case ProtectedTree(within) => Some(within)
+        case _                     => None
+      }
     }
 
     object Val extends ValHelper {
-      def apply(): Tree = ???
+      // Dummy trees to retrofit Dotty AST
+      private case class ValTree() extends d.Tree
+
+      def apply(): Tree = ValTree()
+      def unapply(tree: Tree): Boolean = tree.isInstanceOf[ValTree]
     }
 
     object Var extends VarHelper {
-      def apply(): Tree = ???
+      // Dummy trees to retrofit Dotty AST
+      private case class VarTree() extends d.Tree
+
+      def apply(): Tree = VarTree()
+      def unapply(tree: Tree): Boolean = tree.isInstanceOf[VarTree]
     }
 
     object Implicit extends ImplicitHelper {
-      def apply(): Tree = ???
+      // Dummy trees to retrofit Dotty AST
+      private case class ImplicitTree() extends d.Tree
+
+      def apply(): Tree = ImplicitTree()
+      def unapply(tree: Tree): Boolean = tree.isInstanceOf[ImplicitTree]
     }
 
     object Final extends FinalHelper {
-      def apply(): Tree = ???
+      // Dummy trees to retrofit Dotty AST
+      private case class FinalTree() extends d.Tree
+
+      def apply(): Tree = FinalTree()
+      def unapply(tree: Tree): Boolean = tree.isInstanceOf[FinalTree]
     }
 
     object Sealed extends SealedHelper {
-      def apply(): Tree = ???
+      // Dummy trees to retrofit Dotty AST
+      private case class SealedTree() extends d.Tree
+
+      def apply(): Tree = SealedTree()
+      def unapply(tree: Tree): Boolean = tree.isInstanceOf[SealedTree]
     }
 
     object Override extends OverrideHelper {
-      def apply(): Tree = ???
+      // Dummy trees to retrofit Dotty AST
+      private case class OverrideTree() extends d.Tree
+
+      def apply(): Tree = OverrideTree()
+      def unapply(tree: Tree): Boolean = tree.isInstanceOf[OverrideTree]
     }
 
     object Abstract extends AbstractHelper {
-      def apply(): Tree = ???
+      // Dummy trees to retrofit Dotty AST
+      private case class AbstractTree() extends d.Tree
+
+      def apply(): Tree = AbstractTree()
+      def unapply(tree: Tree): Boolean = tree.isInstanceOf[AbstractTree]
     }
 
     object Lazy extends LazyHelper {
-      def apply(): Tree = ???
+      // Dummy trees to retrofit Dotty AST
+      private case class LazyTree() extends d.Tree
+
+      def apply(): Tree = LazyTree()
+      def unapply(tree: Tree): Boolean = tree.isInstanceOf[LazyTree]
     }
 
     object Inline extends InlineHelper {
-      def apply(): Tree = ???
+      // Dummy trees to retrofit Dotty AST
+      private case class InlineTree() extends d.Tree
+
+      def apply(): Tree = InlineTree()
+      def unapply(tree: Tree): Boolean = tree.isInstanceOf[InlineTree]
     }
 
     object Type extends TypeHelper {
-      def apply(): Tree = ???
+      // Dummy trees to retrofit Dotty AST
+      private case class TypeTree() extends d.Tree
+
+      def apply(): Tree = TypeTree()
+      def unapply(tree: Tree): Boolean = tree.isInstanceOf[TypeTree]
     }
 
     object Case extends CaseHelper {
-      def apply(): Tree = ???
+      // Dummy trees to retrofit Dotty AST
+      private case class CaseTree() extends d.Tree
+
+      def apply(): Tree = CaseTree()
+      def unapply(tree: Tree): Boolean = tree.isInstanceOf[CaseTree]
     }
 
     object Contravariant extends ContravariantHelper {
-      def apply(): Tree = ???
+      // Dummy trees to retrofit Dotty AST
+      private case class ContravariantTree() extends d.Tree
+
+      def apply(): Tree = ContravariantTree()
+      def unapply(tree: Tree): Boolean = tree.isInstanceOf[ContravariantTree]
     }
 
     object Covariant extends CovariantHelper {
-      def apply(): Tree = ???
+      // Dummy trees to retrofit Dotty AST
+      private case class CovariantTree() extends d.Tree
+
+      def apply(): Tree = CovariantTree()
+      def unapply(tree: Tree): Boolean = tree.isInstanceOf[CovariantTree]
     }
 
     object Annot extends AnnotHelper{
-      def apply(body: Tree): Tree = ???
+      // Dummy trees to retrofit Dotty AST
+      private case class AnnotTree(body: Tree) extends d.Tree
+
+      def apply(body: Tree): Tree = AnnotTree(body)
+      def unapply(tree: Tree): Option[Tree] = tree match {
+        case AnnotTree(body) => Some(body)
+        case _               => None
+      }
     }
   }
 }

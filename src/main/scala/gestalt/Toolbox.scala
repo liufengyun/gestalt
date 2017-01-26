@@ -1,5 +1,7 @@
 package scala.gestalt
 
+import scala.collection.immutable.Seq
+
 trait Toolbox { t =>
   // portable trees -- minimum assumptions
   type Tree <: { def tpe: Type } // TODO: structural types performance penalty.
@@ -23,25 +25,25 @@ trait Toolbox { t =>
   // standard constructors and extractors
   val Object: ObjectHelper
   trait ObjectHelper {
-    def apply(mods: Seq[Tree], name: String, parents: Seq[Tree], selfOpt: Option[Tree], stats: Option[Seq[Tree]]): Tree
-    def unapply(tree: Tree): Option[(Seq[Tree], String, Seq[Tree], Option[Tree], Option[Seq[Tree]])]
+    def apply(mods: Seq[Tree], name: String, parents: Seq[Tree], selfOpt: Option[Tree], stats: Seq[Tree]): Tree
+    def unapply(tree: Tree): Option[(Seq[Tree], String, Seq[Tree], Option[Tree], Seq[Tree])]
   }
 
   val Class: ClassHelper
   trait ClassHelper {
-    def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], self: Option[Tree], stats: Option[Seq[Tree]]): Tree
-    def unapply(tree: Tree): Option[(Seq[Tree], String, Seq[Tree], Option[Tree], Seq[Tree], Option[Tree], Option[Seq[Tree]])]
+    def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], self: Option[Tree], stats: Seq[Tree]): Tree
+    def unapply(tree: Tree): Option[(Seq[Tree], String, Seq[Tree], Option[Tree], Seq[Tree], Option[Tree], Seq[Tree])]
   }
 
   val AnonymClass: AnonymClassHelper
   trait AnonymClassHelper {
-    def apply(parents: Seq[Tree], self: Option[Tree], stats: Option[Seq[Tree]]): Tree
+    def apply(parents: Seq[Tree], self: Option[Tree], stats: Seq[Tree]): Tree
   }
 
   val Trait: TraitHelper
   trait TraitHelper {
-    def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], self: Option[Tree], stats: Option[Seq[Tree]]): Tree
-    def unapply(tree: Tree): Option[(Seq[Tree], String, Seq[Tree], Option[Tree], Seq[Tree], Option[Tree], Option[Seq[Tree]])]
+    def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], self: Option[Tree], stats: Seq[Tree]): Tree
+    def unapply(tree: Tree): Option[(Seq[Tree], String, Seq[Tree], Option[Tree], Seq[Tree], Option[Tree], Seq[Tree])]
   }
 
   val Type: TypeHelper
@@ -64,6 +66,7 @@ trait Toolbox { t =>
   val PrimaryCtor: PrimaryCtorHelper
   trait PrimaryCtorHelper {
     def apply(mods: Seq[Tree], paramss: Seq[Seq[Tree]]): Tree
+    def unapply(tree: Tree): Option[(Seq[Tree], Seq[Seq[Tree]])]
   }
 
   val SecondaryCtor: SecondaryCtorHelper
@@ -80,6 +83,14 @@ trait Toolbox { t =>
   val Param: ParamHelper
   trait ParamHelper {
     def apply(mods: Seq[Tree], name: String, tpe: Option[TypeTree], default: Option[Tree]): Tree
+    def unapply(tree: Tree): Option[(Seq[Tree], String, Option[TypeTree], Option[Tree])]
+
+    def copy(param: Tree)(
+      mods: Seq[Tree]       = unapply(param).get._1,
+      name: String          = unapply(param).get._2,
+      tpe: Option[TypeTree] = unapply(param).get._3,
+      default: Option[Tree] = unapply(param).get._4
+    ) = apply(mods, name, tpe, default)
   }
 
   val TypeParam: TypeParamHelper
@@ -409,82 +420,98 @@ trait Toolbox { t =>
   trait ModHelper {
     val Private: PrivateHelper
     trait PrivateHelper {
-      def apply(within: Tree): Tree
+      def apply(within: String): Tree
+      def unapply(tree: Tree): Option[String]
     }
 
     val Protected: ProtectedHelper
     trait ProtectedHelper {
-      def apply(within: Tree): Tree
+      def apply(within: String): Tree
+      def unapply(tree: Tree): Option[String]
     }
 
     val Val: ValHelper
     trait ValHelper {
       def apply(): Tree
+      def unapply(tree: Tree): Boolean
     }
 
     val Var: VarHelper
     trait VarHelper {
       def apply(): Tree
+      def unapply(tree: Tree): Boolean
     }
 
     val Implicit: ImplicitHelper
     trait ImplicitHelper {
       def apply(): Tree
+      def unapply(tree: Tree): Boolean
     }
 
     val Final: FinalHelper
     trait FinalHelper {
       def apply(): Tree
+      def unapply(tree: Tree): Boolean
     }
 
     val Sealed: SealedHelper
     trait SealedHelper {
       def apply(): Tree
+      def unapply(tree: Tree): Boolean
     }
 
     val Override: OverrideHelper
     trait OverrideHelper {
       def apply(): Tree
+      def unapply(tree: Tree): Boolean
     }
 
     val Abstract: AbstractHelper
     trait AbstractHelper {
       def apply(): Tree
+      def unapply(tree: Tree): Boolean
     }
 
     val Lazy: LazyHelper
     trait LazyHelper {
       def apply(): Tree
+      def unapply(tree: Tree): Boolean
     }
 
     val Inline: InlineHelper
     trait InlineHelper {
       def apply(): Tree
+      def unapply(tree: Tree): Boolean
     }
 
     val Type: TypeHelper
     trait TypeHelper {
       def apply(): Tree
+      def unapply(tree: Tree): Boolean
     }
 
     val Case: CaseHelper
     trait CaseHelper {
       def apply(): Tree
+      def unapply(tree: Tree): Boolean
     }
 
     val Contravariant: ContravariantHelper
     trait ContravariantHelper {
       def apply(): Tree
+      def unapply(tree: Tree): Boolean
     }
 
     val Covariant: CovariantHelper
     trait CovariantHelper {
       def apply(): Tree
+      def unapply(tree: Tree): Boolean
     }
 
     val Annot: AnnotHelper
     trait AnnotHelper {
       def apply(body: Tree): Tree
+      def unapply(tree: Tree): Option[Tree]
     }
   }
 }
