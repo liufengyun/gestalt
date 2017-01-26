@@ -4,13 +4,6 @@ import scala.collection.immutable.Seq
 import scala.{meta => m}
 import scala.compat.Platform.EOL
 
-object Flatten {
-  def unapply[T](x: Option[Seq[T]]): Option[Seq[T]] = x match {
-    case Some(xs) => Some(xs)
-    case None => Some(Nil)
-  }
-}
-
 /** Lift scala.meta trees as t.trees */
 abstract class Quote(val t: Toolbox, val toolboxName: String) {
   import Quasiquote.Hole
@@ -118,7 +111,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
 
   def liftOptSeq(treesOpt: Option[Seq[m.Tree]]): t.Tree = treesOpt match {
     case Some(Seq(quasi: Quasi)) if quasi.rank > 0 && !isTerm =>
-      select("scala.gestalt.Flatten").appliedTo(liftQuasi(quasi))
+      liftQuasi(quasi)
     case Some(trees) =>
       liftSeq(trees)
     case None =>
