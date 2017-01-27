@@ -46,8 +46,13 @@ trait Toolbox { t =>
     def unapply(tree: Tree): Option[(Seq[Tree], String, Seq[Tree], Option[Tree], Seq[Tree], Option[Tree], Seq[Tree])]
   }
 
-  val Type: TypeHelper
-  trait TypeHelper {
+  val TypeDecl: TypeDeclHelper
+  trait TypeDeclHelper {
+    def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], tbounds: Option[TypeTree]): Tree
+  }
+
+  val TypeAlias: TypeAliasHelper
+  trait TypeAliasHelper {
     def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], rhs: TypeTree): Tree
   }
 
@@ -60,7 +65,7 @@ trait Toolbox { t =>
   trait ValDefHelper {
     def apply(mods: Seq[Tree], name: String, tpe: Option[TypeTree], rhs: Option[Tree]): Tree
     def apply(mods: Seq[Tree], lhs: Tree, tpe: Option[TypeTree], rhs: Option[Tree]): Tree
-    def apply(mods: Seq[Tree], lhs: Seq[Tree], tpe: Option[TypeTree], rhs: Option[Tree]): Tree
+    def apply(mods: Seq[Tree], pats: Seq[Tree], tpe: Option[TypeTree], rhs: Option[Tree]): Tree
   }
 
   val PrimaryCtor: PrimaryCtorHelper
@@ -95,7 +100,7 @@ trait Toolbox { t =>
 
   val TypeParam: TypeParamHelper
   trait TypeParamHelper {
-    def apply(mods: Seq[Tree], name: String, tparams: Seq[TypeTree], tbounds: TypeTree, cbounds: Seq[TypeTree]): TypeTree
+    def apply(mods: Seq[Tree], name: String, tparams: Seq[TypeTree], tbounds: Option[TypeTree], cbounds: Seq[TypeTree]): TypeTree
   }
 
   val Self: SelfHelper
@@ -154,12 +159,6 @@ trait Toolbox { t =>
     def apply(tpe : Option[TypeTree], stats: Seq[Tree]): TypeTree
   }
 
-  val TypeWildcard: TypeWildcardHelper
-  trait TypeWildcardHelper {
-    def apply(): TypeTree = apply(TypeBounds(None, None))
-    def apply(bounds: Tree): TypeTree
-  }
-
   val TypeBounds: TypeBoundsHelper
   trait TypeBoundsHelper {
     def apply(lo: Option[TypeTree], hi: Option[TypeTree]): TypeTree
@@ -185,11 +184,6 @@ trait Toolbox { t =>
   trait LitHelper {
     def apply(value: Any): Tree
     def unapply(tree: Tree): Option[Any]
-  }
-
-  val Wildcard: WildcardHelper
-  trait WildcardHelper {
-    def apply(): Tree
   }
 
   val Ident: IdentHelper
@@ -243,6 +237,7 @@ trait Toolbox { t =>
   val ApplyType: ApplyTypeHelper
   trait ApplyTypeHelper {
     def apply(fun: Tree, args: Seq[TypeTree]): Tree
+    def unapply(tree: Tree): Option[(Tree, Seq[TypeTree])]
   }
 
   // a + (b, c)  =>  Infix(a, +, Tuple(b, c))
@@ -264,6 +259,7 @@ trait Toolbox { t =>
   val Assign: AssignHelper
   trait AssignHelper {
     def apply(lhs: Tree, rhs: Tree): Tree
+    def unapply(tree: Tree): Option[(Tree, Tree)]
   }
 
   val Return: ReturnHelper
@@ -314,7 +310,7 @@ trait Toolbox { t =>
   val Try: TryHelper
   trait TryHelper {
     def apply(expr: Tree, cases: Seq[Tree], finallyp: Option[Tree]): Tree
-    def apply(expr: Tree, catchp: Tree, finallyp: Option[Tree]): Tree
+    def apply(expr: Tree, handler: Tree, finallyp: Option[Tree]): Tree
   }
 
   val Function: FunctionHelper
