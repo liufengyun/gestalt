@@ -2,6 +2,8 @@
 
 portable and lightweight macros with semantic API
 
+Status: active development, not 0.1 yet.
+
 ## Test
 
 - `sbt macros/test:run`
