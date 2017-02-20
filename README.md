@@ -1,6 +1,6 @@
 # Gestalt
 
-_portable_ and _lightweight_ macros with _semantic API_
+portable and lightweight macros with semantic API
 
 ## Test
 
