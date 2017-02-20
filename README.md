@@ -1,4 +1,4 @@
-# Gestalt
+# Gestalt [![Build Status](https://travis-ci.org/liufengyun/gestalt.svg?branch=master)](https://travis-ci.org/liufengyun/gestalt)
 
 portable and lightweight macros with semantic API
 
