@@ -160,7 +160,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     case _ => scalaNil
   }
 
-  def liftValDef(mods: t.Tree, pats: Seq[m.Pat], tpe: t.Tree, rhs: t.Tree): t.Tree = {
+  def liftValDef(mods: t.Tree, pats: Seq[m.Pat], tpe: t.Tree, rhs: t.Tree, name: String): t.Tree = {
     if (pats.size == 1) {
       val left = pats(0) match {
         case quasi: Quasi =>
@@ -171,10 +171,10 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
           lift(pat)
       }
 
-      selectToolbox("ValDef").appliedTo(mods, left, tpe, scalaNone)
+      selectToolbox(name).appliedTo(mods, left, tpe, scalaNone)
     }
     else
-      selectToolbox("ValDef").appliedTo(mods, liftSeq(pats), tpe, rhs)
+      selectToolbox(name).appliedTo(mods, liftSeq(pats), tpe, rhs)
   }
 
   /** Lift self annotation in class definition */
@@ -398,25 +398,25 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
 
     case m.Decl.Val(mods, pats, tpe) =>
       require(pats.size > 0)
-      val modifiers = t.Infix(liftSeq(mods), ":+", selectToolbox("Mod.Val").appliedTo())
-      liftValDef(modifiers, pats, scalaSome.appliedTo(lift(tpe)), scalaNone)
+      val modifiers = liftSeq(mods)
+      liftValDef(modifiers, pats, scalaSome.appliedTo(lift(tpe)), scalaNone, "ValDecl")
     case m.Decl.Var(mods, pats, tpe) =>
       require(pats.size > 0)
-      val modifiers = t.Infix(liftSeq(mods), ":+", selectToolbox("Mod.Var").appliedTo())
-      liftValDef(modifiers, pats, scalaSome.appliedTo(lift(tpe)), scalaNone)
+      val modifiers = liftSeq(mods)
+      liftValDef(modifiers, pats, scalaSome.appliedTo(lift(tpe)), scalaNone, "VarDecl")
     case m.Decl.Def(mods, name, tparams, paramss, tpe) =>
-      selectToolbox("scala.meta.Decl.Def").appliedTo(liftSeq(mods), lift(name), liftSeq(tparams), liftSeqSeq(paramss), lift(tpe))
+      selectToolbox("DefDecl").appliedTo(liftSeq(mods), lift(name), liftSeq(tparams), liftSeqSeq(paramss), lift(tpe))
     case m.Decl.Type(mods, name, tparams, bounds) =>
-      selectToolbox("scala.meta.Decl.Type").appliedTo(liftSeq(mods), lift(name), liftSeq(tparams), lift(bounds))
+      selectToolbox("TypeDecl").appliedTo(liftSeq(mods), lift(name), liftSeq(tparams), lift(bounds))
 
     case m.Defn.Val(mods, pats, tpe, rhs) =>
       require(pats.size > 0)
-      val modifiers = t.Infix(liftSeq(mods), ":+", selectToolbox("Mod.Val").appliedTo())
-      liftValDef(modifiers, pats, liftOpt(tpe), lift(rhs))
+      val modifiers = liftSeq(mods)
+      liftValDef(modifiers, pats, liftOpt(tpe), lift(rhs), "ValDef")
     case m.Defn.Var(mods, pats, tpe, rhs) =>
       require(pats.size > 0)
-      val modifiers = t.Infix(liftSeq(mods), ":+",  selectToolbox("Mod.Var").appliedTo())
-      liftValDef(modifiers, pats, liftOpt(tpe), liftOpt(rhs))
+      val modifiers = liftSeq(mods)
+      liftValDef(modifiers, pats, liftOpt(tpe), liftOpt(rhs), "VarDef")
     case m.Defn.Def(mods, name, tparams, paramss, tpe, body) =>
       selectToolbox("DefDef").appliedTo(liftSeq(mods), liftName(name), liftSeq(tparams), liftSeqSeq(paramss), liftOpt(tpe), lift(body))
     // case m.Defn.Macro(mods, name, tparams, paramss, tpe, body) =>

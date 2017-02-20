@@ -1,5 +1,5 @@
 lazy val metaVersion = "1.5.0.585"
-lazy val dottyVersion = "0.1.1-SNAPSHOT"
+lazy val dottyVersion = "0.2.2-SNAPSHOT"
 
 lazy val common = Seq(
   resolvers ++= Seq(
@@ -88,7 +88,7 @@ lazy val macrosSetting = Seq(
   ),
 
   // Bridge which allows REPL and compilation via dotty
-  scalaCompilerBridgeSource := ("ch.epfl.lamp" % "dotty-bridge" % "0.1.1-20160906-75f4400-NIGHTLY" % "component").sources(),
+  scalaCompilerBridgeSource := ("ch.epfl.lamp" % "dotty-sbt-bridge" % "0.1.1-20170203-da7d723-NIGHTLY" % "component").sources(),
 
   testOptions += Tests.Argument(TestFrameworks.JUnit, "-q", "-v")
 

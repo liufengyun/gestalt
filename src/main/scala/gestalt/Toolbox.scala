@@ -5,7 +5,7 @@ import scala.collection.immutable.Seq
 trait Toolbox { t =>
   // portable trees -- minimum assumptions
   type Tree <: { def tpe: Type } // TODO: structural types performance penalty.
-  type TypeTree <: Tree          // avoid errors in mixing type and term -- implementation can have TypeTree = Tree
+  type TypeTree <: Tree          // safety by construction -- implementation can have TypeTree = Tree
   type Type
 
   // type operations
@@ -58,14 +58,38 @@ trait Toolbox { t =>
 
   val DefDef: DefDefHelper
   trait DefDefHelper {
-    def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], paramss: Seq[Seq[Tree]], tpe: Option[TypeTree], rhs: Option[Tree]): Tree
+    def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], paramss: Seq[Seq[Tree]], tpe: Option[TypeTree], rhs: Tree): Tree
+  }
+
+  val DefDecl: DefDeclHelper
+  trait DefDeclHelper {
+    def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], paramss: Seq[Seq[Tree]], tpe: TypeTree): Tree
   }
 
   val ValDef: ValDefHelper
   trait ValDefHelper {
-    def apply(mods: Seq[Tree], name: String, tpe: Option[TypeTree], rhs: Option[Tree]): Tree
-    def apply(mods: Seq[Tree], lhs: Tree, tpe: Option[TypeTree], rhs: Option[Tree]): Tree
-    def apply(mods: Seq[Tree], pats: Seq[Tree], tpe: Option[TypeTree], rhs: Option[Tree]): Tree
+    def apply(mods: Seq[Tree], name: String, tpe: Option[TypeTree], rhs: Tree): Tree
+    def apply(mods: Seq[Tree], lhs: Tree, tpe: Option[TypeTree], rhs: Tree): Tree
+    def apply(mods: Seq[Tree], pats: Seq[Tree], tpe: Option[TypeTree], rhs: Tree): Tree
+  }
+
+  val ValDecl: ValDeclHelper
+  trait ValDeclHelper {
+    def apply(mods: Seq[Tree], name: String, tpe: TypeTree): Tree
+    def apply(mods: Seq[Tree], vals: Seq[String], tpe: TypeTree): Tree
+  }
+
+  val VarDef: VarDefHelper
+  trait VarDefHelper {
+    def apply(mods: Seq[Tree], name: String, tpe: Option[TypeTree], rhs: Tree): Tree
+    def apply(mods: Seq[Tree], lhs: Tree, tpe: Option[TypeTree], rhs: Tree): Tree
+    def apply(mods: Seq[Tree], pats: Seq[Tree], tpe: Option[TypeTree], rhs: Tree): Tree
+  }
+
+  val VarDecl: VarDeclHelper
+  trait VarDeclHelper {
+    def apply(mods: Seq[Tree], name: String, tpe: TypeTree): Tree
+    def apply(mods: Seq[Tree], vars: Seq[String], tpe: TypeTree): Tree
   }
 
   val PrimaryCtor: PrimaryCtorHelper
@@ -105,7 +129,8 @@ trait Toolbox { t =>
 
   val Self: SelfHelper
   trait SelfHelper {
-    def apply(name: String, tpe: Option[TypeTree]): Tree
+    def apply(name: String, tpe: TypeTree): Tree
+    def apply(name: String): Tree
   }
 
   // types

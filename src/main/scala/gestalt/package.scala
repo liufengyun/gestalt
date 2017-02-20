@@ -33,7 +33,4 @@ package object gestalt {
     quote.expand(label, parts, argsTyped, isPattern).asInstanceOf[t.Tree]
   }
 
-
-  // implicit helpers
-  implicit def toOption(t: toolbox.Tree): Option[toolbox.Tree] = Some(t)
 }

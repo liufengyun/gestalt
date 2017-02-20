@@ -140,7 +140,7 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
 
     def unapply(tree: Tree): Option[(Seq[Tree], String, Seq[Tree], Option[Tree], Seq[Tree])] = tree match {
       case obj @ d.ModuleDef(name, templ @ c.Template(constr, parents, self: d.ValDef, body)) =>
-        val selfOpt = if (self.name == nme.WILDCARD && self.tpt == d.TypeTree()) None else Some(Self(self.name.toString, self.tpe))
+        val selfOpt = if (self.name == nme.WILDCARD || self.isEmpty) None else Some(Self(self.name.toString, self.tpt))
         Some((toMods(obj.mods), name.toString, parents, selfOpt, templ.body))
       case _ => None
     }
@@ -171,7 +171,7 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
             tparams = tps
             Some(PrimaryCtor(toMods(pctor.mods), paramss))
         }
-        val selfOpt = if (self.name == nme.WILDCARD && self.tpt == d.TypeTree()) None else Some(Self(self.name.toString, self.tpe))
+        val selfOpt = if (self.name == nme.WILDCARD && self.tpt == d.TypeTree()) None else Some(Self(self.name.toString, self.tpt))
         Some((toMods(cdef.mods), name.toString, tparams, ctor, tparams, selfOpt, templ.body))  // TODO: parents
       case _ => None
     }
@@ -219,22 +219,57 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
   }
 
   object DefDef extends DefDefHelper {
-    def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], paramss: Seq[Seq[Tree]], tpe: Option[TypeTree], rhs: Option[Tree]): Tree = {
+    def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], paramss: Seq[Seq[Tree]], tpe: Option[TypeTree], rhs: Tree): Tree = {
       val types = tparams.toList.asInstanceOf[List[d.TypeDef]]
       val params = paramss.map(_.toList).toList.asInstanceOf[List[List[d.ValDef]]]
-      d.DefDef(name.toTermName, types, params, tpe.getOrElse(d.TypeTree()), getOrEmpty(rhs)).withMods(fromMods(mods))
+      d.DefDef(name.toTermName, types, params, tpe.getOrElse(d.TypeTree()), rhs).withMods(fromMods(mods))
+    }
+  }
+
+  object DefDecl extends DefDeclHelper {
+    def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], paramss: Seq[Seq[Tree]], tpe: TypeTree): Tree = {
+      val types = tparams.toList.asInstanceOf[List[d.TypeDef]]
+      val params = paramss.map(_.toList).toList.asInstanceOf[List[List[d.ValDef]]]
+      d.DefDef(name.toTermName, types, params, tpe, d.EmptyTree).withMods(fromMods(mods))
     }
   }
 
   object ValDef extends ValDefHelper {
-    def apply(mods: Seq[Tree], name: String, tpe: Option[TypeTree], rhs: Option[Tree]): Tree =
-      d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), rhs.getOrElse(d.EmptyTree)).withMods(fromMods(mods))
+    def apply(mods: Seq[Tree], name: String, tpe: Option[TypeTree], rhs: Tree): Tree =
+      d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), rhs).withMods(fromMods(mods))
 
-    def apply(mods: Seq[Tree], lhs: Tree, tpe: Option[TypeTree], rhs: Option[Tree]): Tree =
-      d.PatDef(fromMods(mods), List(lhs), tpe.getOrElse(d.TypeTree()), rhs.getOrElse(d.EmptyTree))
+    def apply(mods: Seq[Tree], lhs: Tree, tpe: Option[TypeTree], rhs: Tree): Tree =
+      d.PatDef(fromMods(mods), List(lhs), tpe.getOrElse(d.TypeTree()), rhs)
 
-    def apply(mods: Seq[Tree], pats: Seq[Tree], tpe: Option[TypeTree], rhs: Option[Tree]): Tree =
-      d.PatDef(fromMods(mods), pats.toList, tpe.getOrElse(d.TypeTree()), rhs.getOrElse(d.EmptyTree))
+    def apply(mods: Seq[Tree], pats: Seq[Tree], tpe: Option[TypeTree], rhs: Tree): Tree =
+      d.PatDef(fromMods(mods), pats.toList, tpe.getOrElse(d.TypeTree()), rhs)
+  }
+
+  object ValDecl extends ValDeclHelper {
+    def apply(mods: Seq[Tree], name: String, tpe: TypeTree): Tree =
+      d.ValDef(name.toTermName, tpe, d.EmptyTree).withMods(fromMods(mods))
+
+    def apply(mods: Seq[Tree], vals: Seq[String], tpe: TypeTree): Tree =
+      d.PatDef(fromMods(mods), vals.map(n => d.Ident(n.toTermName)).toList, tpe, d.EmptyTree)
+  }
+
+  object VarDef extends VarDefHelper {
+    def apply(mods: Seq[Tree], name: String, tpe: Option[TypeTree], rhs: Tree): Tree =
+      d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), rhs).withMods(fromMods(mods) | Flags.Mutable)
+
+    def apply(mods: Seq[Tree], lhs: Tree, tpe: Option[TypeTree], rhs: Tree): Tree =
+      d.PatDef(fromMods(mods) | Flags.Mutable, List(lhs), tpe.getOrElse(d.TypeTree()), rhs)
+
+    def apply(mods: Seq[Tree], pats: Seq[Tree], tpe: Option[TypeTree], rhs: Tree): Tree =
+      d.PatDef(fromMods(mods) | Flags.Mutable, pats.toList, tpe.getOrElse(d.TypeTree()), rhs)
+  }
+
+  object VarDecl extends VarDeclHelper {
+    def apply(mods: Seq[Tree], name: String, tpe: TypeTree): Tree =
+      d.ValDef(name.toTermName, tpe, d.EmptyTree).withMods(fromMods(mods) | Flags.Mutable)
+
+    def apply(mods: Seq[Tree], vals: Seq[String], tpe: TypeTree): Tree =
+      d.PatDef(fromMods(mods) | Flags.Mutable, vals.map(n => d.Ident(n.toTermName)).toList, tpe, d.EmptyTree)
   }
 
   object PrimaryCtor extends PrimaryCtorHelper {
@@ -251,7 +286,7 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
 
   object SecondaryCtor extends SecondaryCtorHelper {
     def apply(mods: Seq[Tree], paramss: Seq[Seq[Tree]], rhs: Tree): Tree =
-      DefDef(mods, nme.CONSTRUCTOR.toString, Nil, paramss, Some(d.TypeTree()), Some(rhs))
+      DefDef(mods, nme.CONSTRUCTOR.toString, Nil, paramss, Some(d.TypeTree()), rhs)
   }
 
   // qual.T[A, B](x, y)(z)
@@ -293,8 +328,11 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
   }
 
   object Self extends SelfHelper {
-    def apply(name: String, tpe: Option[TypeTree]): Tree =
-      d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), d.EmptyTree)
+    def apply(name: String, tpe: TypeTree): Tree =
+      d.ValDef(name.toTermName, tpe, d.EmptyTree)
+
+    def apply(name: String): Tree =
+      d.ValDef(name.toTermName, d.TypeTree(), d.EmptyTree)
 
     def unapply(tree: Tree): Option[(String, Option[TypeTree])] = tree match {
       case c.ValDef(name, tp, _)  =>
@@ -322,7 +360,7 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
   }
 
   object TypeApplyInfix extends TypeApplyInfixHelper {
-    def apply(lhs: TypeTree, op: String, rhs: TypeTree): TypeTree = d.InfixOp(lhs, op.toTypeName, rhs)
+    def apply(lhs: TypeTree, op: String, rhs: TypeTree): TypeTree = d.InfixOp(lhs, d.Ident(op.toTypeName), rhs)
   }
 
   object TypeFunction extends TypeFunctionHelper {
@@ -354,7 +392,7 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
   }
 
   object TypeRepeated extends TypeRepeatedHelper {
-    def apply(tpe: TypeTree): TypeTree = d.PostfixOp(tpe, nme.raw.STAR)
+    def apply(tpe: TypeTree): TypeTree = d.PostfixOp(tpe, d.Ident(nme.raw.STAR))
   }
 
   object TypeByName extends TypeByNameHelper {
@@ -441,11 +479,11 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
   }
 
   object Prefix extends PrefixHelper {
-    def apply(op: String, od: Tree): Tree = d.PrefixOp(op.toTermName, od)
+    def apply(op: String, od: Tree): Tree = d.PrefixOp(d.Ident(op.toTermName), od)
   }
 
   object Postfix extends PostfixHelper {
-    def apply(od: Tree, op: String): Tree = d.PostfixOp(od, op.toTermName)
+    def apply(od: Tree, op: String): Tree = d.PostfixOp(od, d.Ident(op.toTermName))
   }
 
   object Assign extends AssignHelper {
@@ -735,7 +773,7 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
       def unapply(tree: Tree): Boolean = tree.isInstanceOf[CovariantTree]
     }
 
-    object Annot extends AnnotHelper{
+    object Annot extends AnnotHelper {
       // Dummy trees to retrofit Dotty AST
       private case class AnnotTree(body: Tree) extends d.Tree
 

@@ -1,7 +1,9 @@
-import scala.collection.immutable.Seq
-import Decorators._
+package scala.gestalt
 
-class QuasiquoteSuite extends TestSuite {
+import scala.collection.immutable.Seq
+import org.scalatest.FunSuite
+
+class QuasiquoteSuite extends FunSuite {
   /*
   test("param\"${name(index)} : $tp\"") {
     val name = Term.Name("name")
