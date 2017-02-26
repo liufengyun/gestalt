@@ -41,6 +41,7 @@ class MacrosTest extends TestSuite {
   }
 */
   test("plus") {
+    assert(plusObject(3, 5) == 8)
     val p = new plus
     assert(p(3, 5) == 8)
   }

@@ -137,6 +137,13 @@ class cache extends StaticAnnotation {
   }
 }*/
 
+object plusObject {
+  inline def apply(a: Any, b: Any): Any = meta {
+    q"$a + $b"
+  }
+}
+
+
 class plus {
   inline def apply(a: Any, b: Any): Any = meta {
     q"$a + $b"
