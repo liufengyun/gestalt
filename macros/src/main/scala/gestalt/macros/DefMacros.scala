@@ -15,21 +15,21 @@ class plus {
   }
 }
 
-class plus2(a: Any) {
-  inline def apply(b: Any): Any = meta {
-    q"a + $b"
+class plus2(val a: Int) {
+  inline def apply(b: Int): Any = meta {
+    q"$prefix.a + $b"
   }
 }
 
-/*object ImplicitsForNumbers {
-  implicit class PlusFor(a: Any) {
-    inline def plus(b: Any): Any = meta {
-//      val q"$_($prefix)" = q"this.a"
-//      println(s"!!!$prefix")
-      q"a + $b"
+/*
+object ImplicitsForNumbers {
+  implicit class PlusFor(a: Int) {
+    inline def plus(b: Int): Any = meta {
+      q"$prefix.a + $b"
     }
   }
-}*/
+}
+*/
 
 /*
 object scope {
