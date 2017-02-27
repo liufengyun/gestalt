@@ -39,12 +39,15 @@ class MacrosTest extends TestSuite {
 
     assert(visit("hello")(new Authorized(5), new Token(10)) == 15)
   }
-
+*/
+  test("plusObject") {
+    assert(plusObject(3, 5) == 8)
+  }
   test("plus") {
     val p = new plus
     assert(p(3, 5) == 8)
   }
-
+/*
   test("cache") {
     import scala.util.Random
 

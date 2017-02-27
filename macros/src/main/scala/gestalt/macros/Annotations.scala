@@ -135,7 +135,14 @@ class cache extends StaticAnnotation {
         abort("@cache can only annotate method definitions")
     }
   }
+}*/
+
+object plusObject {
+  inline def apply(a: Any, b: Any): Any = meta {
+    q"$a + $b"
+  }
 }
+
 
 class plus {
   inline def apply(a: Any, b: Any): Any = meta {
@@ -143,6 +150,7 @@ class plus {
   }
 }
 
+/*
 object scope {
   inline def is[T](a: Any): Any = meta {
     q"$a.isInstanceOf[$T]"

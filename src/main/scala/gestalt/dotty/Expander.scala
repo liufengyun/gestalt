@@ -74,7 +74,7 @@ object Expander {
       val impl = moduleClass.getDeclaredMethods().find(_.getName == method.toString).get
       impl.setAccessible(true)
 
-      val trees  = obj :: targs ++ argss.flatten
+      val trees  = new DottyToolbox() :: obj :: targs ++ argss.flatten
       impl.invoke(module, trees: _*).asInstanceOf[untpd.Tree]
     case _ =>
       tree
