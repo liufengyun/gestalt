@@ -47,6 +47,16 @@ class MacrosTest extends TestSuite {
     val p = new plus
     assert(p(3, 5) == 8)
   }
+  test("plus2") {
+    val p = new plus2(3)
+    assert(p(5) == 8)
+  }
+
+
+/*  test("implicit plus") {
+    import ImplicitsForNumbers._
+    assert(3.plus(5) == 8)
+  }*/
 /*
   test("cache") {
     import scala.util.Random
