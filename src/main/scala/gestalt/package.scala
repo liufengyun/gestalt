@@ -9,6 +9,12 @@ package object gestalt {
    */
   def meta(body: toolbox.Tree): Nothing = ???
 
+  /**
+    * Placeholder for prefix to show it before macro expansion
+    * @see [[dotty.tools.dotc.macros.Transform]]
+    */
+  def prefix: toolbox.Tree = throw new IllegalAccessError("prefix can only be accessed from within a meta block")
+
   /** Placeholder of quasiquotes for type checking
    */
   implicit class QuasiquoteHelper(val sc: StringContext) {
