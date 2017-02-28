@@ -11,15 +11,17 @@ class DefMacroTest extends TestSuite {
     assert(p(5) == 8)
   }
 
-  test("plus2 returned value") {
+  test("plus2 on method call") {
     case class Holder(item: plus2)
     val holder = Holder(new plus2(3))
     assert(holder.item.apply(5) == 8)
-    object Generator{
-      def generate = new plus2(21)
+
+    object Generator {
+      def fromSeed(seed: Int) = new plus2(seed + 1)
+      def generate = new plus2(42)
     }
-    assert(Generator.generate.apply(3) == 24)
-    assert(Generator.generate.apply(3) == 24)
+    assert(Generator.fromSeed(20).apply(3) == 24)
+    assert(Generator.generate.apply(0) == 42)
   }
 
   test("plus2 on expression") {
