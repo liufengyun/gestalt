@@ -17,7 +17,7 @@ class plus {
 
 class plus2(val a: Int) {
   inline def apply(b: Int): Any = meta {
-    q"$prefix.a + $b"
+    q"$this.a + $b"
   }
 }
 
@@ -25,7 +25,7 @@ class plus2(val a: Int) {
 object ImplicitsForNumbers {
   implicit class PlusFor(a: Int) {
     inline def plus(b: Int): Any = meta {
-      q"$prefix.a + $b"
+      q"this.a + $b"
     }
   }
 }
