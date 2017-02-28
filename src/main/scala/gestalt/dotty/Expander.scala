@@ -26,6 +26,22 @@ object Expander {
     }
   }
 
+  private def javaClassName(classSymbol: Symbol)(implicit ctx: Context): String = {
+    val owner = classSymbol.owner
+    if (classSymbol == NoSymbol ||
+      owner == NoSymbol ||
+      owner.isEffectiveRoot) {
+      classSymbol.showName
+    } else {
+      val enclosingPackage = classSymbol.enclosingPackageClass
+      if (enclosingPackage.isEffectiveRoot) {
+        classSymbol.flatName.toString
+      } else {
+        enclosingPackage.showFullName + "." + classSymbol.flatName
+      }
+    }
+  }
+
   def expandQuasiquote(tree: untpd.Tree, isTerm: Boolean)(implicit ctx: Context): untpd.Tree = {
     val (tag, parts, args) = tree match {
       case Apply(Select(Apply(Ident(nme.StringContext), parts), name), args) =>
@@ -67,7 +83,8 @@ object Expander {
   /** Expand def macros */
   def expandDefMacro(tree: tpd.Tree)(implicit ctx: Context): untpd.Tree = tree match {
     case ExtractApply(Select(obj, method), targs, argss) =>
-      val className = obj.symbol.info.classSymbol.fullName + "$inline$"
+      val objType = obj.symbol.info.resultType
+      val className = javaClassName(objType.classSymbol) + "$inline$"
       // reflect macros definition
       val moduleClass = ctx.classloader.loadClass(className)
       val module = moduleClass.getField("MODULE$").get(null)
