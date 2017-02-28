@@ -39,6 +39,17 @@ class DefMacroTest extends TestSuite {
     import ImplicitsForNumbers._
     assert(3.plus(5) == 8)
   }
+
+  test("implicit plus from a package") {
+    import packaged.macros.ImplicitsForNumbers._
+    assert(3.plus(5) == 8)
+  }
+
+  test("implicit plus from a package object") {
+    import packaged.macros._
+    assert(3.plus(5) == 8)
+  }
+
   /*
     test("def with type parameters") {
       assert(scope.is[String]("hello"))
