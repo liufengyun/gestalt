@@ -5,7 +5,8 @@ object Driver {
 
   def main(args: Array[String]): Unit = {
     // setup tests
-    new MacrosTest
+    new AnnotationMacroTest
+    new DefMacroTest
 
     var success = false
     var total = 0
