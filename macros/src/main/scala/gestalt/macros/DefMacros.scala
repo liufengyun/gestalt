@@ -21,7 +21,6 @@ class plus2(val a: Int) {
   }
 }
 
-/*
 object ImplicitsForNumbers {
   implicit class PlusFor(a: Int) {
     inline def plus(b: Int): Any = meta {
@@ -29,7 +28,6 @@ object ImplicitsForNumbers {
     }
   }
 }
-*/
 
 /*
 object scope {
