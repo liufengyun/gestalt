@@ -75,16 +75,16 @@ object Expander {
 
   /** Expand def macros */
   def expandDefMacro(tree: tpd.Tree)(implicit ctx: Context): untpd.Tree = tree match {
-    case ExtractApply(Select(obj, method), targs, argss) =>
-      val objType = obj.symbol.info.resultType
-      val className = javaClassName(objType.classSymbol) + "$inline$"
+    case ExtractApply(Select(prefix, method), targs, argss) =>
+      val prefixType = prefix.symbol.info.resultType
+      val className = javaClassName(prefixType.classSymbol) + "$inline$"
       // reflect macros definition
       val moduleClass = ctx.classloader.loadClass(className)
       val module = moduleClass.getField("MODULE$").get(null)
       val impl = moduleClass.getDeclaredMethods().find(_.getName == method.toString).get
       impl.setAccessible(true)
 
-      val trees  = new DottyToolbox() :: obj :: targs ++ argss.flatten
+      val trees  = new DottyToolbox() :: prefix :: targs ++ argss.flatten
       impl.invoke(module, trees: _*).asInstanceOf[untpd.Tree]
     case _ =>
       tree
