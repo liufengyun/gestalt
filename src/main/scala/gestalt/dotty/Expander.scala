@@ -27,18 +27,11 @@ object Expander {
   }
 
   private def javaClassName(classSymbol: Symbol)(implicit ctx: Context): String = {
-    val owner = classSymbol.owner
-    if (classSymbol == NoSymbol ||
-      owner == NoSymbol ||
-      owner.isEffectiveRoot) {
-      classSymbol.showName
+    val enclosingPackage = classSymbol.enclosingPackageClass
+    if (enclosingPackage.isEffectiveRoot) {
+      classSymbol.flatName.toString
     } else {
-      val enclosingPackage = classSymbol.enclosingPackageClass
-      if (enclosingPackage.isEffectiveRoot) {
-        classSymbol.flatName.toString
-      } else {
-        enclosingPackage.showFullName + "." + classSymbol.flatName
-      }
+      enclosingPackage.showFullName + "." + classSymbol.flatName
     }
   }
 
