@@ -52,10 +52,10 @@ class DefMacroTest extends TestSuite {
     assert(new InnerObjectMacro.Inner().plus(5, 3) == 8)
   }
 
-  /*  test("plus2 on option get") {
-      val option = Some(new plus2(3))
-      assert(option.get.apply(5) == 8)
-    }*/
+  test("plus2 on option get") {
+    val option = Some(new plus2(3))
+    assert(option.get.apply(5) == 8)
+  }
 
   test("implicit plus") {
     import ImplicitsForNumbers._

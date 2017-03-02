@@ -75,9 +75,9 @@ object Expander {
 
   /** Expand def macros */
   def expandDefMacro(tree: tpd.Tree)(implicit ctx: Context): untpd.Tree = tree match {
-    case ExtractApply(Select(prefix, method), targs, argss) =>
-      val prefixType = prefix.symbol.info.resultType
-      val className = javaClassName(prefixType.classSymbol) + "$inline$"
+    case ExtractApply(methodSelect @ Select(prefix, method), targs, argss) =>
+      val classSymbol = methodSelect.symbol.owner
+      val className = javaClassName(classSymbol) + "$inline$"
       // reflect macros definition
       val moduleClass = ctx.classloader.loadClass(className)
       val module = moduleClass.getField("MODULE$").get(null)
