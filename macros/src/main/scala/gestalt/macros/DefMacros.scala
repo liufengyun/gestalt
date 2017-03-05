@@ -35,6 +35,15 @@ object ImplicitsForNumbers {
   }
 }
 
+object ImplicitBigInt {
+  implicit inline def string2BigInt(s: String): BigInt = meta {
+    val q"${str: String}" = s
+    val bigInt = BigInt(str)
+    val bytes = bigInt.toByteArray
+    q"BigInt(3)"
+  }
+}
+
 object scope {
   inline def is[T](a: Any): Boolean = meta {
     q"$a.isInstanceOf[$T]"

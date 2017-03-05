@@ -81,6 +81,11 @@ class DefMacroTest extends TestSuite {
     assert(!scope.both[String, List[Int]]("hello"))
   }
 
+  test("implict big int"){
+    import ImplicitBigInt._
+    assert("3".modPow(exp = 2, 4) == BigInt(1))
+  }
+
   test("constant quasiqoutes"){
     assert(trees.five() == 5)
     assert(trees.some3() == Some(3))
