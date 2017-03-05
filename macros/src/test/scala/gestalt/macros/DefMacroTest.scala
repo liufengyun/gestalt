@@ -30,17 +30,17 @@ class DefMacroTest extends TestSuite {
     assert(new plus2(three * 1)(5) == 8)
   }
 
-/*  test("plus from class inside class") {
+  test("plus from class inside class") {
     import packaged.macros.InnerClassMacro
     val outer = new InnerClassMacro()
     assert(outer.createInner.plus(5, 3) == 8)
-  }*/
+  }
 
-/*  test("plus from object inside class") {
+  test("plus from object inside class") {
     import packaged.macros.InnerClassMacro
     val outer = new InnerClassMacro()
     assert(outer.InnerObject.plus(5, 3) == 8)
-  }*/
+  }
 
   test("plus from object inside object") {
     import packaged.macros.InnerObjectMacro

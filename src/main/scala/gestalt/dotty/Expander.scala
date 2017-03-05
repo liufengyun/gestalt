@@ -56,7 +56,6 @@ object Expander {
         val className = tpdClass.symbol.fullName + "$inline$"
         // reflect macros definition
         val moduleClass = ctx.classloader.loadClass(className)
-        val module = moduleClass.getField("MODULE$").get(null)
         val impl = moduleClass.getDeclaredMethods().find(_.getName == "apply").get
         impl.setAccessible(true)
 
@@ -64,7 +63,7 @@ object Expander {
           val mods1 = mdef.mods.withAnnotations(mdef.mods.annotations.filter(_ ne ann))
           mdef.withMods(mods1)
         }
-        val result = impl.invoke(module, new DottyToolbox(), ann, expandee).asInstanceOf[untpd.Tree]
+        val result = impl.invoke(null, new DottyToolbox(), ann, expandee).asInstanceOf[untpd.Tree]
         Some(result)
       case _ =>
         None
@@ -80,12 +79,11 @@ object Expander {
       val className = javaClassName(classSymbol) + "$inline$"
       // reflect macros definition
       val moduleClass = ctx.classloader.loadClass(className)
-      val module = moduleClass.getField("MODULE$").get(null)
       val impl = moduleClass.getDeclaredMethods().find(_.getName == method.toString).get
       impl.setAccessible(true)
 
       val trees  = new DottyToolbox() :: prefix :: targs ++ argss.flatten
-      impl.invoke(module, trees: _*).asInstanceOf[untpd.Tree]
+      impl.invoke(null, trees: _*).asInstanceOf[untpd.Tree]
     case _ =>
       tree
   }
