@@ -72,9 +72,9 @@ class DefMacroTest extends TestSuite {
     assert(3.plus(5) == 8)
   }
 
-  /*
-    test("def with type parameters") {
-      assert(scope.is[String]("hello"))
-      assert(!scope.both[String, List[Int]]("hello"))
-    } */
+
+  test("def with type parameters") {
+    assert(scope.is[String]("hello"))
+    assert(!scope.both[String, List[Int]]("hello"))
+  }
 }
