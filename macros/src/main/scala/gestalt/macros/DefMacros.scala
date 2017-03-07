@@ -40,7 +40,7 @@ object ImplicitBigInt {
     val q"${str: String}" = s
     val bigInt = BigInt(str)
     val bytes = bigInt.toByteArray
-    q"BigInt(3)"
+    q"BigInt($bytes)"
   }
 }
 
