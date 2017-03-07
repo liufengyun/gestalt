@@ -195,7 +195,8 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     case quasi: Quasi  =>
       liftQuasi(quasi)
 
-    case m.Lit(value) => t.Lit(value)
+    case m.Lit(value) =>
+      selectToolbox("Lit").appliedTo(t.Lit(value))
 
     // case m.Name.Anonymous() =>
     // case m.Name.Indeterminate(name) =>
