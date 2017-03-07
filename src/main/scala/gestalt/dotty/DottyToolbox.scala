@@ -12,10 +12,12 @@ import Contexts._
 import Decorators._
 import Constants._
 import d.modsDeco
+import util.Positions
+import Positions.Position
 
 import scala.collection.mutable.ListBuffer
 
-class DottyToolbox(implicit ctx: Context) extends Toolbox {
+class DottyToolbox(enclosingPosition: Position = Positions.NoPosition)(implicit ctx: Context) extends Toolbox {
   type Tree = d.Tree
   type TypeTree = d.Tree
   type Type = Types.Type
@@ -410,7 +412,7 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
 
   // terms
   object Lit extends LitHelper {
-    def apply(value: Any): Tree = d.Literal(Constant(value))
+    def apply(value: Any): Tree = d.Literal(Constant(value)).withPos(enclosingPosition)
     def unapply(tree: Tree): Option[Any] = tree match {
       case c.Literal(Constant(v)) => Some(v)
       case _ => None
@@ -418,7 +420,7 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
   }
 
   object Ident extends IdentHelper {
-    def apply(name: String): Tree = d.Ident(name.toTermName)
+    def apply(name: String): Tree = d.Ident(name.toTermName).withPos(enclosingPosition)
   }
 
   object Select extends SelectHelper {
