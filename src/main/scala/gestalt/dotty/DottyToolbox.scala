@@ -17,7 +17,7 @@ import Positions.Position
 
 import scala.collection.mutable.ListBuffer
 
-class DottyToolbox(enclosingPosition: Position = Positions.NoPosition)(implicit ctx: Context) extends Toolbox {
+class DottyToolbox(enclosingPosition: Position)(implicit ctx: Context) extends Toolbox {
   type Tree = d.Tree
   type TypeTree = d.Tree
   type Type = Types.Type
