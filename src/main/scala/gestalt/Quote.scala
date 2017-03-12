@@ -11,6 +11,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
   type Quasi = m.internal.ast.Quasi
 
   // fields
+  // args: List[t.Tree[Any]]
   def args: List[t.Tree]
   def isTerm: Boolean
 
@@ -51,8 +52,10 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     t.Select(qual, parts.last)
   }
 
-  // lifts: m.Tree => t.Tree[t.Tree]
-
+  /** {{{
+    * AnyTree = t.Tree | t.TypeTree
+    * (trees: Seq[m.Tree[A]]) => (t.Tree[Seq[String]] | t.Tree[Seq[AnyTree[?]]])
+    * }}}*/
   def liftSeq(trees: Seq[m.Tree]): t.Tree =  {
     def loop(trees: List[m.Tree], acc: Option[t.Tree], prefix: List[m.Tree]): t.Tree = trees match {
       case (quasi: Quasi) +: rest if quasi.rank == 1 =>
@@ -84,6 +87,9 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     loop (trees.toList, None, Nil)
   }
 
+  /** {{{
+    * (treess: Seq[Seq[m.Tree[A]]]) => t.Tree[Seq[Seq[t.Tree[A]]]]
+    * }}}*/
   def liftSeqSeq(treess: Seq[Seq[m.Tree]]): t.Tree = {
     val tripleDotQuasis = treess.flatten.collect{ case quasi: Quasi if quasi.rank == 2 => quasi }
     if (tripleDotQuasis.length == 0) {
@@ -100,6 +106,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     }
   }
 
+  /** (trees: Option[m.Tree[A]]) => t.Tree[Option[t.Tree[A]]] */
   def liftOpt(treeOpt: Option[m.Tree]): t.Tree = treeOpt match {
     case Some(quasi: Quasi) =>
       liftQuasi(quasi, optional = true)
@@ -109,6 +116,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
       scalaNone
   }
 
+  /**{{{(treesOpt: Option[Seq[m.Tree[A]]]) => t.Tree[Seq[t.Tree[A]}}} */
   def liftOptSeq(treesOpt: Option[Seq[m.Tree]]): t.Tree = treesOpt match {
     case Some(Seq(quasi: Quasi)) if quasi.rank > 0 && !isTerm =>
       liftQuasi(quasi)
@@ -118,6 +126,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
       scalaNil
   }
 
+  /** {{{(tree: Quasi, Int, Boolean) => ( t.Tree[Any]| t.Tree[t.Tree[?]])}}} */
   def liftQuasi(quasi: Quasi, expectedRank: Int = 0, optional: Boolean = false): t.Tree = {
     if (quasi.rank > 0) return liftQuasi(quasi.tree.asInstanceOf[Quasi], quasi.rank, optional)
 
@@ -131,7 +140,8 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     }
   }
 
-  /** Lift initcall : qual.T[A, B](x, y)(z) */
+  /** Lift initcall : {{{qual.T[A, B](x, y)(z)}}}
+    * {{{(tree: m.Tree[A]) => t.Tree[t.Tree[A]]}}} */
   def liftInitCall(tree: m.Tree): t.Tree = {
     def extractFun(tree: m.Tree): (t.Tree, t.Tree, t.Tree) = tree match {
       case m.Type.Apply(m.Ctor.Ref.Select(qual, m.Ctor.Ref.Name(name)), targs) =>
@@ -155,13 +165,26 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     }
   }
 
+  /** {{{(trees: Seq[t.Tree[t.Tree[A]]]) => t.Tree[Seq[t.Tree[A]]]}}} */
   def liftSeqTrees(trees: Seq[t.Tree]): t.Tree = trees match {
     case head :: rest => t.Infix(head, "::", liftSeqTrees(rest))
     case _ => scalaNil
   }
 
+  /**
+    * {{{
+    * (mods: t.Tree[Seq[t.Tree[A]]],
+    *  pats: Seq[m.Pat],
+    *  tpe: t.Tree[Option[t.TypeTree[B]]],
+    *  rhs: t.Tree[Option[t.Tree[C]]],
+    *  name: String) => t.Tree[t.Tree[?]]
+    * }}}
+    *
+    * @param name "ValDecl", "VarDecl", "ValDef" or "VarDef"
+    * */
   def liftValDef(mods: t.Tree, pats: Seq[m.Pat], tpe: t.Tree, rhs: t.Tree, name: String): t.Tree = {
     if (pats.size == 1) {
+      //left: t.Tree[t.Tree[?]] | t.Tree[String]
       val left = pats(0) match {
         case quasi: Quasi =>
           liftQuasi(quasi)
@@ -177,20 +200,28 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
       selectToolbox(name).appliedTo(mods, liftSeq(pats), tpe, rhs)
   }
 
-  /** Lift self annotation in class definition */
+  /** Lift self annotation in class definition
+    * {{{(tree: m.Tree[A]) => t.Tree[Option[t.Tree[A]]]}}} */
   def liftSelf(tree: m.Tree): t.Tree = tree match {
     case m.Term.Param(_, m.Name.Anonymous(), _, _) =>
       scalaNone
-    case m.Term.Param(_, m.Term.Name(name), tpOpt, _) =>
-      scalaSome appliedTo selectToolbox("Self").appliedTo(t.Lit(name), liftOpt(tpOpt))
+    case m.Term.Param(_, m.Term.Name(name), Some(tp), _) =>
+      scalaSome appliedTo selectToolbox("Self").appliedTo(t.Lit(name), lift(tp))
+    case m.Term.Param(_, m.Term.Name(name), _, _) =>
+      scalaSome appliedTo selectToolbox("Self").appliedTo(t.Lit(name))
   }
 
-  // lift name to either Lit or Quasi
+  /** lift name to either Lit or Quasi
+    * {{{(name: m.Name) => t.Tree[String]}} */
   def liftName(name: m.Name): t.Tree = name match {
     case quasi: Quasi => liftQuasi(quasi)
     case _ => t.Lit(name.value)
   }
 
+  /** {{{
+    * AnyTree = t.Tree | t.TypeTree
+    * (tree: m.Tree[A]) => t.Tree[AnyTree[A]]
+    * }}} */
   def lift(tree: m.Tree): t.Tree = tree match {
     case quasi: Quasi  =>
       liftQuasi(quasi)
@@ -263,7 +294,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     case m.Term.Block(stats) =>
       selectToolbox("Block").appliedTo(liftSeq(stats))
     case m.Term.If(cond, thenp, elsep) =>
-      selectToolbox("If").appliedTo(lift(cond), lift(thenp), lift(elsep))
+      selectToolbox("If").appliedTo(lift(cond), lift(thenp), scalaSome.appliedTo(lift(elsep)))
     case m.Term.Match(expr, cases) =>
       selectToolbox("Match").appliedTo(lift(expr), liftSeq(cases))
     case m.Term.TryWithCases(expr, catchp, finallyp) =>
@@ -285,11 +316,13 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     case m.Term.New(m.Template(Nil, Seq(mctor), m.Term.Param(Nil, m.Name.Anonymous(), None, None), None)) =>
       selectToolbox("New").appliedTo(liftInitCall(mctor))
     case m.Term.New(m.Template(_, parents, self, stats)) =>
+      // parentCalls: t.Tree[Seq[t.Tree[B]]]
       val parentCalls = liftSeqTrees(parents.map(liftInitCall))
+      // anonym: t.Tree[t.Tree[C]]
       val anonym = selectToolbox("AnonymClass").appliedTo(parentCalls, liftSelf(self), liftOptSeq(stats))
       selectToolbox("New").appliedTo(anonym)
     case m.Term.Placeholder() =>
-      selectToolbox("Wildcard").appliedTo()
+      selectToolbox("Wildcard").appliedTo() // FIXME Wildcard is not defined in toolbox
     case m.Term.Eta(expr) =>
       selectToolbox("Postfix").appliedTo(lift(expr), t.Lit("_"))
     case m.Term.Arg.Named(m.Term.Name(name), expr) =>
@@ -312,7 +345,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     case m.Type.ApplyInfix(lhs, m.Type.Name(op), rhs) =>
       selectToolbox("ApplyInfix").appliedTo(lift(lhs), t.Lit(op), lift(rhs))
     case m.Type.Function(params, res) =>
-      selectToolbox("Function").appliedTo(liftSeq(params), lift(res))
+      selectToolbox("TypeFunction").appliedTo(liftSeq(params), lift(res))
     case m.Type.Tuple(args) =>
       selectToolbox("TypeTuple").appliedTo(liftSeq(args))
     // case m.Type.With(lhs, rhs) =>
@@ -326,7 +359,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     case m.Type.Annotate(tpe, annots) =>
       selectToolbox("TypeAnnotated").appliedTo(lift(tpe), liftSeq(annots))
     case m.Type.Placeholder(bounds) =>
-      selectToolbox("TypeWildcard").appliedTo(lift(bounds))
+      selectToolbox("TypeWildcard").appliedTo(lift(bounds)) // FIXME TypeWildcard is not defined in toolbox
     case m.Type.Bounds(lo, hi) =>
       selectToolbox("TypeBounds").appliedTo(liftOpt(lo), liftOpt(hi))
     case m.Type.Arg.ByName(tpe) =>
@@ -341,7 +374,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
       }
 
       selectToolbox("TypeParam").appliedTo(
-        liftSeq(mods), t.Lit(nameStr), liftSeq(tparams), lift(tbounds), scalaNil, liftSeq(cbounds)
+        liftSeq(mods), t.Lit(nameStr), liftSeq(tparams), lift(tbounds), liftSeq(cbounds)
       )
 
     // patterns
@@ -350,9 +383,9 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     case m.Pat.Var.Type(m.Type.Name(name)) =>
       selectToolbox("TypeIdent").appliedTo(t.Lit(name))
     case m.Pat.Wildcard() =>
-      selectToolbox("Wildcard").appliedTo()
-    case m.Pat.Bind(lhs, rhs) =>
-      selectToolbox("Bind").appliedTo(lift(lhs), lift(rhs))
+      selectToolbox("Wildcard").appliedTo() // FIXME Wildcard is not defined in toolbox
+    case m.Pat.Bind(m.Pat.Var.Term(name), expr) =>
+      selectToolbox("Bind").appliedTo(t.Lit(name), lift(expr))
     case m.Pat.Alternative(lhs, rhs) =>
       selectToolbox("Alternative").appliedTo(lift(lhs), lift(rhs))
     case m.Pat.Tuple(args) =>
@@ -374,12 +407,12 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
       selectToolbox("Ascribe").appliedTo(lift(lhs), lift(rhs))
     // case m.Pat.Arg.SeqWildcard() =>
     case m.Pat.Type.Wildcard() =>
-      selectToolbox("TypeWildcard").appliedTo()
+      selectToolbox("TypeWildcard").appliedTo() // FIXME TypeWildcard is not defined in toolbox
     // case m.Pat.Type.Project(qual, name) =>
     case m.Pat.Type.Apply(tpe, args) =>
       selectToolbox("TypeApply").appliedTo(lift(tpe), liftSeq(args))
     case m.Pat.Type.ApplyInfix(lhs, op, rhs) =>
-      selectToolbox("TypeApplyInfix").appliedTo(lift(lhs), lift(op), lift(rhs))
+      selectToolbox("TypeApplyInfix").appliedTo(lift(lhs), liftName(op), lift(rhs))
     case m.Pat.Type.Function(params, res) =>
       selectToolbox("TypeFunction").appliedTo(liftSeq(params), lift(res))
     case m.Pat.Type.Tuple(args) =>
@@ -395,7 +428,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     case m.Pat.Type.Annotate(tpe, annots) =>
       selectToolbox("TypeAnnotated").appliedTo(lift(tpe), liftSeq(annots))
     case m.Pat.Type.Placeholder(bounds) =>
-      selectToolbox("TypeWildcard").appliedTo(lift(bounds))
+      selectToolbox("TypeWildcard").appliedTo(lift(bounds)) // FIXME TypeWildcard is not defined in toolbox
 
     case m.Decl.Val(mods, pats, tpe) =>
       require(pats.size > 0)
@@ -406,9 +439,9 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
       val modifiers = liftSeq(mods)
       liftValDef(modifiers, pats, scalaSome.appliedTo(lift(tpe)), scalaNone, "VarDecl")
     case m.Decl.Def(mods, name, tparams, paramss, tpe) =>
-      selectToolbox("DefDecl").appliedTo(liftSeq(mods), lift(name), liftSeq(tparams), liftSeqSeq(paramss), lift(tpe))
+      selectToolbox("DefDecl").appliedTo(liftSeq(mods), liftName(name), liftSeq(tparams), liftSeqSeq(paramss), lift(tpe))
     case m.Decl.Type(mods, name, tparams, bounds) =>
-      selectToolbox("TypeDecl").appliedTo(liftSeq(mods), lift(name), liftSeq(tparams), lift(bounds))
+      selectToolbox("TypeDecl").appliedTo(liftSeq(mods), liftName(name), liftSeq(tparams), scalaSome.appliedTo(lift(bounds)))
 
     case m.Defn.Val(mods, pats, tpe, rhs) =>
       require(pats.size > 0)
@@ -422,7 +455,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
       selectToolbox("DefDef").appliedTo(liftSeq(mods), liftName(name), liftSeq(tparams), liftSeqSeq(paramss), liftOpt(tpe), lift(body))
     // case m.Defn.Macro(mods, name, tparams, paramss, tpe, body) =>
     case m.Defn.Type(mods, name, tparams, body) =>
-      selectToolbox("Type").appliedTo(liftSeq(mods), liftName(name), liftSeq(tparams), lift(body))
+      selectToolbox("TypeAlias").appliedTo(liftSeq(mods), liftName(name), liftSeq(tparams), lift(body))
     case m.Defn.Class(mods, name, tparams, ctor, m.Template(_, parents, self, stats)) =>
       selectToolbox("Class").appliedTo(
         liftSeq(mods),
@@ -469,9 +502,9 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     case m.Mod.Annot(body) =>
       selectToolbox("Mod.Annot").appliedTo(lift(body))
     case m.Mod.Private(within) =>
-      selectToolbox("Mod.Private").appliedTo(lift(within))
+      selectToolbox("Mod.Private").appliedTo(lift(within)) // FIXME expected:  Mod.Private.apply(within: String) got: Mod.Private.apply(within: Tree)
     case m.Mod.Protected(within) =>
-      selectToolbox("Mod.Protected").appliedTo(lift(within))
+      selectToolbox("Mod.Protected").appliedTo(lift(within)) // FIXME expected:  Mod.Protected.apply(within: String) got: Mod.Private.apply(within: Tree)
     case m.Mod.Implicit() =>
       selectToolbox("Mod.Implicit").appliedTo()
     case m.Mod.Final() =>
