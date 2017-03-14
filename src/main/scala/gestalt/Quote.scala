@@ -184,7 +184,8 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     * */
   def liftValDef(mods: t.Tree, pats: Seq[m.Pat], tpe: t.Tree, rhs: t.Tree, name: String): t.Tree = {
     if (pats.size == 1) {
-      //left: t.Tree[t.Tree[?]] | t.Tree[String]
+      // AnyTree = t.Tree | t.TypeTree
+      //left: t.Tree[AnyTree[?]] | t.Tree[String]
       val left = pats(0) match {
         case quasi: Quasi =>
           liftQuasi(quasi)
@@ -194,9 +195,17 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
           lift(pat)
       }
 
+      // FIXME does not match to any of ${name}.apply signatures
+      // For *Decl does not have a last argument,
+      //  tpe: expected: TypeTree, actual: Option[TypeTree],
+      // For *Def argument rhs: expected: Tree, actual: Option[Nothing]
       selectToolbox(name).appliedTo(mods, left, tpe, scalaNone)
     }
     else
+      // FIXME does not match to any of ${name}.apply signatures
+      // For *Decl does not have a last argument,
+      //  tpe: expected: TypeTree, actual: Option[TypeTree],
+      // For *Def argument rhs: expected: Tree, actual: Option[Tree]
       selectToolbox(name).appliedTo(mods, liftSeq(pats), tpe, rhs)
   }
 
