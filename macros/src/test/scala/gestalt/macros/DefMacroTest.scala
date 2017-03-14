@@ -24,6 +24,10 @@ class DefMacroTest extends TestSuite {
     assert(Generator.generate.apply(0) == 42)
   }
 
+  test("just fail"){
+    assert(3 == 2)
+  }
+
   test("plus2 on expression") {
     val three = 3
     assert(new plus2(3)(5) == 8)
