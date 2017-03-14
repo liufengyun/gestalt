@@ -46,13 +46,13 @@ object scope {
 }
 
 object trees {
-  inline def some3: Option[Int] = meta {
+  inline def some3(): Option[Int] = meta {
     q"Some(3)"
   }
-  inline def five: Int = meta {
+  inline def five(): Int = meta {
     q"5"
   }
-  inline def pi: Double = meta {
+  inline def pi(): Double = meta {
     q"Math.PI"
   }
   inline def ident(a: Any): Any = meta {
