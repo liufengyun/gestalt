@@ -15,6 +15,12 @@ class plus {
   }
 }
 
+object plusOne {
+  inline def apply(a: Int): Int =  meta {
+    q"$a + 1"
+  }
+}
+
 class plus2(val a: Int) {
   inline def apply(b: Int): Any = meta {
     q"$this.a + $b"
@@ -36,5 +42,20 @@ object scope {
 
   inline def both[S, T](a: Any): Boolean = meta {
     q"$a.isInstanceOf[$S] && $a.isInstanceOf[$T]"
+  }
+}
+
+object trees {
+  inline def some3: Option[Int] = meta {
+    q"Some(3)"
+  }
+  inline def five: Int = meta {
+    q"5"
+  }
+  inline def pi: Double = meta {
+    q"Math.PI"
+  }
+  inline def ident(a: Any): Any = meta {
+    q"$a"
   }
 }
