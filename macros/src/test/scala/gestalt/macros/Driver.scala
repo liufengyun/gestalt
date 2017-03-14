@@ -39,6 +39,9 @@ object Driver {
     }
 
     println(s"\n\n [${suites.size} Suites] ${Console.WHITE}Tests: $total, Success: ${total - totalFailed}, Failed: $totalFailed")
+    if (totalFailed > 0) {
+      System.exit(-1)
+    }
   }
 }
 
