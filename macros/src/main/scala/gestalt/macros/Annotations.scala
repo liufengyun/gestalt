@@ -13,6 +13,12 @@ class main extends StaticAnnotation {
   }
 }
 
+class replace extends StaticAnnotation {
+  inline def apply(defn: Any): Any = meta {
+    q"object UnrelatedObject{ def aPrimeNumber = 29 }"
+  }
+}
+
 /*
 class data extends StaticAnnotation {
   inline def apply(defn: Any): Any = meta {
