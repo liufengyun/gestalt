@@ -7,6 +7,7 @@ import ast.untpd.modsDeco
 import core.StdNames._
 import core.Contexts._
 import core.Symbols._
+import core.Names._
 import core.Decorators._
 import core.Constants._
 
@@ -23,6 +24,14 @@ object Expander {
         Some((f, targs, argss :+ args))
       case _ =>
         Some((tree, Nil, Nil))
+    }
+  }
+
+  private object MethodSelect {
+    def unapply(tree: untpd.Tree): Option[(untpd.Tree, Name)] = tree match {
+      case Select(prefix, method) => Some((prefix, method))
+      case Ident(method) => Some((untpd.EmptyTree, method))
+      case _ => None
     }
   }
 
@@ -74,7 +83,7 @@ object Expander {
 
   /** Expand def macros */
   def expandDefMacro(tree: tpd.Tree)(implicit ctx: Context): untpd.Tree = tree match {
-    case ExtractApply(methodSelect @ Select(prefix, method), targs, argss) =>
+    case ExtractApply(methodSelect @ MethodSelect(prefix, method), targs, argss) =>
       val classSymbol = methodSelect.symbol.owner
       val className = javaClassName(classSymbol) + "$inline$"
       // reflect macros definition
@@ -85,6 +94,7 @@ object Expander {
       val trees  = new DottyToolbox(tree.pos) :: prefix :: targs ++ argss.flatten
       impl.invoke(null, trees: _*).asInstanceOf[untpd.Tree]
     case _ =>
+      ctx.warning(s"Unknown macro expansion: $tree")
       tree
   }
 }
