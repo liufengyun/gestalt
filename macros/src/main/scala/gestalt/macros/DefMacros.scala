@@ -37,11 +37,11 @@ object ImplicitsForNumbers {
 
 object ImplicitBigInt {
   implicit inline def string2BigInt(s: String): BigInt = meta {
-    val q"${str: String}" = s
+    val q"${toolbox.Lit(str: String)}" = s
     val bigInt = BigInt(str)
-    val bytes = bigInt.toByteArray.toVector
-    val literals = bytes.map(toolbox.Lit.apply)
-    q"BigInt(Array[Byte](..$literals))"
+    val radix = Character.MAX_RADIX
+    val compressedString = bigInt.toString(radix)
+    q"BigInt(${toolbox.Lit(compressedString)},${toolbox.Lit(radix)})"
   }
 }
 
