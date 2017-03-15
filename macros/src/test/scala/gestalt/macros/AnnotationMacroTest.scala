@@ -7,6 +7,12 @@ class AnnotationMacroTest extends TestSuite {
     assert(Test.stub(null) == "hello world!")
   }
 
+  test("replace"){
+    @replace object Replacable
+
+    assert(UnrelatedObject.aPrimeNumber == 29)
+  }
+
   /*
   test("data") {
     @data class Point(x: Int, y: Int)

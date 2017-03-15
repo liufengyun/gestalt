@@ -6,6 +6,10 @@ class DefMacroTest extends TestSuite {
     val p = new plus
     assert(p(3, 5) == 8)
   }
+
+  test("plusOne") {
+    assert(plusOne(4) == 5)
+  }
   test("plus2") {
     val p = new plus2(3)
     assert(p(5) == 8)
@@ -72,9 +76,14 @@ class DefMacroTest extends TestSuite {
     assert(3.plus(5) == 8)
   }
 
-
   test("def with type parameters") {
     assert(scope.is[String]("hello"))
     assert(!scope.both[String, List[Int]]("hello"))
+  }
+
+  test("constant quasiqoutes"){
+    assert(trees.five() == 5)
+    assert(trees.some3() == Some(3))
+    assert(trees.pi() == Math.PI)
   }
 }

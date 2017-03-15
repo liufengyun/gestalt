@@ -12,10 +12,12 @@ import Contexts._
 import Decorators._
 import Constants._
 import d.modsDeco
+import util.Positions
+import Positions.Position
 
 import scala.collection.mutable.ListBuffer
 
-class DottyToolbox(implicit ctx: Context) extends Toolbox {
+class DottyToolbox(enclosingPosition: Position)(implicit ctx: Context) extends Toolbox {
   type Tree = d.Tree
   type TypeTree = d.Tree
   type Type = Types.Type
@@ -25,6 +27,10 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
   def typeOf(path: String): Type = ???
 
   def getOrEmpty(treeOpt: Option[Tree]): Tree = treeOpt.getOrElse(d.EmptyTree)
+
+  implicit class TreeHelper(tree: d.Tree) {
+    def withPosition = tree.withPos(enclosingPosition)
+  }
 
   private implicit def fromMods(mods: Seq[Tree]): d.Modifiers = {
     def addMod(modifiers: d.Modifiers, mod: d.Mod): d.Modifiers =
@@ -135,7 +141,7 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
       val constr = d.DefDef(nme.CONSTRUCTOR, Nil, Nil, d.TypeTree(), d.EmptyTree)
       val self = if (selfOpt.isEmpty) d.EmptyValDef else selfOpt.get.asInstanceOf[d.ValDef]
       val templ = d.Template(constr, parents.toList, self, stats)
-      d.ModuleDef(name.toTermName, templ).withMods(fromMods(mods))
+      d.ModuleDef(name.toTermName, templ).withMods(fromMods(mods)).withPosition
     }
 
     def unapply(tree: Tree): Option[(Seq[Tree], String, Seq[Tree], Option[Tree], Seq[Tree])] = tree match {
@@ -159,7 +165,7 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
 
       val self = if (selfOpt.isEmpty) d.EmptyValDef else selfOpt.get.asInstanceOf[d.ValDef]
       val templ = d.Template(constr, parents.toList, self, stats)
-      d.TypeDef(name.toTypeName, templ).withMods(fromMods(mods))
+      d.TypeDef(name.toTypeName, templ).withMods(fromMods(mods)).withPosition
     }
 
     def unapply(tree: Tree): Option[(Seq[Tree], String, Seq[Tree], Option[Tree], Seq[Tree], Option[Tree], Seq[Tree])] = tree match {
@@ -181,13 +187,13 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
     def apply(parents: Seq[Tree], selfOpt: Option[Tree], stats: Seq[Tree]): Tree = {
       val init = d.DefDef(nme.CONSTRUCTOR, List(), List(), d.TypeTree(), d.EmptyTree)
       val self = if (selfOpt.isEmpty) d.EmptyValDef else selfOpt.get.asInstanceOf[d.ValDef]
-      d.Template(init, parents.toList, self, stats)
+      d.Template(init, parents.toList, self, stats).withPosition
     }
   }
 
   object Trait extends TraitHelper {
     def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], self: Option[Tree], stats: Seq[Tree]): Tree =
-      Class(mods, name, tparams, ctor, parents, self, stats).asInstanceOf[d.TypeDef].withFlags(Flags.Trait)
+      Class(mods, name, tparams, ctor, parents, self, stats).asInstanceOf[d.TypeDef].withFlags(Flags.Trait).withPosition
 
     def unapply(tree: Tree): Option[(Seq[Tree], String, Seq[Tree], Option[Tree], Seq[Tree], Option[Tree], Seq[Tree])] =
       if (!tree.isInstanceOf[d.TypeDef]) return None
@@ -205,7 +211,7 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
       val body =
         if (tparams.size == 0) tbounds
         else d.PolyTypeTree(tparams.toList.asInstanceOf[List[d.TypeDef]], tbounds)
-      d.TypeDef(name.toTypeName, body).withMods(fromMods(mods))
+      d.TypeDef(name.toTypeName, body).withMods(fromMods(mods)).withPosition
     }
   }
 
@@ -214,7 +220,7 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
       val body =
         if (tparams.size == 0) rhs
         else d.PolyTypeTree(tparams.toList.asInstanceOf[List[d.TypeDef]], rhs)
-      d.TypeDef(name.toTypeName, body).withMods(fromMods(mods))
+      d.TypeDef(name.toTypeName, body).withMods(fromMods(mods)).withPosition
     }
   }
 
@@ -222,7 +228,7 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
     def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], paramss: Seq[Seq[Tree]], tpe: Option[TypeTree], rhs: Tree): Tree = {
       val types = tparams.toList.asInstanceOf[List[d.TypeDef]]
       val params = paramss.map(_.toList).toList.asInstanceOf[List[List[d.ValDef]]]
-      d.DefDef(name.toTermName, types, params, tpe.getOrElse(d.TypeTree()), rhs).withMods(fromMods(mods))
+      d.DefDef(name.toTermName, types, params, tpe.getOrElse(d.TypeTree()), rhs).withMods(fromMods(mods)).withPosition
     }
   }
 
@@ -230,53 +236,53 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
     def apply(mods: Seq[Tree], name: String, tparams: Seq[Tree], paramss: Seq[Seq[Tree]], tpe: TypeTree): Tree = {
       val types = tparams.toList.asInstanceOf[List[d.TypeDef]]
       val params = paramss.map(_.toList).toList.asInstanceOf[List[List[d.ValDef]]]
-      d.DefDef(name.toTermName, types, params, tpe, d.EmptyTree).withMods(fromMods(mods))
+      d.DefDef(name.toTermName, types, params, tpe, d.EmptyTree).withMods(fromMods(mods)).withPosition
     }
   }
 
   object ValDef extends ValDefHelper {
     def apply(mods: Seq[Tree], name: String, tpe: Option[TypeTree], rhs: Tree): Tree =
-      d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), rhs).withMods(fromMods(mods))
+      d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), rhs).withMods(fromMods(mods)).withPosition
 
     def apply(mods: Seq[Tree], lhs: Tree, tpe: Option[TypeTree], rhs: Tree): Tree =
-      d.PatDef(fromMods(mods), List(lhs), tpe.getOrElse(d.TypeTree()), rhs)
+      d.PatDef(fromMods(mods), List(lhs), tpe.getOrElse(d.TypeTree()), rhs).withPosition
 
     def apply(mods: Seq[Tree], pats: Seq[Tree], tpe: Option[TypeTree], rhs: Tree): Tree =
-      d.PatDef(fromMods(mods), pats.toList, tpe.getOrElse(d.TypeTree()), rhs)
+      d.PatDef(fromMods(mods), pats.toList, tpe.getOrElse(d.TypeTree()), rhs).withPosition
   }
 
   object ValDecl extends ValDeclHelper {
     def apply(mods: Seq[Tree], name: String, tpe: TypeTree): Tree =
-      d.ValDef(name.toTermName, tpe, d.EmptyTree).withMods(fromMods(mods))
+      d.ValDef(name.toTermName, tpe, d.EmptyTree).withMods(fromMods(mods)).withPosition
 
     def apply(mods: Seq[Tree], vals: Seq[String], tpe: TypeTree): Tree =
-      d.PatDef(fromMods(mods), vals.map(n => d.Ident(n.toTermName)).toList, tpe, d.EmptyTree)
+      d.PatDef(fromMods(mods), vals.map(n => d.Ident(n.toTermName)).toList, tpe, d.EmptyTree).withPosition
   }
 
   object VarDef extends VarDefHelper {
     def apply(mods: Seq[Tree], name: String, tpe: Option[TypeTree], rhs: Tree): Tree =
-      d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), rhs).withMods(fromMods(mods) | Flags.Mutable)
+      d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), rhs).withMods(fromMods(mods) | Flags.Mutable).withPosition
 
     def apply(mods: Seq[Tree], lhs: Tree, tpe: Option[TypeTree], rhs: Tree): Tree =
-      d.PatDef(fromMods(mods) | Flags.Mutable, List(lhs), tpe.getOrElse(d.TypeTree()), rhs)
+      d.PatDef(fromMods(mods) | Flags.Mutable, List(lhs), tpe.getOrElse(d.TypeTree()), rhs).withPosition
 
     def apply(mods: Seq[Tree], pats: Seq[Tree], tpe: Option[TypeTree], rhs: Tree): Tree =
-      d.PatDef(fromMods(mods) | Flags.Mutable, pats.toList, tpe.getOrElse(d.TypeTree()), rhs)
+      d.PatDef(fromMods(mods) | Flags.Mutable, pats.toList, tpe.getOrElse(d.TypeTree()), rhs).withPosition
   }
 
   object VarDecl extends VarDeclHelper {
     def apply(mods: Seq[Tree], name: String, tpe: TypeTree): Tree =
-      d.ValDef(name.toTermName, tpe, d.EmptyTree).withMods(fromMods(mods) | Flags.Mutable)
+      d.ValDef(name.toTermName, tpe, d.EmptyTree).withMods(fromMods(mods) | Flags.Mutable).withPosition
 
     def apply(mods: Seq[Tree], vals: Seq[String], tpe: TypeTree): Tree =
-      d.PatDef(fromMods(mods) | Flags.Mutable, vals.map(n => d.Ident(n.toTermName)).toList, tpe, d.EmptyTree)
+      d.PatDef(fromMods(mods) | Flags.Mutable, vals.map(n => d.Ident(n.toTermName)).toList, tpe, d.EmptyTree).withPosition
   }
 
   object PrimaryCtor extends PrimaryCtorHelper {
     // Dummy trees to retrofit Dotty AST
     private case class PrimaryCtorTree(mods: Seq[Tree], paramss: Seq[Seq[Tree]]) extends d.Tree
 
-    def apply(mods: Seq[Tree], paramss: Seq[Seq[Tree]]): Tree = PrimaryCtorTree(mods, paramss)
+    def apply(mods: Seq[Tree], paramss: Seq[Seq[Tree]]): Tree = PrimaryCtorTree(mods, paramss).withPosition
 
     def unapply(tree: Tree): Option[(Seq[Tree], Seq[Seq[Tree]])] = tree match {
       case PrimaryCtorTree(mods, paramss) => Some((mods, paramss))
@@ -286,7 +292,7 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
 
   object SecondaryCtor extends SecondaryCtorHelper {
     def apply(mods: Seq[Tree], paramss: Seq[Seq[Tree]], rhs: Tree): Tree =
-      DefDef(mods, nme.CONSTRUCTOR.toString, Nil, paramss, Some(d.TypeTree()), rhs)
+      DefDef(mods, nme.CONSTRUCTOR.toString, Nil, paramss, Some(d.TypeTree()), rhs).withPosition
   }
 
   // qual.T[A, B](x, y)(z)
@@ -294,13 +300,13 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
     def apply(qual: Option[Tree], name: String, tparams: Seq[TypeTree], argss: Seq[Seq[Tree]]): Tree = {
       val select = if (qual.isEmpty) d.Ident(name.toTermName) else d.Select(qual.get, name.toTypeName)
       val fun = if (tparams.size == 0) select else TypeApply(select, tparams.toList)
-      ApplySeq(fun, argss)
+      ApplySeq(fun, argss).withPosition
     }
   }
 
   object Param extends ParamHelper {
     def apply(mods: Seq[Tree], name: String, tpe: Option[TypeTree], default: Option[Tree]): Tree = {
-      d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), getOrEmpty(default)).withMods(fromMods(mods)).withFlags(Flags.TermParam)
+      d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), getOrEmpty(default)).withMods(fromMods(mods)).withFlags(Flags.TermParam).withPosition
     }
 
     def unapply(tree: Tree): Option[(Seq[Tree], String, Option[TypeTree], Option[Tree])] = tree match {
@@ -323,16 +329,16 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
         if (tparams.size == 0) inner
         else d.PolyTypeTree(tparams.toList.asInstanceOf[List[d.TypeDef]], inner)
 
-      d.TypeDef(name.toTypeName, body).withMods(fromMods(mods))
+      d.TypeDef(name.toTypeName, body).withMods(fromMods(mods)).withPosition
     }
   }
 
   object Self extends SelfHelper {
     def apply(name: String, tpe: TypeTree): Tree =
-      d.ValDef(name.toTermName, tpe, d.EmptyTree)
+      d.ValDef(name.toTermName, tpe, d.EmptyTree).withPosition
 
     def apply(name: String): Tree =
-      d.ValDef(name.toTermName, d.TypeTree(), d.EmptyTree)
+      d.ValDef(name.toTermName, d.TypeTree(), d.EmptyTree).withPosition
 
     def unapply(tree: Tree): Option[(String, Option[TypeTree])] = tree match {
       case c.ValDef(name, tp, _)  =>
@@ -344,73 +350,73 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
 
   // types
   object TypeIdent extends TypeIdentHelper {
-    def apply(name: String): TypeTree = d.Ident(name.toTypeName)
+    def apply(name: String): TypeTree = d.Ident(name.toTypeName).withPosition
   }
 
   object TypeSelect extends TypeSelectHelper {
-    def apply(qual: Tree, name: String): TypeTree = d.Select(qual, name.toTypeName)
+    def apply(qual: Tree, name: String): TypeTree = d.Select(qual, name.toTypeName).withPosition
   }
 
   object TypeSingleton extends TypeSingletonHelper {
-    def apply(ref: Tree): TypeTree = d.SingletonTypeTree(ref)
+    def apply(ref: Tree): TypeTree = d.SingletonTypeTree(ref).withPosition
   }
 
   object TypeApply extends TypeApplyHelper {
-    def apply(tpe: TypeTree, args: Seq[TypeTree]): TypeTree = d.AppliedTypeTree(tpe, args.toList)
+    def apply(tpe: TypeTree, args: Seq[TypeTree]): TypeTree = d.AppliedTypeTree(tpe, args.toList).withPosition
   }
 
   object TypeApplyInfix extends TypeApplyInfixHelper {
-    def apply(lhs: TypeTree, op: String, rhs: TypeTree): TypeTree = d.InfixOp(lhs, d.Ident(op.toTypeName), rhs)
+    def apply(lhs: TypeTree, op: String, rhs: TypeTree): TypeTree = d.InfixOp(lhs, d.Ident(op.toTypeName), rhs).withPosition
   }
 
   object TypeFunction extends TypeFunctionHelper {
-    def apply(params: Seq[TypeTree], res: TypeTree): TypeTree = d.Function(params.toList, res)
+    def apply(params: Seq[TypeTree], res: TypeTree): TypeTree = d.Function(params.toList, res).withPosition
   }
 
   object TypeTuple extends TypeTupleHelper {
-    def apply(args: Seq[TypeTree]): TypeTree = d.Tuple(args.toList)
+    def apply(args: Seq[TypeTree]): TypeTree = d.Tuple(args.toList).withPosition
   }
 
   object TypeAnd extends TypeAndHelper {
-    def apply(lhs: TypeTree, rhs: TypeTree): TypeTree = d.AndTypeTree(lhs, rhs)
+    def apply(lhs: TypeTree, rhs: TypeTree): TypeTree = d.AndTypeTree(lhs, rhs).withPosition
   }
 
   object TypeOr extends TypeOrHelper {
-    def apply(lhs: TypeTree, rhs: TypeTree): TypeTree = d.OrTypeTree(lhs, rhs)
+    def apply(lhs: TypeTree, rhs: TypeTree): TypeTree = d.OrTypeTree(lhs, rhs).withPosition
   }
 
   object TypeRefine extends TypeRefineHelper {
     def apply(tpe : Option[TypeTree], stats: Seq[Tree]): TypeTree =
-      d.RefinedTypeTree(tpe.getOrElse(d.EmptyTree), stats.toList)
+      d.RefinedTypeTree(tpe.getOrElse(d.EmptyTree), stats.toList).withPosition
   }
 
   object TypeBounds extends TypeBoundsHelper {
     def apply(lo: Option[TypeTree], hi: Option[TypeTree]): TypeTree = {
       require(lo.nonEmpty || hi.nonEmpty)
-      d.TypeBoundsTree(lo.getOrElse(d.EmptyTree), hi.getOrElse(d.EmptyTree))
+      d.TypeBoundsTree(lo.getOrElse(d.EmptyTree), hi.getOrElse(d.EmptyTree)).withPosition
     }
   }
 
   object TypeRepeated extends TypeRepeatedHelper {
-    def apply(tpe: TypeTree): TypeTree = d.PostfixOp(tpe, d.Ident(nme.raw.STAR))
+    def apply(tpe: TypeTree): TypeTree = d.PostfixOp(tpe, d.Ident(nme.raw.STAR)).withPosition
   }
 
   object TypeByName extends TypeByNameHelper {
-    def apply(tpe: TypeTree): TypeTree = d.ByNameTypeTree(tpe)
+    def apply(tpe: TypeTree): TypeTree = d.ByNameTypeTree(tpe).withPosition
   }
 
   object TypeAnnotated extends TypeAnnotatedHelper {
     def apply(tpe: TypeTree, annots: Seq[Tree]): TypeTree = {
       require(annots.size > 0)
-      annots.tail.foldRight(d.Annotated(tpe, annots.head)) { (ann, acc) =>
-        d.Annotated(acc, ann)
+      annots.tail.foldRight(d.Annotated(tpe, annots.head).withPosition) { (ann, acc) =>
+        d.Annotated(acc, ann).withPosition
       }
     }
   }
 
   // terms
   object Lit extends LitHelper {
-    def apply(value: Any): Tree = d.Literal(Constant(value))
+    def apply(value: Any): Tree = d.Literal(Constant(value)).withPosition
     def unapply(tree: Tree): Option[Any] = tree match {
       case c.Literal(Constant(v)) => Some(v)
       case _ => None
@@ -418,21 +424,21 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
   }
 
   object Ident extends IdentHelper {
-    def apply(name: String): Tree = d.Ident(name.toTermName)
+    def apply(name: String): Tree = d.Ident(name.toTermName).withPosition
   }
 
   object Select extends SelectHelper {
-    def apply(qual: Tree, name: String): Tree = d.Select(qual, name.toTermName)
+    def apply(qual: Tree, name: String): Tree = d.Select(qual, name.toTermName).withPosition
   }
 
   object This extends ThisHelper {
-    def apply(qual: String): Tree = d.This(d.Ident(qual.toTypeName))
-    def apply(qual: Tree): Tree = d.This(qual.asInstanceOf[d.Ident])
+    def apply(qual: String): Tree = d.This(d.Ident(qual.toTypeName)).withPosition
+    def apply(qual: Tree): Tree = d.This(qual.asInstanceOf[d.Ident]).withPosition
   }
 
   object Super extends SuperHelper {
     def apply(thisp: String, superp: String): Tree =
-      d.Super(d.Ident(thisp.toTypeName), d.Ident(superp.toTypeName))
+      d.Super(d.Ident(thisp.toTypeName), d.Ident(superp.toTypeName)).withPosition
   }
 
   object Interpolate extends InterpolateHelper {
@@ -451,12 +457,12 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
           thickets :+ Lit(parts.last)
         else thickets
 
-      d.InterpolatedString(prefix.toTermName, segments.toList)
+      d.InterpolatedString(prefix.toTermName, segments.toList).withPosition
     }
   }
 
   object Apply extends ApplyHelper {
-    def apply(fun: Tree, args: Seq[Tree]): Tree = d.Apply(fun, args.toList)
+    def apply(fun: Tree, args: Seq[Tree]): Tree = d.Apply(fun, args.toList).withPosition
     def unapply(tree: Tree): Option[(Tree, Seq[Tree])] = tree match {
       case c.Apply(fun, args) => Some((fun, args))
       case _ => None
@@ -464,7 +470,7 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
   }
 
   object ApplyType extends ApplyTypeHelper {
-    def apply(fun: Tree, args: Seq[TypeTree]): Tree = d.TypeApply(fun, args.toList)
+    def apply(fun: Tree, args: Seq[TypeTree]): Tree = d.TypeApply(fun, args.toList).withPosition
 
     def unapply(tree: Tree): Option[(Tree, Seq[TypeTree])] = tree match {
       case c.TypeApply(fun, args) => Some((fun, args))
@@ -475,19 +481,19 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
   // a + (b, c)  =>  Infix(a, +, Tuple(b, c))
   object Infix extends InfixHelper {
     def apply(lhs: Tree, op: String, rhs: Tree): Tree =
-      d.Apply(d.Select(lhs, op.toTermName), List(rhs))
+      d.Apply(d.Select(lhs, op.toTermName), List(rhs)).withPosition
   }
 
   object Prefix extends PrefixHelper {
-    def apply(op: String, od: Tree): Tree = d.PrefixOp(d.Ident(op.toTermName), od)
+    def apply(op: String, od: Tree): Tree = d.PrefixOp(d.Ident(op.toTermName), od).withPosition
   }
 
   object Postfix extends PostfixHelper {
-    def apply(od: Tree, op: String): Tree = d.PostfixOp(od, d.Ident(op.toTermName))
+    def apply(od: Tree, op: String): Tree = d.PostfixOp(od, d.Ident(op.toTermName)).withPosition
   }
 
   object Assign extends AssignHelper {
-    def apply(lhs: Tree, rhs: Tree): Tree = d.Assign(lhs, rhs)
+    def apply(lhs: Tree, rhs: Tree): Tree = d.Assign(lhs, rhs).withPosition
 
     def unapply(tree: Tree): Option[(Tree, Tree)] = tree match {
       case c.Assign(lhs, rhs) => Some((lhs, rhs))
@@ -496,78 +502,78 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
   }
 
   object Return extends ReturnHelper {
-    def apply(expr: Tree): Tree = d.Return(expr, d.EmptyTree)
+    def apply(expr: Tree): Tree = d.Return(expr, d.EmptyTree).withPosition
   }
 
   object Throw extends ThrowHelper {
-    def apply(expr: Tree): Tree = d.Throw(expr)
+    def apply(expr: Tree): Tree = d.Throw(expr).withPosition
   }
 
   object Ascribe extends AscribeHelper {
-    def apply(expr: Tree, tpe: Tree): Tree = d.Typed(expr, tpe)
+    def apply(expr: Tree, tpe: Tree): Tree = d.Typed(expr, tpe).withPosition
   }
 
   object Annotated extends AnnotatedHelper {
     def apply(expr: Tree, annots: Seq[Tree]): Tree = {
       require(annots.size > 0)
-      annots.tail.foldRight(d.Annotated(expr, annots.head)) { (ann, acc) =>
-        d.Annotated(acc, ann)
+      annots.tail.foldRight(d.Annotated(expr, annots.head).withPosition) { (ann, acc) =>
+        d.Annotated(acc, ann).withPosition
       }
     }
   }
 
   object Tuple extends TupleHelper {
-    def apply(args: Seq[Tree]): Tree = d.Tuple(args.toList)
+    def apply(args: Seq[Tree]): Tree = d.Tuple(args.toList).withPosition
   }
 
   object Block extends BlockHelper {
     def apply(stats: Seq[Tree]): Tree = {
       if (stats.size == 0)
-        d.Block(stats.toList, d.EmptyTree)
+        d.Block(stats.toList, d.EmptyTree).withPosition
       else
-        d.Block(stats.init.toList, stats.last)
+        d.Block(stats.init.toList, stats.last).withPosition
     }
   }
 
   object If extends IfHelper {
     def apply(cond: Tree, thenp: Tree, elsep: Option[Tree]): Tree =
-      d.If(cond, thenp, elsep.getOrElse(d.EmptyTree))
+      d.If(cond, thenp, elsep.getOrElse(d.EmptyTree)).withPosition
   }
 
   object Match extends MatchHelper {
     def apply(expr: Tree, cases: Seq[Tree]): Tree =
-      d.Match(expr, cases.toList.asInstanceOf[List[d.CaseDef]])
+      d.Match(expr, cases.toList.asInstanceOf[List[d.CaseDef]]).withPosition
   }
 
   object Case extends CaseHelper {
     def apply(pat: Tree, cond: Option[Tree], body: Tree): Tree =
-      d.CaseDef(pat, cond.getOrElse(d.EmptyTree), body)
+      d.CaseDef(pat, cond.getOrElse(d.EmptyTree), body).withPosition
   }
 
   object Try extends TryHelper {
     def apply(expr: Tree, cases: Seq[Tree], finallyp: Option[Tree]): Tree =
-      d.Try(expr, cases.toList.asInstanceOf[List[d.CaseDef]], finallyp.getOrElse(d.EmptyTree))
+      d.Try(expr, cases.toList.asInstanceOf[List[d.CaseDef]], finallyp.getOrElse(d.EmptyTree)).withPosition
 
     def apply(expr: Tree, handler: Tree, finallyp: Option[Tree]): Tree =
-      d.ParsedTry(expr, handler, finallyp.getOrElse(d.EmptyTree))
+      d.ParsedTry(expr, handler, finallyp.getOrElse(d.EmptyTree)).withPosition
   }
 
   object Function extends FunctionHelper {
     def apply(params: Seq[Tree], body: Tree): Tree =
-      d.Function(params.toList, body)
+      d.Function(params.toList, body).withPosition
   }
 
   object PartialFunction extends PartialFunctionHelper {
     def apply(cases: Seq[Tree]): Tree =
-      d.Match(d.Thicket(Nil), cases.toList.asInstanceOf[List[d.CaseDef]])
+      d.Match(d.Thicket(Nil), cases.toList.asInstanceOf[List[d.CaseDef]]).withPosition
   }
 
   object While extends WhileHelper {
-    def apply(expr: Tree, body: Tree): Tree = d.WhileDo(expr, body)
+    def apply(expr: Tree, body: Tree): Tree = d.WhileDo(expr, body).withPosition
   }
 
   object DoWhile extends DoWhileHelper {
-    def apply(body: Tree, expr: Tree): Tree = d.DoWhile(body, expr)
+    def apply(body: Tree, expr: Tree): Tree = d.DoWhile(body, expr).withPosition
   }
 
   object For extends ForHelper {
@@ -592,56 +598,56 @@ class DottyToolbox(implicit ctx: Context) extends Toolbox {
 
   // can be InitCall or AnonymClass
   object New extends NewHelper {
-    def apply(tpe: Tree): Tree = d.New(tpe)
+    def apply(tpe: Tree): Tree = d.New(tpe).withPosition
   }
 
   object Named extends NamedHelper {
     def apply(name: String, expr: Tree): Tree =
-      d.NamedArg(name.toTermName, expr)
+      d.NamedArg(name.toTermName, expr).withPosition
   }
 
   object Repeated extends RepeatedHelper {
     def apply(expr: Tree): Tree =
-      d.Typed(expr, d.Ident(tpnme.WILDCARD_STAR))
+      d.Typed(expr, d.Ident(tpnme.WILDCARD_STAR)).withPosition
   }
 
   // patterns
   object Bind extends BindHelper {
     def apply(name: String, expr: Tree): Tree =
-      d.Bind(name.toTermName, expr)
+      d.Bind(name.toTermName, expr).withPosition
   }
 
   object Alternative extends AlternativeHelper {
     def apply(lhs: Tree, rhs: Tree): Tree =
-      d.Alternative(List(lhs, rhs))
+      d.Alternative(List(lhs, rhs)).withPosition
   }
 
   // importees
   object Import extends ImportHelper {
     def apply(items: Seq[Tree]): Tree =
       if (items.size == 1)
-        items(0)
+        items(0).withPosition
       else
-        d.Thicket(items.toList)
+        d.Thicket(items.toList).withPosition
   }
 
   object ImportItem extends ImportItemHelper {
     def apply(ref: Tree, importees: Seq[Tree]): Tree =
-      d.Import(ref, importees.toList)
+      d.Import(ref, importees.toList).withPosition
   }
 
   object ImportName extends ImportNameHelper {
-    def apply(name: String): Tree = d.Ident(name.toTermName)
+    def apply(name: String): Tree = d.Ident(name.toTermName).withPosition
   }
 
   object ImportRename extends ImportRenameHelper {
     def apply(from: String, to: String): Tree =
-      d.Thicket(d.Ident(from.toTermName), d.Ident(to.toTermName))
+      d.Thicket(d.Ident(from.toTermName), d.Ident(to.toTermName)).withPosition
   }
 
   object ImportHide extends ImportHideHelper {
     def apply(name: String): Tree =
-      d.Thicket(d.Ident(name.toTermName), d.Ident(nme.WILDCARD))
+      d.Thicket(d.Ident(name.toTermName), d.Ident(nme.WILDCARD)).withPosition
   }
 
   // modifiers
