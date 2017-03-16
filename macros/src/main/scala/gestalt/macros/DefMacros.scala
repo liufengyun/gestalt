@@ -37,7 +37,7 @@ object ImplicitsForNumbers {
 
 object ImplicitBigInt {
   implicit inline def string2BigInt(s: String): BigInt = meta {
-    val q"${toolbox.Lit(str: String)}" = s
+    val toolbox.Lit(str: String) = s
     val bigInt = BigInt(str)
     val radix = Character.MAX_RADIX
     val compressedString = bigInt.toString(radix)
