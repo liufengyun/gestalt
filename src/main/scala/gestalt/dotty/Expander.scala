@@ -30,7 +30,7 @@ object Expander {
   private object MethodSelect {
     def unapply(tree: untpd.Tree): Option[(untpd.Tree, Name)] = tree match {
       case Select(prefix, method) => Some((prefix, method))
-      case Ident(method) => Some((untpd.EmptyTree, method))
+      case Ident(method) => Some((null, method))
       case _ => None
     }
   }
