@@ -35,6 +35,16 @@ object ImplicitsForNumbers {
   }
 }
 
+object ImplicitBigInt {
+  implicit inline def string2BigInt(s: String): BigInt = meta {
+    val toolbox.Lit(str: String) = s
+    val bigInt = BigInt(str)
+    val radix = Character.MAX_RADIX
+    val compressedString = bigInt.toString(radix)
+    q"BigInt(${toolbox.Lit(compressedString)},${toolbox.Lit(radix)})"
+  }
+}
+
 object scope {
   inline def is[T](a: Any): Boolean = meta {
     q"$a.isInstanceOf[$T]"
