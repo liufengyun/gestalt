@@ -79,6 +79,7 @@ class DefMacroTest extends TestSuite {
   test("def with type parameters") {
     assert(scope.is[String]("hello"))
     assert(!scope.both[String, List[Int]]("hello"))
+    scope.mapTest()
   }
 
   test("explicit big int"){

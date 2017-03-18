@@ -62,7 +62,7 @@ object Expander {
       case ann @ Apply(Select(New(tpt), init), _) =>
         val tpdClass = ctx.typer.typedAheadType(tpt)
 
-        val className = tpdClass.symbol.fullName + "$inline$"
+        val className = tpdClass.symbol.fullName + "$inline"
         // reflect macros definition
         val moduleClass = ctx.classloader.loadClass(className)
         val impl = moduleClass.getDeclaredMethods().find(_.getName == "apply").get
@@ -85,7 +85,7 @@ object Expander {
   def expandDefMacro(tree: tpd.Tree)(implicit ctx: Context): untpd.Tree = tree match {
     case ExtractApply(methodSelect @ MethodSelect(prefix, method), targs, argss) =>
       val classSymbol = methodSelect.symbol.owner
-      val className = javaClassName(classSymbol) + "$inline$"
+      val className = javaClassName(classSymbol) + "$inline"
       // reflect macros definition
       val moduleClass = ctx.classloader.loadClass(className)
       val impl = moduleClass.getDeclaredMethods().find(_.getName == method.toString).get
