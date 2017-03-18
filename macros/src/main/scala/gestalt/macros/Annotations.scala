@@ -13,6 +13,23 @@ class main extends StaticAnnotation {
   }
 }
 
+class addFields extends StaticAnnotation {
+  inline def apply(defn: Any): Any = meta {
+    val q"class $name { ..$stats }" = defn
+    val main = q"""
+      ..$stats
+      private def a = 1
+      private[this] def b = 2
+      private[pack] def c = 3
+
+      protected def a1 = 1
+      protected[this] def b1 = 2
+      protected[pack] def c1 = 3
+    """
+    q"class $name { $main }"
+  }
+}
+
 class replace extends StaticAnnotation {
   inline def apply(defn: Any): Any = meta {
     q"object UnrelatedObject{ def aPrimeNumber = 29 }"

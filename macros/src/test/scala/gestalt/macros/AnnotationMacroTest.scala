@@ -1,3 +1,8 @@
+package pack {
+  import _root_.addFields
+  @addFields class Nice
+}
+
 class AnnotationMacroTest extends TestSuite {
   test("main") {
     @main object Test {
@@ -12,6 +17,17 @@ class AnnotationMacroTest extends TestSuite {
 
     assert(UnrelatedObject.aPrimeNumber == 29)
   }
+
+  test("addFields"){
+    import pack.Nice
+    assert(new Nice().a == 1)
+    assert(new Nice().b == 2)
+    assert(new Nice().c == 3)
+    assert(new Nice().a1 == 1)
+    assert(new Nice().b1 == 2)
+    assert(new Nice().c1 == 3)
+  }
+
 
   /*
   test("data") {
