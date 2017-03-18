@@ -79,6 +79,10 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def withPosition = tree.withPos(enclosingPosition)
   }
 
+  // diagnostics - the implementation takes the position from the tree
+  def error(message: String, tree: Tree): Unit = {
+    ctx.error(message, tree.pos)
+  }
   //----------------------------------------
 
   // modifiers

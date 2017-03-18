@@ -55,9 +55,8 @@ trait Toolbox {
   type TypeTree <: Tree      // safety by construction -- implementation can have TypeTree = Tree
   type Mods <: Modifiers[Tree]
 
-  // diagnostics
-  // TODO: should take pos as param -- need to introduce Pos as type param
-  def error(message: String): Nothing = throw new Exception(message)
+  // diagnostics - the implementation takes the position from the tree
+  def error(message: String, tree: Tree): Unit
 
   // modifiers
   def emptyMods: Mods

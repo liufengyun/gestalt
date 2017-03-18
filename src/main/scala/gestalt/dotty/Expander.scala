@@ -52,7 +52,7 @@ object Expander {
         (name.toString, parts, pats)
     }
     val strs = for(Literal(Constant(v: String)) <- parts) yield v
-    expand(new Toolbox(tree.pos))(tag, strs, args, !isTerm)
+    expand(new Toolbox(tree.pos))(tag, tree, strs, args, !isTerm)
   }
 
   /** Expand annotation macros */

@@ -64,13 +64,14 @@ class Quasiquote(val t: Toolbox, val toolboxName: String) {
   import t._
   import Quasiquote._
 
-  def expand(label: String, parts: List[String], unquotes: List[Tree], isPattern: Boolean): Tree = {
+  def expand(label: String, tree: Tree, parts: List[String], unquotes: List[Tree], isPattern: Boolean): Tree = {
     val code = resugar(parts)
     val parser = instantiateParser(parserMap(label))
     val mTree = parser(m.Input.String(code), quasiquoteTermDialect)
     val quote = new Quote(t, toolboxName) {
       val args = unquotes.asInstanceOf[List[this.t.Tree]]    // fix compiler stupidity
       val isTerm = !isPattern
+      val enclosingTree = tree.asInstanceOf[this.t.Tree]
     }
 
     // compiler stupidity

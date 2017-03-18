@@ -14,6 +14,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
   // args: List[t.Tree[Any]]
   def args: List[t.Tree]
   def isTerm: Boolean
+  def enclosingTree: t.Tree
 
   // helpers
   private implicit class TreeOps(val tree: t.Tree) {
@@ -69,7 +70,8 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
           require(prefix.isEmpty)
           if (isTerm) loop(rest, Some(t.Infix(acc.get, "++", liftQuasi(quasi))), Nil)
           else {
-            t.error(m.internal.parsers.Messages.QuasiquoteAdjacentEllipsesInPattern(quasi.rank))
+            t.error(m.internal.parsers.Messages.QuasiquoteAdjacentEllipsesInPattern(quasi.rank), enclosingTree)
+            t.Lit(null)
           }
         }
       case other +: rest =>
@@ -99,10 +101,12 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
       if (treess.flatten.length == 1) liftQuasi(tripleDotQuasis(0))
       else {
         t.error("implementation restriction: can't mix ...$ with anything else in parameter lists." +
-          EOL + "See https://github.com/scalameta/scalameta/issues/406 for details.")
+          EOL + "See https://github.com/scalameta/scalameta/issues/406 for details.", enclosingTree)
+        t.Lit(null)
       }
     } else {
-      t.error(m.internal.parsers.Messages.QuasiquoteAdjacentEllipsesInPattern(2))
+      t.error(m.internal.parsers.Messages.QuasiquoteAdjacentEllipsesInPattern(2), enclosingTree)
+      t.Lit(null)
     }
   }
 
@@ -229,6 +233,15 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
 
   /** lift modifiers */
   def liftMods(mods: Seq[m.Tree]): t.Tree = {
+    mods match {
+      case Seq(quasi: Quasi) => return liftQuasi(quasi)
+      case _ =>
+        if (!isTerm) {
+          t.error("Match modifiers in syntax is problematic and not supported.", enclosingTree)
+          return t.Ident("_")
+        }
+    }
+
     val vdef = t.ValDef(t.emptyMods, "mods", None, selectToolbox("emptyMods"))
     val updates: Seq[t.Tree] = mods.map { mod =>
       mod match {
