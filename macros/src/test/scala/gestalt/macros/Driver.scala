@@ -7,6 +7,7 @@ object Driver {
     // setup tests
     new AnnotationMacroTest
     new DefMacroTest
+    new QuasiquoteTest
 
     var success = false
     var total = 0

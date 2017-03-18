@@ -1,9 +1,30 @@
-package scala.gestalt
-
 import scala.collection.immutable.Seq
-import org.scalatest.FunSuite
 
-class QuasiquoteSuite extends FunSuite {
+import dotty.tools._
+import dotc.core.Contexts._
+
+import scala.gestalt._
+import dotty.DottyToolbox
+
+class QuasiquoteTest extends TestSuite {
+  val context: Context = {
+    val base = new ContextBase {}
+    val ctx = base.initialCtx.fresh
+    ctx.setSetting(ctx.settings.encoding, "UTF8")
+    // ctx.setSetting(ctx.settings.classpath, Jars.dottyLib)
+    // when classpath is changed in ctx, we need to re-initialize to get the
+    // correct classpath from PathResolver
+    // base.initialize()(ctx)
+    ctx
+  }
+
+  /*
+  val toolbox = new DottyToolbox()(context)
+
+  test("literals") {
+    assert(q"5" eq toolbox.Lit(5))
+  }*/
+
   /*
   test("param\"${name(index)} : $tp\"") {
     val name = Term.Name("name")
