@@ -53,6 +53,12 @@ object scope {
   inline def both[S, T](a: Any): Boolean = meta {
     q"$a.isInstanceOf[$S] && $a.isInstanceOf[$T]"
   }
+
+  // test nested method inside macro def -- used to be a problem with @static implementation
+  inline def mapTest(): Int = meta {
+    val sum = (1 to 5).map(_ * 2).sum
+    toolbox.Lit(sum)
+  }
 }
 
 object trees {
