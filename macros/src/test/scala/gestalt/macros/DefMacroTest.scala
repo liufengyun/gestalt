@@ -79,10 +79,9 @@ class DefMacroTest extends TestSuite {
   test("def with type parameters") {
     assert(scope.is[String]("hello"))
     assert(!scope.both[String, List[Int]]("hello"))
-    scope.mapTest()
   }
 
-  test("explicit big int"){
+  test("explicit big int") {
     import ImplicitBigInt._
     assert(string2BigInt("19") == BigInt(19))
     assert(string2BigInt("19").modPow(exp = 2, 4) == BigInt(1))
@@ -93,9 +92,13 @@ class DefMacroTest extends TestSuite {
     assert("19".modPow(exp = 2, 4) == BigInt(1))
   }
 
-  test("constant quasiqoutes"){
+  test("constant quasiqoutes") {
     assert(trees.five() == 5)
     assert(trees.some3() == Some(3))
     assert(trees.pi() == Math.PI)
+  }
+
+  test("nested method inside macro def") {
+    assert(scope.mapTest() == 30)
   }
 }
