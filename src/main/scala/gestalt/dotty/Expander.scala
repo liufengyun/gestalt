@@ -52,7 +52,7 @@ object Expander {
         (name.toString, parts, pats)
     }
     val strs = for(Literal(Constant(v: String)) <- parts) yield v
-    expand(new DottyToolbox(tree.pos))(tag, strs, args, !isTerm)
+    expand(new Toolbox(tree.pos))(tag, strs, args, !isTerm)
   }
 
   /** Expand annotation macros */
@@ -72,7 +72,7 @@ object Expander {
           val mods1 = mdef.mods.withAnnotations(mdef.mods.annotations.filter(_ ne ann))
           mdef.withMods(mods1)
         }
-        val result = impl.invoke(null, new DottyToolbox(ann.pos), ann, expandee).asInstanceOf[untpd.Tree]
+        val result = impl.invoke(null, new StructToolbox(ann.pos), ann, expandee).asInstanceOf[untpd.Tree]
         Some(result)
       case _ =>
         None
@@ -91,7 +91,7 @@ object Expander {
       val impl = moduleClass.getDeclaredMethods().find(_.getName == method.toString).get
       impl.setAccessible(true)
 
-      val trees  = new DottyToolbox(tree.pos) :: prefix :: targs ++ argss.flatten
+      val trees  = new TypeToolbox(tree.pos) :: prefix :: targs ++ argss.flatten
       impl.invoke(null, trees: _*).asInstanceOf[untpd.Tree]
     case _ =>
       ctx.warning(s"Unknown macro expansion: $tree")

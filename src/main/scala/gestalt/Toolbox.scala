@@ -2,24 +2,75 @@ package scala.gestalt
 
 import scala.collection.immutable.Seq
 
-trait Toolbox { t =>
-  // portable trees -- minimum assumptions
-  type Tree <: { def tpe: Type } // TODO: structural types performance penalty.
-  type TypeTree <: Tree          // safety by construction -- implementation can have TypeTree = Tree
+trait Modifiers[T] {
+  def isPrivate: Boolean
+  def setPrivate(within: String): Unit
+  def getPrivate: String
+
+  def isProtected: Boolean
+  def setProtected(within: String): Unit
+  def getProtected: String
+
+  def isVal: Boolean
+  def setVal: Unit
+
+  def isVar: Boolean
+  def setVar: Unit
+
+  def isImplicit: Boolean
+  def setImplicit: Unit
+
+  def isFinal: Boolean
+  def setFinal: Unit
+
+  def isSealed: Boolean
+  def setSealed: Unit
+
+  def isOverride: Boolean
+  def setOverride: Unit
+
+  def isAbstract: Boolean
+  def setAbstract: Unit
+
+  def isLazy: Boolean
+  def setLazy: Unit
+
+  def isInline: Boolean
+  def setInline: Unit
+
+  def isCase: Boolean
+  def setCase: Unit
+
+  def isContravariant: Boolean
+  def setContravariant: Unit
+
+  def isCovariant: Boolean
+  def setCovariant: Unit
+
+  def addAnnot(annot: T): Unit
+}
+
+trait Toolbox {
+  type Tree
+  type TypeTree <: Tree      // safety by construction -- implementation can have TypeTree = Tree
+  type Mods <: Modifiers[Tree]
 
   // diagnostics
   // TODO: should take pos as param -- need to introduce Pos as type param
   def error(message: String): Nothing = throw new Exception(message)
 
+  // modifiers
+  def emptyMods: Mods
+
   // definition trees
   def Object(mods: Mods, name: String, parents: Seq[Tree], selfOpt: Option[Tree], stats: Seq[Tree]): Tree
   def Class(mods: Mods, name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], self: Option[Tree], stats: Seq[Tree]): Tree
-  def Anonym(parents: Seq[Tree], self: Option[Tree], stats: Seq[Tree]): Tree
+  def AnonymClass(parents: Seq[Tree], self: Option[Tree], stats: Seq[Tree]): Tree
   def Trait(mods: Mods, name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], self: Option[Tree], stats: Seq[Tree]): Tree
   def TypeDecl(mods: Mods, name: String, tparams: Seq[Tree], tbounds: Option[TypeTree]): Tree
   def TypeAlias(mods: Mods, name: String, tparams: Seq[Tree], rhs: TypeTree): Tree
   def DefDef(mods: Mods, name: String, tparams: Seq[Tree], paramss: Seq[Seq[Tree]], tpe: Option[TypeTree], rhs: Tree): Tree
-  def DefCl(mods: Mods, name: String, tparams: Seq[Tree], paramss: Seq[Seq[Tree]], tpe: TypeTree): Tree
+  def DefDecl(mods: Mods, name: String, tparams: Seq[Tree], paramss: Seq[Seq[Tree]], tpe: TypeTree): Tree
   def ValDef(mods: Mods, name: String, tpe: Option[TypeTree], rhs: Tree): Tree
   def ValDef(mods: Mods, lhs: Tree, tpe: Option[TypeTree], rhs: Tree): Tree
   def ValDef(mods: Mods, pats: Seq[Tree], tpe: Option[TypeTree], rhs: Tree): Tree
@@ -111,57 +162,6 @@ trait Toolbox { t =>
   def ImportName(name: String): Tree
   def ImportRename(from: String, to: String): Tree
   def ImportHide(name: String): Tree
-
-
-  // modifiers
-  def empty: Mods
-  trait Mods {
-    def isPrivate: Boolean
-    def setPrivate(within: Tree): Unit
-    def getPrivate: String
-
-    def isProtected: Boolean
-    def setProtected(within: Tree): Unit
-    def getProtected: String
-
-    def isVal: Boolean
-    def setVal: Unit
-
-    def isVar: Boolean
-    def setVar: Unit
-
-    def isImplicit: Boolean
-    def setImplicit: Unit
-
-    def isFinal: Boolean
-    def setFinal: Unit
-
-    def isSealed: Boolean
-    def setSealed: Unit
-
-    def isOverride: Boolean
-    def setOverride: Unit
-
-    def isAbstract: Boolean
-    def setAbstract: Unit
-
-    def isLazy: Boolean
-    def setLazy: Unit
-
-    def isInline: Boolean
-    def setInline: Unit
-
-    def isCase: Boolean
-    def setCase: Unit
-
-    def isContravariant: Boolean
-    def setContravariant: Unit
-
-    def isCovariant: Boolean
-    def setCovariant: Unit
-
-    def addAnnot(annot: Tree): Unit
-  }
 }
 
 /** StructToolbox defines extractors available for inspecting definition trees
@@ -169,13 +169,10 @@ trait Toolbox { t =>
  *  To provide solid experience of macros, we only provide extractors for definition trees, like object, class, trait.
  *
  *  TODO:
- *
- *  another choice:
  *    Provide definition tree transformers so that attachments (docs, etc) on the
  *    current tree is not an issue.
  */
 trait StructToolbox extends Toolbox {
-  // standard constructors and extractors
   val Object: ObjectHelper
   trait ObjectHelper {
     def unapply(tree: Tree): Option[(Mods, String, Seq[Tree], Option[Tree], Seq[Tree])]
@@ -184,17 +181,24 @@ trait StructToolbox extends Toolbox {
   val Class: ClassHelper
   trait ClassHelper {
     def unapply(tree: Tree): Option[(Mods, String, Seq[Tree], Option[Tree], Seq[Tree], Option[Tree], Seq[Tree])]
+    // def cpy(tree: Tree)(mods: Mods, name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], self: Option[Tree], stats: Seq[Tree])
   }
 
   val Trait: TraitHelper
   trait TraitHelper {
     def unapply(tree: Tree): Option[(Mods, String, Seq[Tree], Option[Tree], Seq[Tree], Option[Tree], Seq[Tree])]
   }
+
+  val PrimaryCtor: PrimaryCtorHelper
+  trait PrimaryCtorHelper {
+    def unapply(tree: Tree): Option[(Mods, Seq[Seq[Tree]])]
+  }
 }
 
-/** TypeToolbox defines extractors for inspecting expression trees
+/** TypeToolbox defines extractors for inspecting expression trees as well as check types of trees
  */
-trait TypeToolbox extends Toolbox {
+trait TypeToolbox extends Toolbox { t =>
+  type Tree <: { def tpe: Type }
   type Type
 
   // type operations
@@ -211,15 +215,6 @@ trait TypeToolbox extends Toolbox {
   trait LitHelper {
     def unapply(tree: Tree): Option[Any]
   }
-
-  val Ident: IdentHelper
-  trait IdentHelper
-
-  val Select: SelectHelper
-  trait SelectHelper
-
-  val This: ThisHelper
-  trait ThisHelper
 
   val Apply: ApplyHelper
   trait ApplyHelper {

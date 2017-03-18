@@ -4,7 +4,7 @@ import dotty.tools._
 import dotc.core.Contexts._
 
 import scala.gestalt._
-import dotty.DottyToolbox
+import dotty.Toolbox
 
 class QuasiquoteTest extends TestSuite {
   val context: Context = {

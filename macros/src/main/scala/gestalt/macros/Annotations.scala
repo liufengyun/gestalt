@@ -5,11 +5,11 @@ import scala.gestalt._
 
 class main extends StaticAnnotation {
   inline def apply(defn: Any): Any = meta {
-    val q"object $name { ..$stats }" = defn
+    val toolbox.Object(mods, name, parents, self, stats) = defn
     val main = q"""
       def stub(args: Any): Any = { ..$stats }
     """
-    q"object $name { $main }"
+    toolbox.Object(mods, name, parents, self, List(main))
   }
 }
 
