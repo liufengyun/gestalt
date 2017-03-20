@@ -435,7 +435,7 @@ class StructToolbox(enclosingPosition: Position)(implicit ctx: Context) extends 
   object Object extends ObjectHelper {
     def unapply(tree: Tree): Option[(Mods, String, Seq[Tree], Option[Tree], Seq[Tree])] = tree match {
       case obj @ d.ModuleDef(name, templ @ c.Template(constr, parents, self: d.ValDef, body)) =>
-        val selfOpt = if (self.name == nme.WILDCARD || self.isEmpty) None else Some(Self(self.name.toString, self.tpt))
+        val selfOpt = if (self == d.EmptyValDef) None else Some(Self(self.name.toString, self.tpt))
         Some((obj.mods, name.toString, parents, selfOpt, templ.body))
       case _ => None
     }
@@ -451,7 +451,7 @@ class StructToolbox(enclosingPosition: Position)(implicit ctx: Context) extends 
             tparams = tps
             Some(PrimaryCtor(pctor.mods, paramss))
         }
-        val selfOpt = if (self.name == nme.WILDCARD && self.tpt == d.TypeTree()) None else Some(Self(self.name.toString, self.tpt))
+        val selfOpt = if (self == d.EmptyValDef) None else Some(Self(self.name.toString, self.tpt))
         Some((cdef.mods, name.toString, tparams, ctor, tparams, selfOpt, templ.body))  // TODO: parents
       case _ => None
     }
