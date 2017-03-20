@@ -18,6 +18,10 @@ class QuasiquoteTest extends TestSuite {
     ctx
   }
 
+  test("test modifiers") {
+    @modsTest val x = 5
+  }
+
   /*
   val toolbox = new DottyToolbox()(context)
 

@@ -237,57 +237,59 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
       case Seq(quasi: Quasi) => return liftQuasi(quasi)
       case _ =>
         if (!isTerm) {
-          t.error("Match modifiers in syntax is problematic and not supported.", enclosingTree)
+          t.error("Match modifiers in syntax is problematic and not supported. Match the modifiers with a variable instead or $_ to ignore them.", enclosingTree)
           return t.Ident("_")
         }
     }
 
-    val vdef = t.ValDef(t.emptyMods, "mods", None, selectToolbox("emptyMods"))
-    val updates: Seq[t.Tree] = mods.map { mod =>
+    val zero: t.Tree = selectToolbox("emptyMods")
+
+    mods.foldLeft(zero) { (acc, mod) =>
       mod match {
         case m.Mod.Annot(body) =>
-          t.Select(t.Ident("mods"), "addAnnot").appliedTo(lift(body))
+          t.Select(acc, "withAddedAnnotation").appliedTo(lift(body))
         case m.Mod.Private(within) =>
           val scope = within match {
             case m.Name.Indeterminate(name)      => name
             case m.Term.This(m.Name.Anonymous()) => "this"
             case m.Name.Anonymous()              => ""
           }
-          t.Select(t.Ident("mods"), "setPrivate").appliedTo(t.Lit(scope))
+          t.Select(t.Select(acc, "withPrivateWithin").appliedTo(t.Lit(scope)), "|").
+            appliedTo(t.Select(t.Ident("flags"), "Private"))
         case m.Mod.Protected(within) =>
           val scope = within match {
             case m.Name.Indeterminate(name)      => name
             case m.Term.This(m.Name.Anonymous()) => "this"
             case m.Name.Anonymous()              => ""
           }
-          t.Select(t.Ident("mods"), "setProtected").appliedTo(t.Lit(scope))
+          t.Select(t.Select(acc, "withPrivateWithin").appliedTo(t.Lit(scope)), "|").
+            appliedTo(t.Select(t.Ident("flags"), "Private"))
         case m.Mod.Implicit() =>
-          t.Select(t.Ident("mods"), "setImplicit").appliedTo()
+          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Implicit"))
         case m.Mod.Final() =>
-          t.Select(t.Ident("mods"), "setFinal").appliedTo()
+          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Final"))
         case m.Mod.Sealed() =>
-          t.Select(t.Ident("mods"), "setSealed").appliedTo()
+          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Sealed"))
         case m.Mod.Override() =>
-          t.Select(t.Ident("mods"), "setOverride").appliedTo()
+          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Override"))
         case m.Mod.Case() =>
-          t.Select(t.Ident("mods"), "setCase").appliedTo()
+          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Case"))
         case m.Mod.Abstract() =>
-          t.Select(t.Ident("mods"), "setAbstract").appliedTo()
+          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Abstract"))
         case m.Mod.Covariant() =>
-          t.Select(t.Ident("mods"), "setCovariant").appliedTo()
+          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Covariant"))
         case m.Mod.Contravariant() =>
-          t.Select(t.Ident("mods"), "setContravariant").appliedTo()
+          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Contravariant"))
         case m.Mod.Lazy() =>
-          t.Select(t.Ident("mods"), "setLazy").appliedTo()
+          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Lazy"))
         case m.Mod.ValParam() =>
-          t.Select(t.Ident("mods"), "setVal").appliedTo()
+          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Val"))
         case m.Mod.VarParam() =>
-          t.Select(t.Ident("mods"), "setVar").appliedTo()
+          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Var"))
         case m.Mod.Inline() =>
-          t.Select(t.Ident("mods"), "setInline").appliedTo()
+          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Inline"))
       }
     }
-    t.Block(vdef +: updates :+ t.Ident("mods"))
   }
 
   /** {{{

@@ -1,6 +1,6 @@
 package scala.gestalt.dotty
 
-import scala.gestalt.{Toolbox => Tbox, StructToolbox => STbox, TypeToolbox => TTbox, Modifiers => Mods}
+import scala.gestalt.{Toolbox => Tbox, StructToolbox => STbox, TypeToolbox => TTbox, Modifiers => Mods, flags}
 import scala.collection.immutable.Seq
 
 import dotty.tools.dotc._
@@ -17,61 +17,101 @@ import Positions.Position
 
 import scala.collection.mutable.ListBuffer
 
-class Modifiers(var mods: d.Modifiers) extends Mods[d.Tree] {
-  def isPrivate: Boolean = mods is Flags.Private
-  def getPrivate: String = if (mods is Flags.Local) "this" else mods.privateWithin.toString
-  def setPrivate(within: String): Unit = {
-    if (within == "this") mods = mods | Flags.Local
-    else mods = mods.withPrivateWithin(within.toTypeName)
+object ModsHelper {
+  // TODO: valDefContext: (1) caseClassParam (2) self (3) methodParam (4) classParam
+  def toDotty(tbMods: Mods[d.Tree]): d.Modifiers = {
+    var dottyMods = d.Modifiers(
+      annotations = tbMods.annotations,
+      privateWithin = tbMods.privateWithin.toTypeName)
+
+    if (tbMods.is(flags.Private))
+      dottyMods =
+        if (tbMods.privateWithin == "this")
+          dottyMods | Flags.PrivateLocal
+        else
+          dottyMods | Flags.Private
+
+    if (tbMods.is(flags.Protected))
+      dottyMods =
+        if (tbMods.privateWithin == "this")
+          dottyMods | Flags.ProtectedLocal
+        else
+          dottyMods | Flags.Protected
+
+    if (tbMods.is(flags.Var)) dottyMods = dottyMods | Flags.Mutable
+
+    if (tbMods.is(flags.Implicit)) dottyMods = dottyMods | Flags.Implicit
+
+    if (tbMods.is(flags.Sealed)) dottyMods = dottyMods | Flags.Sealed
+
+    if (tbMods.is(flags.Override)) dottyMods = dottyMods | Flags.Override
+
+    if (tbMods.is(flags.Abstract)) dottyMods = dottyMods | Flags.Abstract
+
+    if (tbMods.is(flags.Lazy)) dottyMods = dottyMods | Flags.Lazy
+
+    if (tbMods.is(flags.Inline)) dottyMods = dottyMods | Flags.Inline
+
+    if (tbMods.is(flags.Case)) dottyMods = dottyMods | Flags.Case
+
+    if (tbMods.is(flags.Contravariant)) dottyMods = dottyMods | Flags.Contravariant
+
+    if (tbMods.is(flags.Covariant)) dottyMods = dottyMods | Flags.Covariant
+
+    // TODO: mods.Val -- presence or absence of this flag depends on valDefContext
+
+    dottyMods
   }
 
-  def isProtected: Boolean = mods is Flags.Protected
-  def getProtected: String = mods.privateWithin.toString
-  def setProtected(within: String): Unit = mods = mods.withPrivateWithin(within.toTypeName)
+  def fromDotty(dottyMods: d.Modifiers): Mods[d.Tree] = {
+    var tbMods = Mods[d.Tree](
+      annotations = dottyMods.annotations,
+      privateWithin = dottyMods.privateWithin.toString
+    )
 
-  def isVal: Boolean = mods.mods.exists(_.isInstanceOf[d.Mod.Val])
-  def setVal: Unit = mods = mods.withAddedMod(d.Mod.Val())
+    if (dottyMods.is(Flags.Private))
+      tbMods =
+        if (dottyMods.is(Flags.Local))
+          tbMods.withPrivateWithin("this") | flags.Private
+        else
+          tbMods | flags.Private
 
-  def isVar: Boolean = mods is Flags.Mutable
-  def setVar: Unit = mods = mods | Flags.Mutable
+    if (dottyMods.is(Flags.Protected))
+      tbMods =
+        if (dottyMods.is(Flags.Local))
+          tbMods.withPrivateWithin("this") | flags.Protected
+        else
+          tbMods | flags.Protected
 
-  def isImplicit: Boolean = mods is Flags.Implicit
-  def setImplicit: Unit = mods = mods | Flags.Implicit
+    if (dottyMods.is(Flags.Mutable)) tbMods = tbMods | flags.Var
 
-  def isFinal: Boolean = mods is Flags.Final
-  def setFinal: Unit = mods = mods | Flags.Final
+    if (dottyMods.is(Flags.Implicit)) tbMods = tbMods | flags.Implicit
 
-  def isSealed: Boolean = mods is Flags.Sealed
-  def setSealed: Unit = mods = mods | Flags.Sealed
+    if (dottyMods.is(Flags.Sealed)) tbMods = tbMods | flags.Sealed
 
-  def isOverride: Boolean = mods is Flags.Override
-  def setOverride: Unit = mods = mods | Flags.Override
+    if (dottyMods.is(Flags.Override)) tbMods = tbMods | flags.Override
 
-  def isAbstract: Boolean = mods is Flags.Abstract
-  def setAbstract: Unit = mods = mods | Flags.Abstract
+    if (dottyMods.is(Flags.Abstract)) tbMods = tbMods | flags.Abstract
 
-  def isLazy: Boolean = mods is Flags.Lazy
-  def setLazy: Unit = mods = mods | Flags.Lazy
+    if (dottyMods.is(Flags.Lazy)) tbMods = tbMods | flags.Lazy
 
-  def isInline: Boolean = mods is Flags.Inline
-  def setInline: Unit = mods = mods | Flags.Inline
+    if (dottyMods.is(Flags.Inline)) tbMods = tbMods | flags.Inline
 
-  def isCase: Boolean = mods is Flags.Case
-  def setCase: Unit = mods = mods | Flags.Case
+    if (dottyMods.is(Flags.Case)) tbMods = tbMods | flags.Case
 
-  def isContravariant: Boolean = mods is Flags.Contravariant
-  def setContravariant: Unit = mods = mods | Flags.Contravariant
+    if (dottyMods.is(Flags.Contravariant)) tbMods = tbMods | flags.Contravariant
 
-  def isCovariant: Boolean = mods is Flags.Covariant
-  def setCovariant: Unit = mods = mods | Flags.Covariant
+    if (dottyMods.is(Flags.Covariant)) tbMods = tbMods | flags.Covariant
 
-  def addAnnot(annot: d.Tree): Unit = mods = mods.withAddedAnnotation(annot)
+    // TODO: mods.Val -- presence or absence of this flag depends on valDefContext
+
+    tbMods
+  }
 }
 
 class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   type Tree = d.Tree
   type TypeTree = d.Tree
-  type Mods = Modifiers
 
   def getOrEmpty(treeOpt: Option[Tree]): Tree = treeOpt.getOrElse(d.EmptyTree)
 
@@ -83,16 +123,18 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   def error(message: String, tree: Tree): Unit = {
     ctx.error(message, tree.pos)
   }
-  //----------------------------------------
 
-  // modifiers
-  def emptyMods: Mods = new Modifiers(d.EmptyModifiers)
+  implicit  def toDotty(tbMods: Mods): d.Modifiers = ModsHelper.toDotty(tbMods)
+
+  implicit def fromDotty(dottyMods: d.Modifiers): Mods = ModsHelper.fromDotty(dottyMods)
+
+  //----------------------------------------
 
   def Object(mods: Mods, name: String, parents: Seq[Tree], selfOpt: Option[Tree], stats: Seq[Tree]): Tree = {
     val constr = d.DefDef(nme.CONSTRUCTOR, Nil, Nil, d.TypeTree(), d.EmptyTree)
     val self = if (selfOpt.isEmpty) d.EmptyValDef else selfOpt.get.asInstanceOf[d.ValDef]
     val templ = d.Template(constr, parents.toList, self, stats)
-    d.ModuleDef(name.toTermName, templ).withMods(mods.mods).withPosition
+    d.ModuleDef(name.toTermName, templ).withMods(mods).withPosition
   }
 
   def Class(mods: Mods, name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], selfOpt: Option[Tree], stats: Seq[Tree]): Tree = {
@@ -102,12 +144,12 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
         val PrimaryCtorTree(mods, paramss) = ctor.get
         val tparamsCast = tparams.toList.asInstanceOf[List[d.TypeDef]]
         val paramssCast = paramss.map(_.toList).toList.asInstanceOf[List[List[d.ValDef]]]
-        d.DefDef(nme.CONSTRUCTOR, tparamsCast, paramssCast, d.TypeTree(), d.EmptyTree).withMods(mods.mods)
+        d.DefDef(nme.CONSTRUCTOR, tparamsCast, paramssCast, d.TypeTree(), d.EmptyTree).withMods(mods)
       }
 
     val self = if (selfOpt.isEmpty) d.EmptyValDef else selfOpt.get.asInstanceOf[d.ValDef]
     val templ = d.Template(constr, parents.toList, self, stats)
-    d.TypeDef(name.toTypeName, templ).withMods(mods.mods).withPosition
+    d.TypeDef(name.toTypeName, templ).withMods(mods).withPosition
   }
 
   def AnonymClass(parents: Seq[Tree], selfOpt: Option[Tree], stats: Seq[Tree]): Tree = {
@@ -124,57 +166,57 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     val body =
       if (tparams.size == 0) tbounds
       else d.PolyTypeTree(tparams.toList.asInstanceOf[List[d.TypeDef]], tbounds)
-    d.TypeDef(name.toTypeName, body).withMods(mods.mods).withPosition
+    d.TypeDef(name.toTypeName, body).withMods(mods).withPosition
   }
 
   def TypeAlias(mods: Mods, name: String, tparams: Seq[Tree], rhs: TypeTree): Tree = {
     val body =
       if (tparams.size == 0) rhs
       else d.PolyTypeTree(tparams.toList.asInstanceOf[List[d.TypeDef]], rhs)
-    d.TypeDef(name.toTypeName, body).withMods(mods.mods).withPosition
+    d.TypeDef(name.toTypeName, body).withMods(mods).withPosition
   }
 
   def DefDef(mods: Mods, name: String, tparams: Seq[Tree], paramss: Seq[Seq[Tree]], tpe: Option[TypeTree], rhs: Tree): Tree = {
     val types = tparams.toList.asInstanceOf[List[d.TypeDef]]
     val params = paramss.map(_.toList).toList.asInstanceOf[List[List[d.ValDef]]]
-    d.DefDef(name.toTermName, types, params, tpe.getOrElse(d.TypeTree()), rhs).withMods(mods.mods).withPosition
+    d.DefDef(name.toTermName, types, params, tpe.getOrElse(d.TypeTree()), rhs).withMods(mods).withPosition
   }
 
   def DefDecl(mods: Mods, name: String, tparams: Seq[Tree], paramss: Seq[Seq[Tree]], tpe: TypeTree): Tree = {
     val types = tparams.toList.asInstanceOf[List[d.TypeDef]]
     val params = paramss.map(_.toList).toList.asInstanceOf[List[List[d.ValDef]]]
-    d.DefDef(name.toTermName, types, params, tpe, d.EmptyTree).withMods(mods.mods).withPosition
+    d.DefDef(name.toTermName, types, params, tpe, d.EmptyTree).withMods(mods).withPosition
   }
 
   def ValDef(mods: Mods, name: String, tpe: Option[TypeTree], rhs: Tree): Tree =
-    d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), rhs).withMods(mods.mods).withPosition
+    d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), rhs).withMods(mods).withPosition
 
   def ValDef(mods: Mods, lhs: Tree, tpe: Option[TypeTree], rhs: Tree): Tree =
-    d.PatDef(mods.mods, List(lhs), tpe.getOrElse(d.TypeTree()), rhs).withPosition
+    d.PatDef(mods, List(lhs), tpe.getOrElse(d.TypeTree()), rhs).withPosition
 
   def ValDef(mods: Mods, pats: Seq[Tree], tpe: Option[TypeTree], rhs: Tree): Tree =
-    d.PatDef(mods.mods, pats.toList, tpe.getOrElse(d.TypeTree()), rhs).withPosition
+    d.PatDef(mods, pats.toList, tpe.getOrElse(d.TypeTree()), rhs).withPosition
 
   def ValDecl(mods: Mods, name: String, tpe: TypeTree): Tree =
-    d.ValDef(name.toTermName, tpe, d.EmptyTree).withMods(mods.mods).withPosition
+    d.ValDef(name.toTermName, tpe, d.EmptyTree).withMods(mods).withPosition
 
   def ValDecl(mods: Mods, vals: Seq[String], tpe: TypeTree): Tree =
-    d.PatDef(mods.mods, vals.map(n => d.Ident(n.toTermName)).toList, tpe, d.EmptyTree).withPosition
+    d.PatDef(mods, vals.map(n => d.Ident(n.toTermName)).toList, tpe, d.EmptyTree).withPosition
 
   def VarDef(mods: Mods, name: String, tpe: Option[TypeTree], rhs: Tree): Tree =
-    d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), rhs).withMods(mods.mods | Flags.Mutable).withPosition
+    d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), rhs).withMods((mods : d.Modifiers) | Flags.Mutable).withPosition
 
   def VarDef(mods: Mods, lhs: Tree, tpe: Option[TypeTree], rhs: Tree): Tree =
-    d.PatDef(mods.mods | Flags.Mutable, List(lhs), tpe.getOrElse(d.TypeTree()), rhs).withPosition
+    d.PatDef((mods: d.Modifiers) | Flags.Mutable, List(lhs), tpe.getOrElse(d.TypeTree()), rhs).withPosition
 
   def VarDef(mods: Mods, pats: Seq[Tree], tpe: Option[TypeTree], rhs: Tree): Tree =
-    d.PatDef(mods.mods | Flags.Mutable, pats.toList, tpe.getOrElse(d.TypeTree()), rhs).withPosition
+    d.PatDef((mods: d.Modifiers) | Flags.Mutable, pats.toList, tpe.getOrElse(d.TypeTree()), rhs).withPosition
 
   def VarDecl(mods: Mods, name: String, tpe: TypeTree): Tree =
-    d.ValDef(name.toTermName, tpe, d.EmptyTree).withMods(mods.mods | Flags.Mutable).withPosition
+    d.ValDef(name.toTermName, tpe, d.EmptyTree).withMods((mods: d.Modifiers) | Flags.Mutable).withPosition
 
   def VarDecl(mods: Mods, vals: Seq[String], tpe: TypeTree): Tree =
-    d.PatDef(mods.mods | Flags.Mutable, vals.map(n => d.Ident(n.toTermName)).toList, tpe, d.EmptyTree).withPosition
+    d.PatDef((mods: d.Modifiers)| Flags.Mutable, vals.map(n => d.Ident(n.toTermName)).toList, tpe, d.EmptyTree).withPosition
 
   // Dummy trees to retrofit Dotty AST
   protected case class PrimaryCtorTree(mods: Mods, paramss: Seq[Seq[Tree]]) extends d.Tree
@@ -191,7 +233,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   }
 
   def Param(mods: Mods, name: String, tpe: Option[TypeTree], default: Option[Tree]): Tree = {
-    d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), getOrEmpty(default)).withMods(mods.mods).withFlags(Flags.TermParam).withPosition
+    d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), getOrEmpty(default)).withMods(mods).withFlags(Flags.TermParam).withPosition
   }
 
   def TypeParam(mods: Mods, name: String, tparams: Seq[TypeTree], tboundsOpt: Option[TypeTree], cbounds: Seq[TypeTree]): TypeTree = {
@@ -204,7 +246,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       if (tparams.size == 0) inner
       else d.PolyTypeTree(tparams.toList.asInstanceOf[List[d.TypeDef]], inner)
 
-    d.TypeDef(name.toTypeName, body).withMods(mods.mods).withPosition
+    d.TypeDef(name.toTypeName, body).withMods(mods).withPosition
   }
 
   def Self(name: String, tpe: TypeTree): Tree =
@@ -394,7 +436,7 @@ class StructToolbox(enclosingPosition: Position)(implicit ctx: Context) extends 
     def unapply(tree: Tree): Option[(Mods, String, Seq[Tree], Option[Tree], Seq[Tree])] = tree match {
       case obj @ d.ModuleDef(name, templ @ c.Template(constr, parents, self: d.ValDef, body)) =>
         val selfOpt = if (self.name == nme.WILDCARD || self.isEmpty) None else Some(Self(self.name.toString, self.tpt))
-        Some((new Modifiers(obj.mods), name.toString, parents, selfOpt, templ.body))
+        Some((obj.mods, name.toString, parents, selfOpt, templ.body))
       case _ => None
     }
   }
@@ -407,10 +449,10 @@ class StructToolbox(enclosingPosition: Position)(implicit ctx: Context) extends 
           case c.DefDef(nme.CONSTRUCTOR, Nil, Nil, c.TypeTree(), d.EmptyTree) => None
           case pctor @ c.DefDef(nme.CONSTRUCTOR, tps, paramss, c.TypeTree(), d.EmptyTree) =>
             tparams = tps
-            Some(PrimaryCtor(new Modifiers(pctor.mods), paramss))
+            Some(PrimaryCtor(pctor.mods, paramss))
         }
         val selfOpt = if (self.name == nme.WILDCARD && self.tpt == d.TypeTree()) None else Some(Self(self.name.toString, self.tpt))
-        Some((new Modifiers(cdef.mods), name.toString, tparams, ctor, tparams, selfOpt, templ.body))  // TODO: parents
+        Some((cdef.mods, name.toString, tparams, ctor, tparams, selfOpt, templ.body))  // TODO: parents
       case _ => None
     }
   }

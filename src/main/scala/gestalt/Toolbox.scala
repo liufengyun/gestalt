@@ -2,64 +2,128 @@ package scala.gestalt
 
 import scala.collection.immutable.Seq
 
-trait Modifiers[T] {
-  def isPrivate: Boolean
-  def setPrivate(within: String): Unit
-  def getPrivate: String
+/** Modelling of modifiers
+ *
+ * Code adapted from Dotty
+ */
+object flags {
+  private val flagName = Array.fill(64)("")
+  private final val MaxFlag = 63
 
-  def isProtected: Boolean
-  def setProtected(within: String): Unit
-  def getProtected: String
+  final val EmptyFlags = FlagSet(0)
 
-  def isVal: Boolean
-  def setVal: Unit
+  /** The flag with given index between 1 and 63.
+   *  Installs given name as the name of the flag. */
+  private def newFlag(index: Int, name: String): FlagSet = {
+    flagName(index) = name
+    FlagSet(1L << index)
+  }
 
-  def isVar: Boolean
-  def setVar: Unit
+  /** A FlagSet represents a set of flags.
+   */
+  case class FlagSet(val bits: Long) extends AnyVal {
 
-  def isImplicit: Boolean
-  def setImplicit: Unit
+    /** The union of this flag set and the given flag set
+     */
+    def | (that: FlagSet): FlagSet =
+      if (bits == 0) that
+      else if (that.bits == 0) this
+      else {
+        FlagSet(this.bits | that.bits)
+      }
 
-  def isFinal: Boolean
-  def setFinal: Unit
+    /** The intersection of this flag set and the given flag set */
+    def & (that: FlagSet) = FlagSet(bits & that.bits)
 
-  def isSealed: Boolean
-  def setSealed: Unit
+    /** The intersection of this flag set with the complement of the given flag set */
+    def &~ (that: FlagSet) = FlagSet(this.bits & ~that.bits)
 
-  def isOverride: Boolean
-  def setOverride: Unit
+    /** Does this flag set have a non-empty intersection with the given flag set?
+     */
+    def is(flags: FlagSet): Boolean = (bits & flags.bits) != 0
 
-  def isAbstract: Boolean
-  def setAbstract: Unit
+    /** Does this flag set have a non-empty intersection with the given flag set,
+     *  and at the same time contain none of the flags in the `butNot` set?
+     */
+    def is(flags: FlagSet, butNot: FlagSet): Boolean = is(flags) && !is(butNot)
 
-  def isLazy: Boolean
-  def setLazy: Unit
+    /** Is this flag set a subset of that one? */
+    def <= (that: FlagSet) = (bits & that.bits) == bits
 
-  def isInline: Boolean
-  def setInline: Unit
+    /** The number flags in this set */
+    def numFlags: Int = java.lang.Long.bitCount(bits)
 
-  def isCase: Boolean
-  def setCase: Unit
+    private def flagString(idx: Int): List[String] =
+      if ((bits & (1L << idx)) == 0) Nil
+      else {
+        val fs = flagName(idx)
+        val strs = fs :: Nil
+        strs filter (_.nonEmpty)
+      }
 
-  def isContravariant: Boolean
-  def setContravariant: Unit
+    /** The list of non-empty names of flags that are set in this FlagSet */
+    def flagStrings: Seq[String] = (1 to MaxFlag).flatMap(flagString)
 
-  def isCovariant: Boolean
-  def setCovariant: Unit
+    /** The string representation of this flag set */
+    override def toString = flagStrings.mkString(" ")
+  }
 
-  def addAnnot(annot: T): Unit
+  final val Private = newFlag(1, "private")
+  final val Protected = newFlag(2, "protected")
+  final val Override = newFlag(3, "override")
+  final val Final = newFlag(4, "final")
+  final val Implicit = newFlag(5, "implicit")
+  final val Lazy = newFlag(6, "lazy")
+  final val Sealed = newFlag(8, "sealed")
+  final val Abstract = newFlag(9, "abstract")
+  final val Var = newFlag(10, "var")
+  final val Val = newFlag(11, "val")
+  final val Case = newFlag(12, "case")
+  final val Contravariant = newFlag(13, "contravariant")
+  final val Covariant = newFlag(14, "covariant")
+  final val Inline = newFlag(15, "inline")
+}
+
+import flags._
+
+case class Modifiers[Tree](
+  flags: FlagSet = EmptyFlags,
+  privateWithin: String = "",   // can be empty or `this`
+  annotations: List[Tree] = Nil) {
+
+  def is(fs: FlagSet): Boolean = flags is fs
+  def is(fc: FlagSet, butNot: FlagSet): Boolean = flags.is(fc, butNot = butNot)
+
+  def | (fs: FlagSet): Modifiers[Tree] = withFlags(flags | fs)
+  def & (fs: FlagSet): Modifiers[Tree] = withFlags(flags & fs)
+  def &~(fs: FlagSet): Modifiers[Tree] = withFlags(flags &~ fs)
+
+  def withFlags(flags: FlagSet): Modifiers[Tree] =
+    copy(flags = flags)
+
+  def withAddedAnnotation(annot: Tree): Modifiers[Tree] =
+    withAnnotations(annotations :+ annot)
+
+  def withAnnotations(annots: List[Tree]): Modifiers[Tree] =
+    copy(annotations = annots)
+
+  def withPrivateWithin(pw: String): Modifiers[Tree] =
+    copy(privateWithin = pw)
+
+  def hasAnnotations: Boolean = annotations.nonEmpty
+  def hasPrivateWithin: Boolean = privateWithin != ""
 }
 
 trait Toolbox {
   type Tree
   type TypeTree <: Tree      // safety by construction -- implementation can have TypeTree = Tree
-  type Mods <: Modifiers[Tree]
+  type Mods = Modifiers[Tree]
 
   // diagnostics - the implementation takes the position from the tree
   def error(message: String, tree: Tree): Unit
 
   // modifiers
-  def emptyMods: Mods
+  def emptyMods: Mods = Modifiers[Tree]()
 
   // definition trees
   def Object(mods: Mods, name: String, parents: Seq[Tree], selfOpt: Option[Tree], stats: Seq[Tree]): Tree
