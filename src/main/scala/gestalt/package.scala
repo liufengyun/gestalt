@@ -27,10 +27,10 @@ package object gestalt {
    *
    *  This method is intended to be reflectively called by the compiler
    */
-  def expand(t: Toolbox)(label: String, parts: List[String], unquotes: List[t.Tree], isPattern: Boolean): t.Tree = {
+  def expand(t: Toolbox)(label: String, tree: t.Tree, parts: List[String], unquotes: List[t.Tree], isPattern: Boolean): t.Tree = {
     val quote      = new Quasiquote(t, "toolbox")
     val argsTyped  = unquotes.asInstanceOf[List[quote.t.Tree]]
-    quote.expand(label, parts, argsTyped, isPattern).asInstanceOf[t.Tree]
+    quote.expand(label, tree.asInstanceOf[quote.t.Tree], parts, argsTyped, isPattern).asInstanceOf[t.Tree]
   }
 
 }

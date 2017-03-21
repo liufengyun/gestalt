@@ -14,6 +14,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
   // args: List[t.Tree[Any]]
   def args: List[t.Tree]
   def isTerm: Boolean
+  def enclosingTree: t.Tree
 
   // helpers
   private implicit class TreeOps(val tree: t.Tree) {
@@ -69,7 +70,8 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
           require(prefix.isEmpty)
           if (isTerm) loop(rest, Some(t.Infix(acc.get, "++", liftQuasi(quasi))), Nil)
           else {
-            t.error(m.internal.parsers.Messages.QuasiquoteAdjacentEllipsesInPattern(quasi.rank))
+            t.error(m.internal.parsers.Messages.QuasiquoteAdjacentEllipsesInPattern(quasi.rank), enclosingTree)
+            t.Lit(null)
           }
         }
       case other +: rest =>
@@ -99,10 +101,12 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
       if (treess.flatten.length == 1) liftQuasi(tripleDotQuasis(0))
       else {
         t.error("implementation restriction: can't mix ...$ with anything else in parameter lists." +
-          EOL + "See https://github.com/scalameta/scalameta/issues/406 for details.")
+          EOL + "See https://github.com/scalameta/scalameta/issues/406 for details.", enclosingTree)
+        t.Lit(null)
       }
     } else {
-      t.error(m.internal.parsers.Messages.QuasiquoteAdjacentEllipsesInPattern(2))
+      t.error(m.internal.parsers.Messages.QuasiquoteAdjacentEllipsesInPattern(2), enclosingTree)
+      t.Lit(null)
     }
   }
 
@@ -173,7 +177,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
 
   /**
     * {{{
-    * (mods: t.Tree[Seq[t.Tree[A]]],
+    * (mods: t.Tree[t.Mods],
     *  pats: Seq[m.Pat],
     *  tpe: t.Tree[Option[t.TypeTree[B]]],
     *  rhs: t.Tree[Option[t.Tree[C]]],
@@ -225,6 +229,67 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
   def liftName(name: m.Name): t.Tree = name match {
     case quasi: Quasi => liftQuasi(quasi)
     case _ => t.Lit(name.value)
+  }
+
+  /** lift modifiers */
+  def liftMods(mods: Seq[m.Tree]): t.Tree = {
+    mods match {
+      case Seq(quasi: Quasi) => return liftQuasi(quasi)
+      case _ =>
+        if (!isTerm) {
+          t.error("Match modifiers in syntax is problematic and not supported. Match the modifiers with a variable instead or $_ to ignore them.", enclosingTree)
+          return t.Ident("_")
+        }
+    }
+
+    val zero: t.Tree = selectToolbox("emptyMods")
+
+    mods.foldLeft(zero) { (acc, mod) =>
+      mod match {
+        case m.Mod.Annot(body) =>
+          t.Select(acc, "withAddedAnnotation").appliedTo(lift(body))
+        case m.Mod.Private(within) =>
+          val scope = within match {
+            case m.Name.Indeterminate(name)      => name
+            case m.Term.This(m.Name.Anonymous()) => "this"
+            case m.Name.Anonymous()              => ""
+          }
+          t.Select(t.Select(acc, "withPrivateWithin").appliedTo(t.Lit(scope)), "|").
+            appliedTo(t.Select(t.Ident("flags"), "Private"))
+        case m.Mod.Protected(within) =>
+          val scope = within match {
+            case m.Name.Indeterminate(name)      => name
+            case m.Term.This(m.Name.Anonymous()) => "this"
+            case m.Name.Anonymous()              => ""
+          }
+          t.Select(t.Select(acc, "withPrivateWithin").appliedTo(t.Lit(scope)), "|").
+            appliedTo(t.Select(t.Ident("flags"), "Private"))
+        case m.Mod.Implicit() =>
+          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Implicit"))
+        case m.Mod.Final() =>
+          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Final"))
+        case m.Mod.Sealed() =>
+          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Sealed"))
+        case m.Mod.Override() =>
+          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Override"))
+        case m.Mod.Case() =>
+          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Case"))
+        case m.Mod.Abstract() =>
+          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Abstract"))
+        case m.Mod.Covariant() =>
+          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Covariant"))
+        case m.Mod.Contravariant() =>
+          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Contravariant"))
+        case m.Mod.Lazy() =>
+          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Lazy"))
+        case m.Mod.ValParam() =>
+          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Val"))
+        case m.Mod.VarParam() =>
+          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Var"))
+        case m.Mod.Inline() =>
+          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Inline"))
+      }
+    }
   }
 
   /** {{{
@@ -339,7 +404,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     case m.Term.Arg.Repeated(expr) =>
       selectToolbox("Repeated").appliedTo(lift(expr))
     case m.Term.Param(mods, m.Term.Name(name), tpe, default) =>
-      selectToolbox("Param").appliedTo(liftSeq(mods), t.Lit(name), liftOpt(tpe), liftOpt(default))
+      selectToolbox("Param").appliedTo(liftMods(mods), t.Lit(name), liftOpt(tpe), liftOpt(default))
 
     // types
     case m.Type.Name(name) =>
@@ -383,7 +448,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
       }
 
       selectToolbox("TypeParam").appliedTo(
-        liftSeq(mods), t.Lit(nameStr), liftSeq(tparams), lift(tbounds), liftSeq(cbounds)
+        liftMods(mods), t.Lit(nameStr), liftSeq(tparams), lift(tbounds), liftSeq(cbounds)
       )
 
     // patterns
@@ -441,33 +506,33 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
 
     case m.Decl.Val(mods, pats, tpe) =>
       require(pats.size > 0)
-      val modifiers = liftSeq(mods)
+      val modifiers = liftMods(mods)
       liftValDef(modifiers, pats, scalaSome.appliedTo(lift(tpe)), scalaNone, "ValDecl")
     case m.Decl.Var(mods, pats, tpe) =>
       require(pats.size > 0)
-      val modifiers = liftSeq(mods)
+      val modifiers = liftMods(mods)
       liftValDef(modifiers, pats, scalaSome.appliedTo(lift(tpe)), scalaNone, "VarDecl")
     case m.Decl.Def(mods, name, tparams, paramss, tpe) =>
-      selectToolbox("DefDecl").appliedTo(liftSeq(mods), liftName(name), liftSeq(tparams), liftSeqSeq(paramss), lift(tpe))
+      selectToolbox("DefDecl").appliedTo(liftMods(mods), liftName(name), liftSeq(tparams), liftSeqSeq(paramss), lift(tpe))
     case m.Decl.Type(mods, name, tparams, bounds) =>
-      selectToolbox("TypeDecl").appliedTo(liftSeq(mods), liftName(name), liftSeq(tparams), scalaSome.appliedTo(lift(bounds)))
+      selectToolbox("TypeDecl").appliedTo(liftMods(mods), liftName(name), liftSeq(tparams), scalaSome.appliedTo(lift(bounds)))
 
     case m.Defn.Val(mods, pats, tpe, rhs) =>
       require(pats.size > 0)
-      val modifiers = liftSeq(mods)
+      val modifiers = liftMods(mods)
       liftValDef(modifiers, pats, liftOpt(tpe), lift(rhs), "ValDef")
     case m.Defn.Var(mods, pats, tpe, rhs) =>
       require(pats.size > 0)
-      val modifiers = liftSeq(mods)
+      val modifiers = liftMods(mods)
       liftValDef(modifiers, pats, liftOpt(tpe), liftOpt(rhs), "VarDef")
     case m.Defn.Def(mods, name, tparams, paramss, tpe, body) =>
-      selectToolbox("DefDef").appliedTo(liftSeq(mods), liftName(name), liftSeq(tparams), liftSeqSeq(paramss), liftOpt(tpe), lift(body))
+      selectToolbox("DefDef").appliedTo(liftMods(mods), liftName(name), liftSeq(tparams), liftSeqSeq(paramss), liftOpt(tpe), lift(body))
     // case m.Defn.Macro(mods, name, tparams, paramss, tpe, body) =>
     case m.Defn.Type(mods, name, tparams, body) =>
-      selectToolbox("TypeAlias").appliedTo(liftSeq(mods), liftName(name), liftSeq(tparams), lift(body))
+      selectToolbox("TypeAlias").appliedTo(liftMods(mods), liftName(name), liftSeq(tparams), lift(body))
     case m.Defn.Class(mods, name, tparams, ctor, m.Template(_, parents, self, stats)) =>
       selectToolbox("Class").appliedTo(
-        liftSeq(mods),
+        liftMods(mods),
         liftName(name),
         liftSeq(tparams),
         scalaSome.appliedTo(lift(ctor)),
@@ -477,7 +542,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
       )
     case m.Defn.Trait(mods, name, tparams, ctor, m.Template(_, parents, self, stats)) =>
       selectToolbox("Trait").appliedTo(
-        liftSeq(mods),
+        liftMods(mods),
         liftName(name),
         liftSeq(tparams),
         scalaSome.appliedTo(lift(ctor)),
@@ -487,7 +552,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
       )
     case m.Defn.Object(mods, name, m.Template(_, parents, self, stats)) =>
       selectToolbox("Object").appliedTo(
-        liftSeq(mods),
+        liftMods(mods),
         liftName(name),
         liftSeqTrees(parents.map(liftInitCall)),
         liftSelf(self),
@@ -498,9 +563,9 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     // case m.Pkg.Object(mods, name, templ) =>
 
     case m.Ctor.Primary(mods, name, paramss) =>
-      selectToolbox("PrimaryCtor").appliedTo(liftSeq(mods), liftSeqSeq(paramss))
+      selectToolbox("PrimaryCtor").appliedTo(liftMods(mods), liftSeqSeq(paramss))
     case m.Ctor.Secondary(mods, name, paramss, body) =>
-      selectToolbox("SecondaryCtor").appliedTo(liftSeq(mods), liftSeqSeq(paramss), lift(body))
+      selectToolbox("SecondaryCtor").appliedTo(liftMods(mods), liftSeqSeq(paramss), lift(body))
     // case m.Ctor.Ref.Name(v) =>                       // handled by liftInitCall
     // case m.Ctor.Ref.Select(qual, name) =>
     // case m.Ctor.Ref.Project(qual, name) =>
@@ -508,36 +573,6 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
 
     // case m.Template(early, parents, self, stats) =>
 
-    case m.Mod.Annot(body) =>
-      selectToolbox("Mod.Annot").appliedTo(lift(body))
-    case m.Mod.Private(within) =>
-      selectToolbox("Mod.Private").appliedTo(lift(within)) // FIXME expected:  Mod.Private.apply(within: String) got: Mod.Private.apply(within: Tree)
-    case m.Mod.Protected(within) =>
-      selectToolbox("Mod.Protected").appliedTo(lift(within)) // FIXME expected:  Mod.Protected.apply(within: String) got: Mod.Private.apply(within: Tree)
-    case m.Mod.Implicit() =>
-      selectToolbox("Mod.Implicit").appliedTo()
-    case m.Mod.Final() =>
-      selectToolbox("Mod.Final").appliedTo()
-    case m.Mod.Sealed() =>
-      selectToolbox("Mod.Sealed").appliedTo()
-    case m.Mod.Override() =>
-      selectToolbox("Mod.Override").appliedTo()
-    case m.Mod.Case() =>
-      selectToolbox("Mod.Case").appliedTo()
-    case m.Mod.Abstract() =>
-      selectToolbox("Mod.Abstract").appliedTo()
-    case m.Mod.Covariant() =>
-      selectToolbox("Mod.Covariant").appliedTo()
-    case m.Mod.Contravariant() =>
-      selectToolbox("Mod.Contravariant").appliedTo()
-    case m.Mod.Lazy() =>
-      selectToolbox("Mod.Lazy").appliedTo()
-    case m.Mod.ValParam() =>
-      selectToolbox("Mod.Val").appliedTo()
-    case m.Mod.VarParam() =>
-      selectToolbox("Mod.Var").appliedTo()
-    case m.Mod.Inline() =>
-      selectToolbox("Mod.Inline").appliedTo()
 
     case m.Enumerator.Generator(pat, rhs) =>
       selectToolbox("GenFrom").appliedTo(lift(pat), lift(rhs))

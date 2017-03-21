@@ -5,11 +5,11 @@ import scala.gestalt._
 
 class main extends StaticAnnotation {
   inline def apply(defn: Any): Any = meta {
-    val q"object $name { ..$stats }" = defn
+    val q"$mods object $name { ..$stats }" = defn
     val main = q"""
       def stub(args: Any): Any = { ..$stats }
     """
-    q"object $name { $main }"
+    q"$mods object $name { $main }"
   }
 }
 
@@ -18,6 +18,7 @@ class replace extends StaticAnnotation {
     q"object UnrelatedObject{ def aPrimeNumber = 29 }"
   }
 }
+
 
 /*
 class data extends StaticAnnotation {

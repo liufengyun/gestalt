@@ -4,7 +4,7 @@ import dotty.tools._
 import dotc.core.Contexts._
 
 import scala.gestalt._
-import dotty.DottyToolbox
+import dotty.Toolbox
 
 class QuasiquoteTest extends TestSuite {
   val context: Context = {
@@ -16,6 +16,10 @@ class QuasiquoteTest extends TestSuite {
     // correct classpath from PathResolver
     // base.initialize()(ctx)
     ctx
+  }
+
+  test("test modifiers") {
+    @modsTest val x = 5
   }
 
   /*
