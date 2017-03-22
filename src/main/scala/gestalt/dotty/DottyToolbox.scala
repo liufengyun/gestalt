@@ -15,14 +15,16 @@ import d.modsDeco
 import util.Positions
 import Positions.Position
 
-import scala.collection.mutable.ListBuffer
-
 object ModsHelper {
   // TODO: valDefContext: (1) caseClassParam (2) self (3) methodParam (4) classParam
   def toDotty(tbMods: Mods[d.Tree]): d.Modifiers = {
+    val privateWithin = tbMods.privateWithin match {
+      case "this" | "" => tpnme.EMPTY
+      case named => named.toTypeName
+    }
     var dottyMods = d.Modifiers(
       annotations = tbMods.annotations,
-      privateWithin = tbMods.privateWithin.toTypeName)
+      privateWithin = privateWithin)
 
     if (tbMods.is(flags.Private))
       dottyMods =

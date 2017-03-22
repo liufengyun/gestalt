@@ -13,6 +13,24 @@ class main extends StaticAnnotation {
   }
 }
 
+class addFields extends StaticAnnotation {
+  inline def apply(defn: Any): Any = meta {
+    val q"$mods object $name { ..${stats:Seq[toolbox.Tree]} }" = defn
+    val additional: Seq[toolbox.Tree] = Seq(
+      q"private def a = 1",
+      q"private[this] def b = 2",
+      q"private[pack] def c = 3",
+
+      q"protected def a1 = 1",
+      q"protected[this] def b1 = 2",
+      q"protected[pack] def c1 = 3",
+
+      q"def all = List(a,b,c, a1,b1,c1)"
+    )
+    q"$mods object $name { ..${stats ++ additional} }"
+  }
+}
+
 class replace extends StaticAnnotation {
   inline def apply(defn: Any): Any = meta {
     q"object UnrelatedObject{ def aPrimeNumber = 29 }"
