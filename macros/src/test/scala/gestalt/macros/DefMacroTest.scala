@@ -1,6 +1,16 @@
 class DefMacroTest extends TestSuite {
   test("plusObject") {
     assert(plusObject(3, 5) == 8)
+
+    assert(plusObject.defaultArgs(3, 5) == 8)
+    assert(plusObject.defaultArgs(3) == 4)
+
+    assert(plusObject.curried(3)(5) == 8)
+//    val c3 = plusObject.curried(3)
+//    assert(c3(5) == 8)
+
+    assert(plusObject.poly(3, 5) == 8)
+    assert(plusObject.poly("3", 5) == 8)
   }
   test("plus") {
     val p = new plus

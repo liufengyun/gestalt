@@ -4,6 +4,22 @@ object plusObject {
   inline def apply(a: Int, b: Int): Int = meta {
     q"$a + $b"
   }
+
+  inline def defaultArgs(a:Int, b: Int = 1): Int = meta {
+    q"$a + $b"
+  }
+  inline def curried(a:Int)(b: Int): Int = meta {
+    q"$a + $b"
+  }
+  inline def poly(a: Any, b: Int): Int = meta {
+    a match {
+      case toolbox.Lit(i:Int) => q"$a + $b"
+      case toolbox.Lit(s:String) => q"$a.toInt + $b"
+      case other =>
+        toolbox.error(s"expected String or Interger constants",a)
+        toolbox.Lit(null)
+    }
+  }
 }
 
 
