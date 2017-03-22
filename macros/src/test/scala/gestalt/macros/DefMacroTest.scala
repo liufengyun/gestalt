@@ -38,6 +38,17 @@ class DefMacroTest extends TestSuite {
     assert(new plus2(three * 1)(5) == 8)
   }
 
+  test("plus2 on code block") {
+    assert({
+      val two = 2
+      new plus2(1 + two)
+    }.apply(5) == 8)
+    assert(new plus2(3).apply {
+      val twenty = 10 + 5 + 5
+      twenty / 4
+    } == 8)
+  }
+
   test("plus from class inside class") {
     import packaged.macros.InnerClassMacro
     val outer = new InnerClassMacro()
