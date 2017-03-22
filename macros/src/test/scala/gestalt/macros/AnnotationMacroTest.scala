@@ -1,5 +1,4 @@
 package pack {
-  import _root_.addFields
   @addFields object Nice
 }
 
