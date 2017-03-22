@@ -20,6 +20,13 @@ object plusObject {
         toolbox.Lit(null)
     }
   }
+
+  inline def varargs(items: Int*): Int = meta {
+    //TODO somehow read the varargs value
+//    items.reduceLeft((a,b)=>q"$a + $b")
+    println(">>>"+items)
+    q"1"
+  }
 }
 
 

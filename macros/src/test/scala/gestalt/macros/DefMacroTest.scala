@@ -11,6 +11,11 @@ class DefMacroTest extends TestSuite {
 
     assert(plusObject.poly(3, 5) == 8)
     assert(plusObject.poly("3", 5) == 8)
+
+    assert(plusObject.varargs(1, 2, 5) == 8)
+    assert(plusObject.varargs(Seq(1, 2, 5):_*) == 8)
+    assert(plusObject.varargs(3, 5) == 8)
+    assert(plusObject.varargs(8) == 8)
   }
   test("plus") {
     val p = new plus
