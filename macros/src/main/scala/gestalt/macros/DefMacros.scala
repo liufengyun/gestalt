@@ -86,4 +86,7 @@ object Inheritance {
     val k = 1000
     def a = 8 * k + 1000
   }
+  val a39 = new PlusOne {
+    def a = 39
+  }
 }

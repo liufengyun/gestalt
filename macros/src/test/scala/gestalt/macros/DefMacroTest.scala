@@ -109,5 +109,6 @@ class DefMacroTest extends TestSuite {
     assert(new A(3).plus1() == 4)
     assert(new A(-1).plus1() == 0)
     assert(B.plus1() == 9001)
+    assert(a39.plus1() == 40)
   }
 }
