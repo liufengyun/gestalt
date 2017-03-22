@@ -1,14 +1,14 @@
 import scala.gestalt._
 
 object plusObject {
-  inline def apply(a: Any, b: Any): Any = meta {
+  inline def apply(a: Int, b: Int): Int = meta {
     q"$a + $b"
   }
 }
 
 
 class plus {
-  inline def apply(a: Any, b: Any): Any = meta {
+  inline def apply(a: Int, b: Int): Int = meta {
     q"$a + $b"
   }
 }
@@ -20,14 +20,14 @@ object plusOne {
 }
 
 class plus2(val a: Int) {
-  inline def apply(b: Int): Any = meta {
+  inline def apply(b: Int): Int = meta {
     q"$this.a + $b"
   }
 }
 
 object ImplicitsForNumbers {
   implicit class PlusFor(val a: Int) {
-    inline def plus(b: Int): Any = meta {
+    inline def plus(b: Int): Int = meta {
       q"$this.a + $b"
     }
   }
