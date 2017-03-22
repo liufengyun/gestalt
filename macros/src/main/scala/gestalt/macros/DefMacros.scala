@@ -1,5 +1,3 @@
-import scala.collection.immutable.Seq
-
 import scala.gestalt._
 
 object plusObject {
@@ -73,5 +71,19 @@ object trees {
   }
   inline def ident(a: Any): Any = meta {
     q"$a"
+  }
+}
+
+object Inheritance {
+  trait PlusOne {
+    def a: Int
+    inline def plus1() = meta {
+      q"$this.a + 1"
+    }
+  }
+  class A(val a: Int) extends PlusOne
+  object B extends PlusOne {
+    val k = 1000
+    def a = 8 * k + 1000
   }
 }

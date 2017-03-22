@@ -103,4 +103,11 @@ class DefMacroTest extends TestSuite {
   test("nested method inside macro def") {
     assert(scope.mapTest() == 30)
   }
+
+  test("macro defined in a trait") {
+    import Inheritance._
+    assert(new A(3).plus1() == 4)
+    assert(new A(-1).plus1() == 0)
+    assert(B.plus1() == 9001)
+  }
 }
