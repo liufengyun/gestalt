@@ -12,6 +12,8 @@ class DefMacroTest extends TestSuite {
     assert(plusObject.poly(3, 5) == 8)
     assert(plusObject.poly("3", 5) == 8)
 
+    val five = 5
+    assert(plusObject.varargs(1, 1 + 1, five) == 8)
     assert(plusObject.varargs(1, 2, 5) == 8)
     assert(plusObject.varargs(Seq(1, 2, 5):_*) == 8)
     assert(plusObject.varargs(3, 5) == 8)
