@@ -1,6 +1,6 @@
 package pack {
   import _root_.addFields
-  @addFields class Nice
+  @addFields object Nice
 }
 
 class AnnotationMacroTest extends TestSuite {
@@ -20,12 +20,7 @@ class AnnotationMacroTest extends TestSuite {
 
   test("addFields"){
     import pack.Nice
-    assert(new Nice().a == 1)
-    assert(new Nice().b == 2)
-    assert(new Nice().c == 3)
-    assert(new Nice().a1 == 1)
-    assert(new Nice().b1 == 2)
-    assert(new Nice().c1 == 3)
+    assert(Nice.all == List(1,2,3,1,2,3))
   }
 
 

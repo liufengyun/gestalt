@@ -15,18 +15,19 @@ class main extends StaticAnnotation {
 
 class addFields extends StaticAnnotation {
   inline def apply(defn: Any): Any = meta {
-    val q"class $name { ..$stats }" = defn
-    val main = q"""
-      ..$stats
-      private def a = 1
-      private[this] def b = 2
-      private[pack] def c = 3
+    val q"$mods object $name { ..${stats:Seq[toolbox.Tree]} }" = defn
+    val additional = Seq(
+      q"private def a = 1",
+      q"private[this] def b = 2",
+      q"private[pack] def c = 3",
 
-      protected def a1 = 1
-      protected[this] def b1 = 2
-      protected[pack] def c1 = 3
-    """
-    q"class $name { $main }"
+      q"protected def a1 = 1",
+      q"protected[this] def b1 = 2",
+      q"protected[pack] def c1 = 3",
+
+      q"def all = List(a,b,c,a1,b1,c1)"
+    )
+    q"$mods object $name { ${toolbox.Block(stats ++ additional)} }"
   }
 }
 
