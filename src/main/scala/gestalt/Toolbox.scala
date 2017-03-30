@@ -86,44 +86,33 @@ object flags {
 
 import flags._
 
-case class Modifiers[Tree](
-  flags: FlagSet = EmptyFlags,
-  privateWithin: String = "",   // can be empty or `this`
-  annotations: List[Tree] = Nil) {
-
-  def is(fs: FlagSet): Boolean = flags is fs
-  def is(fc: FlagSet, butNot: FlagSet): Boolean = flags.is(fc, butNot = butNot)
-
-  def | (fs: FlagSet): Modifiers[Tree] = withFlags(flags | fs)
-  def & (fs: FlagSet): Modifiers[Tree] = withFlags(flags & fs)
-  def &~(fs: FlagSet): Modifiers[Tree] = withFlags(flags &~ fs)
-
-  def withFlags(flags: FlagSet): Modifiers[Tree] =
-    copy(flags = flags)
-
-  def withAddedAnnotation(annot: Tree): Modifiers[Tree] =
-    withAnnotations(annotations :+ annot)
-
-  def withAnnotations(annots: List[Tree]): Modifiers[Tree] =
-    copy(annotations = annots)
-
-  def withPrivateWithin(pw: String): Modifiers[Tree] =
-    copy(privateWithin = pw)
-
-  def hasAnnotations: Boolean = annotations.nonEmpty
-  def hasPrivateWithin: Boolean = privateWithin != ""
-}
-
 trait Toolbox {
   type Tree
   type TypeTree <: Tree      // safety by construction -- implementation can have TypeTree = Tree
-  type Mods = Modifiers[Tree]
+  type Mods <: Modifiers
+
+  trait Modifiers {
+    def is(fs: FlagSet): Boolean
+
+    def |(fs: FlagSet): Mods
+
+    def &~(fs: FlagSet): Mods
+
+    def withAddedAnnotation(annot: Tree): Mods
+
+    def hasAnnotations: Boolean
+
+    // can be empty or `this`
+    def withPrivateWithin(pw: String): Mods
+
+    def privateWithin: String
+  }
 
   // diagnostics - the implementation takes the position from the tree
   def error(message: String, tree: Tree): Unit
 
   // modifiers
-  def emptyMods: Mods = Modifiers[Tree]()
+  def emptyMods: Mods
 
   // definition trees
   def Object(mods: Mods, name: String, parents: Seq[Tree], selfOpt: Option[Tree], stats: Seq[Tree]): Tree
