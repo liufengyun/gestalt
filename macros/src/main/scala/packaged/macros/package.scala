@@ -2,7 +2,7 @@ package packaged
 
 import scala.gestalt._
 
-package object insidePackageObject {
+package object macros {
   inline def plus(a: Int, b: Int): Int = meta {
     q"$a + $b"
   }

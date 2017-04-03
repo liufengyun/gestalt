@@ -97,7 +97,7 @@ class DefMacroTest extends TestSuite {
   }
 
   test("implicit plus from a package object") {
-    import packaged.insidePackageObject._
+    import packaged.macros._
     assert(3.plus(5) == 8)
     assert(plus(3,5) == 8)
     assert(PlusObj.plus(3,5) == 8)
