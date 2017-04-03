@@ -84,8 +84,14 @@ object Expander {
   /** Expand def macros */
   def expandDefMacro(tree: tpd.Tree)(implicit ctx: Context): untpd.Tree = tree match {
     case ExtractApply(methodSelect @ MethodSelect(prefix, method), targs, argss) =>
-      val classSymbol = methodSelect.symbol.owner
-      val className = javaClassName(classSymbol) + "$inline"
+      val methodOwner = methodSelect.symbol.owner
+      val className = if (methodOwner.isPackageObject) {
+        // if macro is defined in a package object
+        // the implementation is located relative to the package not the `package$` module
+        methodOwner.owner.showFullName + "$" + "$inline"
+      } else {
+        javaClassName(methodOwner) + "$inline"
+      }
       // reflect macros definition
       val moduleClass = ctx.classloader.loadClass(className)
       val impl = moduleClass.getDeclaredMethods().find(_.getName == method.toString).get
