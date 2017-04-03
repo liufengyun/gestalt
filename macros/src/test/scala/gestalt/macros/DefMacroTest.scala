@@ -1,6 +1,16 @@
 class DefMacroTest extends TestSuite {
   test("plusObject") {
     assert(plusObject(3, 5) == 8)
+
+    assert(plusObject.defaultArgs(3, 5) == 8)
+    assert(plusObject.defaultArgs(3) == 4)
+
+    assert(plusObject.curried(3)(5) == 8)
+//    val c3 = plusObject.curried(3)
+//    assert(c3(5) == 8)
+
+    assert(plusObject.poly(3, 5) == 8)
+    assert(plusObject.poly("3", 5) == 8)
   }
   test("plus") {
     val p = new plus
@@ -26,12 +36,27 @@ class DefMacroTest extends TestSuite {
     }
     assert(Generator.fromSeed(20).apply(3) == 24)
     assert(Generator.generate.apply(0) == 42)
+
+    assert(new plus2(1)(2 + 3) == 6)
+    val five = 5
+    assert(new plus2(1)(five) == 6)
   }
 
   test("plus2 on expression") {
     val three = 3
     assert(new plus2(3)(5) == 8)
     assert(new plus2(three * 1)(5) == 8)
+  }
+
+  test("plus2 on code block") {
+    assert({
+      val two = 2
+      new plus2(1 + two)
+    }.apply(5) == 8)
+    assert(new plus2(3).apply {
+      val twenty = 10 + 5 + 5
+      twenty / 4
+    } == 8)
   }
 
   test("plus from class inside class") {
@@ -74,6 +99,8 @@ class DefMacroTest extends TestSuite {
   test("implicit plus from a package object") {
     import packaged.macros._
     assert(3.plus(5) == 8)
+    assert(plus(3,5) == 8)
+    assert(PlusObj.plus(3,5) == 8)
   }
 
   test("def with type parameters") {
@@ -100,5 +127,13 @@ class DefMacroTest extends TestSuite {
 
   test("nested method inside macro def") {
     assert(scope.mapTest() == 30)
+  }
+
+  test("macro defined in a trait") {
+    import Inheritance._
+    assert(new A(3).plus1() == 4)
+    assert(new A(-1).plus1() == 0)
+    assert(B.plus1() == 9001)
+    assert(a39.plus1() == 40)
   }
 }

@@ -1,16 +1,30 @@
-import scala.collection.immutable.Seq
-
 import scala.gestalt._
 
 object plusObject {
-  inline def apply(a: Any, b: Any): Any = meta {
+  inline def apply(a: Int, b: Int): Int = meta {
     q"$a + $b"
+  }
+
+  inline def defaultArgs(a:Int, b: Int = 1): Int = meta {
+    q"$a + $b"
+  }
+  inline def curried(a:Int)(b: Int): Int = meta {
+    q"$a + $b"
+  }
+  inline def poly(a: Any, b: Int): Int = meta {
+    a match {
+      case toolbox.Lit(i:Int) => q"$a + $b"
+      case toolbox.Lit(s:String) => q"$a.toInt + $b"
+      case other =>
+        toolbox.error(s"expected String or Interger constants",a)
+        toolbox.Lit(null)
+    }
   }
 }
 
 
 class plus {
-  inline def apply(a: Any, b: Any): Any = meta {
+  inline def apply(a: Int, b: Int): Int = meta {
     q"$a + $b"
   }
 }
@@ -22,14 +36,14 @@ object plusOne {
 }
 
 class plus2(val a: Int) {
-  inline def apply(b: Int): Any = meta {
+  inline def apply(b: Int): Int = meta {
     q"$this.a + $b"
   }
 }
 
 object ImplicitsForNumbers {
   implicit class PlusFor(val a: Int) {
-    inline def plus(b: Int): Any = meta {
+    inline def plus(b: Int): Int = meta {
       q"$this.a + $b"
     }
   }
@@ -73,5 +87,22 @@ object trees {
   }
   inline def ident(a: Any): Any = meta {
     q"$a"
+  }
+}
+
+object Inheritance {
+  trait PlusOne {
+    def a: Int
+    inline def plus1() = meta {
+      q"$this.a + 1"
+    }
+  }
+  class A(val a: Int) extends PlusOne
+  object B extends PlusOne {
+    val k = 1000
+    def a = 8 * k + 1000
+  }
+  val a39 = new PlusOne {
+    def a = 39
   }
 }
