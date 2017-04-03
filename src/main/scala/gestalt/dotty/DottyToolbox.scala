@@ -1,6 +1,6 @@
 package scala.gestalt.dotty
 
-import scala.gestalt.{Toolbox => Tbox, StructToolbox => STbox, TypeToolbox => TTbox, Modifiers => Mods, flags}
+import scala.gestalt.{Toolbox => Tbox, StructToolbox => STbox, TypeToolbox => TTbox, flags}
 import scala.collection.immutable.Seq
 
 import dotty.tools.dotc._
@@ -15,105 +15,71 @@ import d.modsDeco
 import util.Positions
 import Positions.Position
 
-object ModsHelper {
-  // TODO: valDefContext: (1) caseClassParam (2) self (3) methodParam (4) classParam
-  def toDotty(tbMods: Mods[d.Tree]): d.Modifiers = {
-    val privateWithin = tbMods.privateWithin match {
-      case "this" | "" => tpnme.EMPTY
-      case named => named.toTypeName
-    }
-    var dottyMods = d.Modifiers(
-      annotations = tbMods.annotations,
-      privateWithin = privateWithin)
-
-    if (tbMods.is(flags.Private))
-      dottyMods =
-        if (tbMods.privateWithin == "this")
-          dottyMods | Flags.PrivateLocal
-        else
-          dottyMods | Flags.Private
-
-    if (tbMods.is(flags.Protected))
-      dottyMods =
-        if (tbMods.privateWithin == "this")
-          dottyMods | Flags.ProtectedLocal
-        else
-          dottyMods | Flags.Protected
-
-    if (tbMods.is(flags.Var)) dottyMods = dottyMods | Flags.Mutable
-
-    if (tbMods.is(flags.Implicit)) dottyMods = dottyMods | Flags.Implicit
-
-    if (tbMods.is(flags.Sealed)) dottyMods = dottyMods | Flags.Sealed
-
-    if (tbMods.is(flags.Override)) dottyMods = dottyMods | Flags.Override
-
-    if (tbMods.is(flags.Abstract)) dottyMods = dottyMods | Flags.Abstract
-
-    if (tbMods.is(flags.Lazy)) dottyMods = dottyMods | Flags.Lazy
-
-    if (tbMods.is(flags.Inline)) dottyMods = dottyMods | Flags.Inline
-
-    if (tbMods.is(flags.Case)) dottyMods = dottyMods | Flags.Case
-
-    if (tbMods.is(flags.Contravariant)) dottyMods = dottyMods | Flags.Contravariant
-
-    if (tbMods.is(flags.Covariant)) dottyMods = dottyMods | Flags.Covariant
-
-    // TODO: mods.Val -- presence or absence of this flag depends on valDefContext
-
-    dottyMods
-  }
-
-  def fromDotty(dottyMods: d.Modifiers): Mods[d.Tree] = {
-    var tbMods = Mods[d.Tree](
-      annotations = dottyMods.annotations,
-      privateWithin = dottyMods.privateWithin.toString
-    )
-
-    if (dottyMods.is(Flags.Private))
-      tbMods =
-        if (dottyMods.is(Flags.Local))
-          tbMods.withPrivateWithin("this") | flags.Private
-        else
-          tbMods | flags.Private
-
-    if (dottyMods.is(Flags.Protected))
-      tbMods =
-        if (dottyMods.is(Flags.Local))
-          tbMods.withPrivateWithin("this") | flags.Protected
-        else
-          tbMods | flags.Protected
-
-    if (dottyMods.is(Flags.Mutable)) tbMods = tbMods | flags.Var
-
-    if (dottyMods.is(Flags.Implicit)) tbMods = tbMods | flags.Implicit
-
-    if (dottyMods.is(Flags.Sealed)) tbMods = tbMods | flags.Sealed
-
-    if (dottyMods.is(Flags.Override)) tbMods = tbMods | flags.Override
-
-    if (dottyMods.is(Flags.Abstract)) tbMods = tbMods | flags.Abstract
-
-    if (dottyMods.is(Flags.Lazy)) tbMods = tbMods | flags.Lazy
-
-    if (dottyMods.is(Flags.Inline)) tbMods = tbMods | flags.Inline
-
-    if (dottyMods.is(Flags.Case)) tbMods = tbMods | flags.Case
-
-    if (dottyMods.is(Flags.Contravariant)) tbMods = tbMods | flags.Contravariant
-
-    if (dottyMods.is(Flags.Covariant)) tbMods = tbMods | flags.Covariant
-
-    // TODO: mods.Val -- presence or absence of this flag depends on valDefContext
-
-    tbMods
-  }
-}
+import scala.collection.mutable.ListBuffer
 
 class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   type Tree = d.Tree
   type TypeTree = d.Tree
+  type Mods = DottyModifiers
+
+  object ModifiersHelper {
+    val FlagPairs = List(
+      flags.Private        ->    Flags.Private,
+      flags.Protected      ->    Flags.Protected,
+      flags.Var            ->    Flags.Mutable,
+      flags.Implicit       ->    Flags.Implicit,
+      flags.Sealed         ->    Flags.Sealed,
+      flags.Override       ->    Flags.Override,
+      flags.Abstract       ->    Flags.Abstract,
+      flags.Lazy           ->    Flags.Lazy,
+      flags.Case           ->    Flags.Case,
+      flags.Inline         ->    Flags.Inline,
+      flags.Contravariant  ->    Flags.Contravariant,
+      flags.Covariant      ->    Flags.Covariant
+    )
+  }
+
+  case class DottyModifiers(dottyMods: d.Modifiers) extends Modifiers {
+    import ModifiersHelper._
+
+    def is(fs: flags.FlagSet): Boolean = FlagPairs.forall { case (gflag, dflag) =>
+      !fs.is(gflag) || dottyMods.is(dflag)
+    }
+
+    def | (fs: flags.FlagSet): Mods = {
+      val mods = FlagPairs.foldRight(dottyMods) { case ((gflag, dflag), mods) =>
+        if (fs.is(gflag)) mods | dflag
+        else mods
+      }
+
+      DottyModifiers(mods)
+    }
+
+    def &~(fs: flags.FlagSet): Mods = {
+      val mods = FlagPairs.foldRight(dottyMods) { case ((gflag, dflag), mods) =>
+        if (fs.is(gflag)) mods &~ dflag
+        else mods
+      }
+
+      DottyModifiers(mods)
+    }
+
+    def withAddedAnnotation(annot: d.Tree): Mods = DottyModifiers(dottyMods.withAddedAnnotation(annot))
+
+    def hasAnnotations: Boolean = dottyMods.hasAnnotations
+
+    // can be empty or `this`
+    def withPrivateWithin(pw: String): Mods =
+      if (pw == "this") DottyModifiers(dottyMods | Flags.Local)
+      else DottyModifiers(dottyMods.withPrivateWithin(pw.toTypeName))
+
+    def privateWithin: String =
+      if (dottyMods.is(Flags.Local)) "this"
+      else dottyMods.privateWithin.toString
+  }
+
+  // modifiers
+  def emptyMods: Mods = DottyModifiers(d.EmptyModifiers)
 
   def getOrEmpty(treeOpt: Option[Tree]): Tree = treeOpt.getOrElse(d.EmptyTree)
 
@@ -126,9 +92,9 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     ctx.error(message, tree.pos)
   }
 
-  implicit  def toDotty(tbMods: Mods): d.Modifiers = ModsHelper.toDotty(tbMods)
+  implicit  def toDotty(tbMods: Mods): d.Modifiers = tbMods.dottyMods
 
-  implicit def fromDotty(dottyMods: d.Modifiers): Mods = ModsHelper.fromDotty(dottyMods)
+  implicit def fromDotty(dottyMods: d.Modifiers): Mods = DottyModifiers(dottyMods)
 
   //----------------------------------------
 
