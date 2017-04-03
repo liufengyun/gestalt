@@ -17,7 +17,7 @@ lazy val gestaltSetting = Seq(
   libraryDependencies ++= Seq(
     "org.scalameta" %% "scalameta" % metaVersion,
     "org.scalatest" %% "scalatest" % "3.0.0" % "test",
-    "me.fengy" % "dotty_2.11" % dottyVersion
+    "me.fengy" % "dotty_2.11" % dottyVersion % "provided"
   ),
 
   credentials += Credentials(Path.userHome / ".sbt" / ".credentials"),
