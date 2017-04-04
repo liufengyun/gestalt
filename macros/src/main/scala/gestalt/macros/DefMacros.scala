@@ -28,8 +28,8 @@ object plusObject {
       case toolbox.SeqLiteral(items:Seq[toolbox.Tree]) =>
         println("!!!"+items)
         items.reduceLeft((a, b) => q"$a + $b")
-      case other =>
-        q"$other.reduce((a:Int,b:Int)=> a + b)"
+      case _ =>
+        q"$items.reduce((a:Int,b:Int)=> a + b)"
     }
   }
 }
