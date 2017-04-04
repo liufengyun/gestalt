@@ -112,6 +112,14 @@ class DefMacroTest extends TestSuite {
     assert(PlusObj.plus(3,5) == 8)
   }
 
+  test("deconstructApply") {
+    import plusObject.deconstructApply
+    def fun(x: Int, y: Int, z: Int) = ???
+    assert(deconstructApply(Seq(1, 2, 1, 3)) == 7)
+    assert(deconstructApply(List[Int](1, 2, 1, 3)) == 7)
+    assert(deconstructApply(fun(1, 2, 4)) == 7)
+  }
+
   test("def with type parameters") {
     assert(scope.is[String]("hello"))
     assert(!scope.both[String, List[Int]]("hello"))

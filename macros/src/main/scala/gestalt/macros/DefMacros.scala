@@ -24,10 +24,20 @@ object plusObject {
   inline def varargs(tped: Int*): Int = meta {
     val q"$items: $_" = tped
     items match {
-      case toolbox.SeqLiteral(items:Seq[toolbox.Tree]) =>
+      case toolbox.SeqLiteral(items: Seq[toolbox.Tree]) =>
         items.reduceLeft((a, b) => q"$a + $b")
       case _ =>
         q"$items.reduce((a:Int,b:Int)=> a + b)"
+    }
+  }
+
+  inline def deconstructApply(items: Any): Int = meta {
+    items match {
+      case toolbox.Apply(prefix: toolbox.Tree, items: Seq[toolbox.Tree]) =>
+        items.reduceLeft((a, b) => q"$a + $b")
+      case _ =>
+        toolbox.error("expected application of Ints",items)
+        toolbox.Lit(null)
     }
   }
 }
