@@ -268,6 +268,11 @@ trait TypeToolbox extends Toolbox { t =>
     def unapply(arg: Tree): Option[(Tree, TypeTree)]
   }
 
+  val SeqLiteral: SeqLiteralHelper
+  trait SeqLiteralHelper {
+    def unapply(tree: Tree): Option[Seq[Tree]]
+  }
+
   val Lit: LitHelper
   trait LitHelper {
     def unapply(tree: Tree): Option[Any]
