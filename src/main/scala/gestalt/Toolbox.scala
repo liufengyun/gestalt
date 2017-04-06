@@ -263,6 +263,16 @@ trait TypeToolbox extends Toolbox { t =>
   def <:<(tp1: Type, tp2: Type): Boolean
   def typeOf(path: String): Type
 
+  val Ascribe: AscribeHelper
+  trait AscribeHelper {
+    def unapply(arg: Tree): Option[(Tree, TypeTree)]
+  }
+
+  val SeqLiteral: SeqLiteralHelper
+  trait SeqLiteralHelper {
+    def unapply(tree: Tree): Option[Seq[Tree]]
+  }
+
   val Lit: LitHelper
   trait LitHelper {
     def unapply(tree: Tree): Option[Any]

@@ -11,6 +11,15 @@ class DefMacroTest extends TestSuite {
 
     assert(plusObject.poly(3, 5) == 8)
     assert(plusObject.poly("3", 5) == 8)
+
+    val five = 5
+    assert(plusObject.varargs(1, 1 + 1, five) == 8)
+    assert(plusObject.varargs(1, 2, 5) == 8)
+//    assert(plusObject.varargs(Seq(1, 2, 5):_*) == 8)
+    val ints = Seq(1, 2, 5)
+    assert(plusObject.varargs(ints:_*) == 8)
+    assert(plusObject.varargs(3, 5) == 8)
+    assert(plusObject.varargs(8) == 8)
   }
   test("plus") {
     val p = new plus
@@ -101,6 +110,14 @@ class DefMacroTest extends TestSuite {
     assert(3.plus(5) == 8)
     assert(plus(3,5) == 8)
     assert(PlusObj.plus(3,5) == 8)
+  }
+
+  test("deconstructApply") {
+    import plusObject.deconstructApply
+    def fun(x: Int, y: Int, z: Int) = ???
+    assert(deconstructApply(Seq(1, 2, 1, 3)) == 7)
+    assert(deconstructApply(List[Int](1, 2, 1, 3)) == 7)
+    assert(deconstructApply(fun(1, 2, 4)) == 7)
   }
 
   test("def with type parameters") {

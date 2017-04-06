@@ -463,6 +463,13 @@ class TypeToolbox(enclosingPosition: Position)(implicit ctx: Context) extends To
   def <:<(tp1: Type, tp2: Type): Boolean = ???
   def typeOf(path: String): Type = ???
 
+  object Ascribe extends AscribeHelper {
+    def unapply(tree: Tree): Option[(Tree, TypeTree)] = tree match {
+      case c.Typed(expr, tpt) => Some((expr, tpt))
+      case _ => None
+    }
+  }
+
   object Lit extends LitHelper {
     def unapply(tree: Tree): Option[Any] = tree match {
       case c.Literal(Constant(v)) => Some(v)
@@ -472,7 +479,15 @@ class TypeToolbox(enclosingPosition: Position)(implicit ctx: Context) extends To
 
   object Apply extends ApplyHelper {
     def unapply(tree: Tree): Option[(Tree, Seq[Tree])] = tree match {
+      case c.Apply(fun, Seq(c.Typed(c.SeqLiteral(args, _), _))) => Some((fun, args))
       case c.Apply(fun, args) => Some((fun, args))
+      case _ => None
+    }
+  }
+
+  object SeqLiteral extends SeqLiteralHelper {
+    def unapply(tree: Tree): Option[Seq[Tree]] = tree match {
+      case c.SeqLiteral(elems,_) => Some(elems)
       case _ => None
     }
   }
