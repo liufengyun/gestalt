@@ -125,3 +125,7 @@ object Inheritance {
     def a = 39
   }
 }
+
+object Materializer {
+  implicit def defaultOpt[T]: Option[T] = meta { q"None" }
+}
