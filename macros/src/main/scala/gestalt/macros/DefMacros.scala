@@ -1,17 +1,17 @@
 import scala.gestalt._
 
 object plusObject {
-  inline def apply(a: Int, b: Int): Int = meta {
+  def apply(a: Int, b: Int): Int = meta {
     q"$a + $b"
   }
 
-  inline def defaultArgs(a:Int, b: Int = 1): Int = meta {
+  def defaultArgs(a:Int, b: Int = 1): Int = meta {
     q"$a + $b"
   }
-  inline def curried(a:Int)(b: Int): Int = meta {
+  def curried(a:Int)(b: Int): Int = meta {
     q"$a + $b"
   }
-  inline def poly(a: Any, b: Int): Int = meta {
+  def poly(a: Any, b: Int): Int = meta {
     a match {
       case toolbox.Lit(i:Int) => q"$a + $b"
       case toolbox.Lit(s:String) => q"$a.toInt + $b"
@@ -21,7 +21,7 @@ object plusObject {
     }
   }
 
-  inline def varargs(items: Int*): Int = meta {
+  def varargs(items: Int*): Int = meta {
     items match {
       case toolbox.SeqLiteral(items: Seq[toolbox.Tree]) =>
         items.reduceLeft((a, b) => q"$a + $b")
@@ -30,7 +30,7 @@ object plusObject {
     }
   }
 
-  inline def deconstructApply(items: Any): Int = meta {
+  def deconstructApply(items: Any): Int = meta {
     items match {
       case toolbox.Apply(prefix: toolbox.Tree, items: Seq[toolbox.Tree]) =>
         items.reduceLeft((a, b) => q"$a + $b")
@@ -43,33 +43,33 @@ object plusObject {
 
 
 class plus {
-  inline def apply(a: Int, b: Int): Int = meta {
+  def apply(a: Int, b: Int): Int = meta {
     q"$a + $b"
   }
 }
 
 object plusOne {
-  inline def apply(a: Int): Int =  meta {
+  def apply(a: Int): Int =  meta {
     q"$a + 1"
   }
 }
 
 class plus2(val a: Int) {
-  inline def apply(b: Int): Int = meta {
+  def apply(b: Int): Int = meta {
     q"$this.a + $b"
   }
 }
 
 object ImplicitsForNumbers {
   implicit class PlusFor(val a: Int) {
-    inline def plus(b: Int): Int = meta {
+    def plus(b: Int): Int = meta {
       q"$this.a + $b"
     }
   }
 }
 
 object ImplicitBigInt {
-  implicit inline def string2BigInt(s: String): BigInt = meta {
+  implicit def string2BigInt(s: String): BigInt = meta {
     val toolbox.Lit(str: String) = s
     val bigInt = BigInt(str)
     val radix = Character.MAX_RADIX
@@ -79,32 +79,32 @@ object ImplicitBigInt {
 }
 
 object scope {
-  inline def is[T](a: Any): Boolean = meta {
+  def is[T](a: Any): Boolean = meta {
     q"$a.isInstanceOf[$T]"
   }
 
-  inline def both[S, T](a: Any): Boolean = meta {
+  def both[S, T](a: Any): Boolean = meta {
     q"$a.isInstanceOf[$S] && $a.isInstanceOf[$T]"
   }
 
   // test nested method inside macro def -- used to be a problem with @static implementation
-  inline def mapTest(): Int = meta {
+  def mapTest(): Int = meta {
     val sum = (1 to 5).map(_ * 2).sum
     toolbox.Lit(sum)
   }
 }
 
 object trees {
-  inline def some3(): Option[Int] = meta {
+  def some3(): Option[Int] = meta {
     q"Some(3)"
   }
-  inline def five(): Int = meta {
+  def five(): Int = meta {
     q"5"
   }
-  inline def pi(): Double = meta {
+  def pi(): Double = meta {
     q"Math.PI"
   }
-  inline def ident(a: Any): Any = meta {
+  def ident(a: Any): Any = meta {
     q"$a"
   }
 }
@@ -112,7 +112,7 @@ object trees {
 object Inheritance {
   trait PlusOne {
     def a: Int
-    inline def plus1() = meta {
+    def plus1() = meta {
       q"$this.a + 1"
     }
   }

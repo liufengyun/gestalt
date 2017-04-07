@@ -4,7 +4,7 @@ import scala.collection.immutable.Seq
 import scala.gestalt._
 
 class modsTest extends StaticAnnotation {
-  inline def apply(defn: Any): Any = meta {
+  def apply(defn: Any): Any = meta {
     val q"$mods object $name" = q"private object A"
     assert(mods.is(flags.Private))
 
