@@ -4,7 +4,7 @@ import scala.collection.immutable.Seq
 import scala.gestalt._
 
 class main extends StaticAnnotation {
-  inline def apply(defn: Any): Any = meta {
+  def apply(defn: Any): Any = meta {
     val q"$mods object $name { ..$stats }" = defn
     val main = q"""
       def stub(args: Any): Any = { ..$stats }
@@ -14,7 +14,7 @@ class main extends StaticAnnotation {
 }
 
 class addFields extends StaticAnnotation {
-  inline def apply(defn: Any): Any = meta {
+  def apply(defn: Any): Any = meta {
     val q"$mods object $name { ..${stats:Seq[toolbox.Tree]} }" = defn
     val additional: Seq[toolbox.Tree] = Seq(
       q"private def a = 1",
@@ -32,7 +32,7 @@ class addFields extends StaticAnnotation {
 }
 
 class replace extends StaticAnnotation {
-  inline def apply(defn: Any): Any = meta {
+  def apply(defn: Any): Any = meta {
     q"object UnrelatedObject{ def aPrimeNumber = 29 }"
   }
 }

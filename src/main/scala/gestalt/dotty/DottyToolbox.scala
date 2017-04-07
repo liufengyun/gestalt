@@ -133,14 +133,14 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     val tbounds = tboundsOpt.getOrElse(d.TypeBoundsTree(d.EmptyTree, d.EmptyTree))
     val body =
       if (tparams.size == 0) tbounds
-      else d.PolyTypeTree(tparams.toList.asInstanceOf[List[d.TypeDef]], tbounds)
+      else d.LambdaTypeTree(tparams.toList.asInstanceOf[List[d.TypeDef]], tbounds)
     d.TypeDef(name.toTypeName, body).withMods(mods).withPosition
   }
 
   def TypeAlias(mods: Mods, name: String, tparams: Seq[Tree], rhs: TypeTree): Tree = {
     val body =
       if (tparams.size == 0) rhs
-      else d.PolyTypeTree(tparams.toList.asInstanceOf[List[d.TypeDef]], rhs)
+      else d.LambdaTypeTree(tparams.toList.asInstanceOf[List[d.TypeDef]], rhs)
     d.TypeDef(name.toTypeName, body).withMods(mods).withPosition
   }
 
@@ -212,7 +212,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
     val body =
       if (tparams.size == 0) inner
-      else d.PolyTypeTree(tparams.toList.asInstanceOf[List[d.TypeDef]], inner)
+      else d.LambdaTypeTree(tparams.toList.asInstanceOf[List[d.TypeDef]], inner)
 
     d.TypeDef(name.toTypeName, body).withMods(mods).withPosition
   }
