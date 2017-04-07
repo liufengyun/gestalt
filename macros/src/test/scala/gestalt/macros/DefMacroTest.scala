@@ -158,4 +158,9 @@ class DefMacroTest extends TestSuite {
     import Materializer._
     assert(defaultOpt[Int] == None)
   }
+
+  test("materializer implicit") {
+    import Materializer._
+    assert(implicitly[Option[Int]] == None)
+  }
 }
