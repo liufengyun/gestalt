@@ -21,12 +21,11 @@ object plusObject {
     }
   }
 
-  inline def varargs(tped: Int*): Int = meta {
-    val q"$items: $_" = tped
+  inline def varargs(items: Int*): Int = meta {
     items match {
       case toolbox.SeqLiteral(items: Seq[toolbox.Tree]) =>
         items.reduceLeft((a, b) => q"$a + $b")
-      case _ =>
+      case q"$items: $_" =>
         q"$items.reduce((a:Int,b:Int)=> a + b)"
     }
   }

@@ -8,7 +8,7 @@ object Quasiquote {
   type QuoteLabel = String
 
   // term dialect suffices the purpose, no need for pattern dialect
-  val quasiquoteTermDialect = m.Dialect.forName("QuasiquoteTerm(Dotty, Multi)")
+  val quasiquoteTermDialect = m.dialects.Dotty.copy(allowTermUnquotes = true, allowMultilinePrograms = true)
 
   private val StringContextName = "StringContext"
   private val ApplyName = "apply"

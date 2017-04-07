@@ -487,7 +487,7 @@ class TypeToolbox(enclosingPosition: Position)(implicit ctx: Context) extends To
 
   object SeqLiteral extends SeqLiteralHelper {
     def unapply(tree: Tree): Option[Seq[Tree]] = tree match {
-      case c.SeqLiteral(elems,_) => Some(elems)
+      case c.Typed(c.SeqLiteral(elems,_), _) => Some(elems)
       case _ => None
     }
   }
