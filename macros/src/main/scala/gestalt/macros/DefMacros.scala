@@ -128,4 +128,5 @@ object Inheritance {
 
 object Materializer {
   implicit def defaultOpt[T]: Option[T] = meta { q"None" }
+  implicit def defaultSome[T](implicit x: T): Some[T] = meta { q"Some($x)" }
 }

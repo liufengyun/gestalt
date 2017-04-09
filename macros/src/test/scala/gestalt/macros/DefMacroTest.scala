@@ -162,5 +162,8 @@ class DefMacroTest extends TestSuite {
   test("materializer implicit") {
     import Materializer._
     assert(implicitly[Option[Int]] == None)
+
+    implicit val defaultName = "test"
+    assert(implicitly[Some[String]] == Some("test"))
   }
 }
