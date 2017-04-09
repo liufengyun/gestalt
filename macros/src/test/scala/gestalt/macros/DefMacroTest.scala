@@ -153,4 +153,17 @@ class DefMacroTest extends TestSuite {
     assert(B.plus1() == 9001)
     assert(a39.plus1() == 40)
   }
+
+  test("materializer explicit") {
+    import Materializer._
+    assert(defaultOpt[Int] == None)
+  }
+
+  test("materializer implicit") {
+    import Materializer._
+    assert(implicitly[Option[Int]] == None)
+
+    implicit val defaultName = "test"
+    assert(implicitly[Some[String]] == Some("test"))
+  }
 }
