@@ -1,7 +1,6 @@
 package scala.gestalt.dotty
 
-import scala.gestalt.{Toolbox => Tbox, StructToolbox => STbox, TypeToolbox => TTbox, flags}
-import scala.collection.immutable.Seq
+import scala.gestalt.{Toolbox => Tbox, StructToolbox => STbox, TypeToolbox => TTbox, flags, Location}
 
 import dotty.tools.dotc._
 import core._
@@ -80,6 +79,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   // modifiers
   def emptyMods: Mods = DottyModifiers(d.EmptyModifiers)
+
+  def fresh(prefix: String = "$local"): String = ctx.freshName(prefix)
 
   def getOrEmpty(treeOpt: Option[Tree]): Tree = treeOpt.getOrElse(d.EmptyTree)
 
@@ -462,6 +463,10 @@ class TypeToolbox(enclosingPosition: Position)(implicit ctx: Context) extends To
   def =:=(tp1: Type, tp2: Type): Boolean = ???
   def <:<(tp1: Type, tp2: Type): Boolean = ???
   def typeOf(path: String): Type = ???
+  /** get the location where the def macro is used */
+  def currentLocation: Location = Location(ctx.compilationUnit.source.file.name, enclosingPosition.line(), enclosingPosition.column())
+
+  /** are the two types equal? */
 
   object Ascribe extends AscribeHelper {
     def unapply(tree: Tree): Option[(Tree, TypeTree)] = tree match {

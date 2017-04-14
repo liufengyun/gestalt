@@ -130,3 +130,11 @@ object Materializer {
   implicit def defaultOpt[T]: Option[T] = meta { q"None" }
   implicit def defaultSome[T](implicit x: T): Some[T] = meta { q"Some($x)" }
 }
+
+object Locations {
+  def currentLocation(): Location = meta {
+    val pos = toolbox.currentLocation
+    q"scala.gestalt.Location(${toolbox.Lit(pos.fileName)}, ${toolbox.Lit(pos.line)}, ${toolbox.Lit(pos.column)})"
+  }
+}
+
