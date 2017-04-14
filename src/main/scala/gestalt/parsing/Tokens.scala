@@ -1,9 +1,7 @@
-package dotty.tools
-package dotc
+package scala.gestalt
 package parsing
 
 import collection.immutable.BitSet
-import core.Decorators._
 
 abstract class TokensCommon {
   val maxToken: Int
@@ -20,10 +18,17 @@ abstract class TokensCommon {
     if (isKeyword(token)) s"'$str'" else str
   }
 
+  def token(str: String, default: Token = IDENTIFIER): Token =
+    if (tokenMap.contains(str)) tokenMap(str)
+    else default
+
   val tokenString, debugString = new Array[String](maxToken + 1)
+  val tokenMap = collection.mutable.Map[String, Token]()
 
   def enter(token: Int, str: String, debugStr: String = ""): Unit = {
     assert(tokenString(token) == null)
+    assert(!tokenMap.contains(str))
+    tokenMap(str) = token
     tokenString(token) = str
     debugString(token) = if (debugStr.isEmpty) str else debugStr
   }
@@ -127,20 +132,6 @@ abstract class TokensCommon {
 
   final val firstParen = LPAREN
   final val lastParen = RBRACE
-
-  def buildKeywordArray(keywords: TokenSet) = {
-    def start(tok: Token) = tokenString(tok).toTermName.asSimpleName.start
-    def sourceKeywords = keywords.toList.filter { (kw: Token) =>
-      val ts = tokenString(kw)
-      (ts != null) && !ts.contains(' ')
-    }
-
-    val lastKeywordStart = sourceKeywords.map(start).max
-
-    val arr = Array.fill(lastKeywordStart + 1)(IDENTIFIER)
-    for (kw <- sourceKeywords) arr(start(kw)) = kw
-    (lastKeywordStart, arr)
-  }
 }
 
 object Tokens extends TokensCommon {

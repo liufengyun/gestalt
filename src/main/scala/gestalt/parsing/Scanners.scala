@@ -1,19 +1,13 @@
-package dotty.tools
-package dotc
+package scala.gestalt
 package parsing
 
-import core.Names._, core.Contexts._, core.Decorators._, util.Positions._
-import core.StdNames._, core.Comments._
-import util.SourceFile
 import java.lang.Character.isDigit
-import util.Chars._
-import Tokens._
-import scala.annotation.{ switch, tailrec }
+import Tokens._, Chars._
 import scala.collection.mutable
 import scala.collection.immutable.SortedMap
-import mutable.ListBuffer
+import scala.annotation.{ switch, tailrec }
 import Utility.isNameStart
-import rewrite.Rewrites.patch
+import mutable.ListBuffer
 
 object Scanners {
 
@@ -37,7 +31,7 @@ object Scanners {
     var lastOffset: Offset = 0
 
     /** the name of an identifier */
-    var name: SimpleTermName = null
+    var name: String = null
 
     /** the string value of a literal */
     var strVal: String = null
@@ -55,8 +49,7 @@ object Scanners {
     }
   }
 
-  abstract class ScannerCommon(source: SourceFile)(implicit ctx: Context) extends CharArrayReader with TokenData {
-    val buf = source.content
+  abstract class ScannerCommon(val buf: Array[Char]) extends CharArrayReader with TokenData {
 
     // Errors -----------------------------------------------------------------
 
@@ -67,14 +60,14 @@ object Scanners {
 
     /** Generate an error at the given offset */
     def error(msg: String, off: Offset = offset) = {
-      ctx.error(msg, source atPos Position(off))
+      // ctx.error(msg, source atPos Position(off))
       token = ERROR
       errOffset = off
     }
 
     /** signal an error where the input ended in the middle of a token */
     def incompleteInputError(msg: String): Unit = {
-      ctx.incompleteInputError(msg, source atPos Position(offset))
+      // ctx.incompleteInputError(msg, source atPos Position(offset))
       token = EOF
       errOffset = offset
     }
@@ -98,15 +91,12 @@ object Scanners {
 
     /** Clear buffer and set name and token */
     def finishNamed(idtoken: Token = IDENTIFIER, target: TokenData = this): Unit = {
-      target.name = termName(flushBuf(litBuf))
+      target.name = flushBuf(litBuf)
       target.token = idtoken
       if (idtoken == IDENTIFIER) {
-        val idx = target.name.start
-        target.token = toToken(idx)
+        target.token = Tokens.token(target.name)
       }
     }
-
-    def toToken(idx: Int): Token
 
     /** Clear buffer and set string */
     def setStrVal() =
@@ -172,47 +162,7 @@ object Scanners {
 
   }
 
-  class Scanner(source: SourceFile, override val startFrom: Offset = 0)(implicit ctx: Context) extends ScannerCommon(source)(ctx) {
-    val keepComments = ctx.settings.YkeepComments.value
-
-    /** All doc comments kept by their end position in a `Map` */
-    private[this] var docstringMap: SortedMap[Int, Comment] = SortedMap.empty
-
-    private[this] def addComment(comment: Comment): Unit = {
-      val lookahead = lookaheadReader
-      def nextPos: Int = (lookahead.getc(): @switch) match {
-        case ' ' | '\t' => nextPos
-        case CR | LF | FF =>
-          // if we encounter line delimitng whitespace we don't count it, since
-          // it seems not to affect positions in source
-          nextPos - 1
-        case _ => lookahead.charOffset - 1
-      }
-      docstringMap = docstringMap + (nextPos -> comment)
-    }
-
-    /** Returns the closest docstring preceding the position supplied */
-    def getDocComment(pos: Int): Option[Comment] = docstringMap.get(pos)
-
-    /** A buffer for comments */
-    val commentBuf = new StringBuilder
-
-    private def handleMigration(keyword: Token): Token =
-      if (!isScala2Mode) keyword
-      else if (keyword == INLINE) treatAsIdent()
-      else keyword
-
-
-    private def treatAsIdent() = {
-      testScala2Mode(i"$name is now a keyword, write `$name` instead of $name to keep it as an identifier")
-      patch(source, Position(offset), "`")
-      patch(source, Position(offset + name.length), "`")
-      IDENTIFIER
-    }
-
-    def toToken(idx: Int): Token =
-      if (idx >= 0 && idx <= lastKeywordStart) handleMigration(kwArray(idx))
-      else IDENTIFIER
+  class Scanner(buf: Array[Char], override val startFrom: Offset = 0) extends ScannerCommon(buf) {
 
     private class TokenData0 extends TokenData
 
@@ -234,15 +184,6 @@ object Scanners {
      */
     var sepRegions: List[Token] = List()
 
-// Scala 2 compatibility
-
-    val isScala2Mode = ctx.settings.language.value.contains(nme.Scala2.toString)
-
-    /** Cannot use ctx.featureEnabled because accessing the context would force too much */
-    def testScala2Mode(msg: String, pos: Position = Position(offset)) = {
-      if (isScala2Mode) ctx.migrationWarning(msg, source atPos pos)
-      isScala2Mode
-    }
 
 // Get next token ------------------------------------------------------------
 
@@ -569,10 +510,7 @@ object Scanners {
     }
 
     private def skipComment(): Boolean = {
-      def appendToComment(ch: Char) =
-        if (keepComments) commentBuf.append(ch)
       def nextChar() = {
-        appendToComment(ch)
         Scanner.this.nextChar()
       }
       def skipLine(): Unit = {
@@ -596,21 +534,9 @@ object Scanners {
       }
       def nestedComment() = { nextChar(); skipComment() }
       val start = lastCharOffset
-      def finishComment(): Boolean = {
-        if (keepComments) {
-          val pos = Position(start, charOffset - 1, start)
-          val comment = Comment(pos, flushBuf(commentBuf))
-
-          if (comment.isDocComment) {
-            addComment(comment)
-          }
-        }
-
-        true
-      }
       nextChar()
-      if (ch == '/') { skipLine(); finishComment() }
-      else if (ch == '*') { nextChar(); skipComment(); finishComment() }
+      if (ch == '/') { skipLine(); true }
+      else if (ch == '*') { nextChar(); skipComment(); true }
       else false
     }
 
@@ -624,7 +550,7 @@ object Scanners {
         finishNamed(BACKQUOTED_IDENT)
         if (name.length == 0)
           error("empty quoted identifier")
-        else if (name == nme.WILDCARD)
+        else if (name == "_")
           error("wildcard invalid as backquoted identifier")
       }
       else error("unclosed quoted identifier")
@@ -991,7 +917,7 @@ object Scanners {
     /* Resume normal scanning after XML */
     def resume(lastToken: Token) = {
       token = lastToken
-      if (next.token != EMPTY && !ctx.reporter.hasErrors)
+      if (next.token != EMPTY) // && !ctx.reporter.hasErrors)
         error("unexpected end of input: possible missing '}' in XML block")
 
       nextToken()
@@ -1002,7 +928,4 @@ object Scanners {
     nextToken()
   } // end Scanner
 
-  // ------------- keyword configuration -----------------------------------
-
-  val (lastKeywordStart, kwArray) = buildKeywordArray(keywords)
 }
