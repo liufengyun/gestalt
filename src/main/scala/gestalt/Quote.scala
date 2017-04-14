@@ -254,40 +254,38 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
             case m.Term.This(m.Name.Anonymous()) => "this"
             case m.Name.Anonymous()              => ""
           }
-          t.Select(t.Select(acc, "withPrivateWithin").appliedTo(t.Lit(scope)), "|").
-            appliedTo(t.Select(t.Ident("flags"), "Private"))
+          t.Select(acc, "setPrivate").appliedTo(t.Lit(scope))
         case m.Mod.Protected(within) =>
           val scope = within match {
             case m.Name.Indeterminate(name)      => name
             case m.Term.This(m.Name.Anonymous()) => "this"
             case m.Name.Anonymous()              => ""
           }
-          t.Select(t.Select(acc, "withPrivateWithin").appliedTo(t.Lit(scope)), "|").
-            appliedTo(t.Select(t.Ident("flags"), "Private"))
+          t.Select(acc, "setProtected").appliedTo(t.Lit(scope))
         case m.Mod.Implicit() =>
-          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Implicit"))
+          t.Select(acc, "setImplicit")
         case m.Mod.Final() =>
-          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Final"))
+          t.Select(acc, "setFinal")
         case m.Mod.Sealed() =>
-          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Sealed"))
+          t.Select(acc, "setSealed")
         case m.Mod.Override() =>
-          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Override"))
+          t.Select(acc, "setOverride")
         case m.Mod.Case() =>
-          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Case"))
+          t.Select(acc, "setCase")
         case m.Mod.Abstract() =>
-          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Abstract"))
+          t.Select(acc, "setAbstract")
         case m.Mod.Covariant() =>
-          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Covariant"))
+          t.Select(acc, "setCovariant")
         case m.Mod.Contravariant() =>
-          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Contravariant"))
+          t.Select(acc, "setContravariant")
         case m.Mod.Lazy() =>
-          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Lazy"))
+          t.Select(acc, "setLazy")
         case m.Mod.ValParam() =>
-          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Val"))
+          acc
         case m.Mod.VarParam() =>
-          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Var"))
+          t.Select(acc, "setMutable")
         case m.Mod.Inline() =>
-          t.Select(acc, "|").appliedTo(t.Select(t.Ident("flags"), "Inline"))
+          t.Select(acc, "setInline")
       }
     }
   }
