@@ -1,89 +1,5 @@
 package scala.gestalt
 
-/** Modelling of modifiers
- *
- * Code adapted from Dotty
- */
-object flags {
-  private val flagName = Array.fill(64)("")
-  private final val MaxFlag = 63
-
-  final val EmptyFlags = FlagSet(0)
-
-  /** The flag with given index between 1 and 63.
-   *  Installs given name as the name of the flag. */
-  private def newFlag(index: Int, name: String): FlagSet = {
-    flagName(index) = name
-    FlagSet(1L << index)
-  }
-
-  /** A FlagSet represents a set of flags.
-   */
-  case class FlagSet(val bits: Long) extends AnyVal {
-
-    /** The union of this flag set and the given flag set
-     */
-    def | (that: FlagSet): FlagSet =
-      if (bits == 0) that
-      else if (that.bits == 0) this
-      else {
-        FlagSet(this.bits | that.bits)
-      }
-
-    /** The intersection of this flag set and the given flag set */
-    def & (that: FlagSet) = FlagSet(bits & that.bits)
-
-    /** The intersection of this flag set with the complement of the given flag set */
-    def &~ (that: FlagSet) = FlagSet(this.bits & ~that.bits)
-
-    /** Does this flag set have a non-empty intersection with the given flag set?
-     */
-    def is(flags: FlagSet): Boolean = (bits & flags.bits) != 0
-
-    /** Does this flag set have a non-empty intersection with the given flag set,
-     *  and at the same time contain none of the flags in the `butNot` set?
-     */
-    def is(flags: FlagSet, butNot: FlagSet): Boolean = is(flags) && !is(butNot)
-
-    /** Is this flag set a subset of that one? */
-    def <= (that: FlagSet) = (bits & that.bits) == bits
-
-    /** The number flags in this set */
-    def numFlags: Int = java.lang.Long.bitCount(bits)
-
-    private def flagString(idx: Int): List[String] =
-      if ((bits & (1L << idx)) == 0) Nil
-      else {
-        val fs = flagName(idx)
-        val strs = fs :: Nil
-        strs filter (_.nonEmpty)
-      }
-
-    /** The list of non-empty names of flags that are set in this FlagSet */
-    def flagStrings: Seq[String] = (1 to MaxFlag).flatMap(flagString)
-
-    /** The string representation of this flag set */
-    override def toString = flagStrings.mkString(" ")
-  }
-
-  final val Private = newFlag(1, "private")
-  final val Protected = newFlag(2, "protected")
-  final val Override = newFlag(3, "override")
-  final val Final = newFlag(4, "final")
-  final val Implicit = newFlag(5, "implicit")
-  final val Lazy = newFlag(6, "lazy")
-  final val Sealed = newFlag(8, "sealed")
-  final val Abstract = newFlag(9, "abstract")
-  final val Var = newFlag(10, "var")
-  final val Val = newFlag(11, "val")
-  final val Case = newFlag(12, "case")
-  final val Contravariant = newFlag(13, "contravariant")
-  final val Covariant = newFlag(14, "covariant")
-  final val Inline = newFlag(15, "inline")
-}
-
-import flags._
-
 case class Location(fileName: String, line: Int, column: Int)
 
 trait Toolbox {
@@ -92,20 +8,38 @@ trait Toolbox {
   type Mods <: Modifiers
 
   trait Modifiers {
-    def is(fs: FlagSet): Boolean
-
-    def |(fs: FlagSet): Mods
-
-    def &~(fs: FlagSet): Mods
-
-    def withAddedAnnotation(annot: Tree): Mods
-
+    def isPrivate: Boolean
+    def isProtected: Boolean
+    def isOverride: Boolean
+    def isFinal: Boolean
+    def isImplicit: Boolean
+    def isLazy: Boolean
+    def isSealed: Boolean
+    def isAbstract: Boolean
+    def isMutable: Boolean
+    def isCase: Boolean
+    def isContravariant: Boolean
+    def isCovariant: Boolean
+    def isInline: Boolean
+    def privateWithin: String
     def hasAnnotations: Boolean
 
     // can be empty or `this`
-    def withPrivateWithin(pw: String): Mods
+    def setPrivate(within: String): Mods
+    def setProtected(within: String): Mods
+    def setOverride: Mods
+    def setFinal: Mods
+    def setImplicit: Mods
+    def setLazy: Mods
+    def setSealed: Mods
+    def setAbstract: Mods
+    def setMutable: Mods
+    def setCase: Mods
+    def setContravariant: Mods
+    def setCovariant: Mods
+    def setInline: Mods
 
-    def privateWithin: String
+    def withAddedAnnotation(annot: Tree): Mods
   }
 
   // diagnostics - the implementation takes the position from the tree

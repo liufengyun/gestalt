@@ -1,6 +1,6 @@
 package scala.gestalt.dotty
 
-import scala.gestalt.{Toolbox => Tbox, StructToolbox => STbox, TypeToolbox => TTbox, flags, Location}
+import scala.gestalt.{Toolbox => Tbox, StructToolbox => STbox, TypeToolbox => TTbox, Location}
 
 import dotty.tools.dotc._
 import core._
@@ -21,56 +21,45 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   type TypeTree = d.Tree
   type Mods = DottyModifiers
 
-  object ModifiersHelper {
-    val FlagPairs = List(
-      flags.Private        ->    Flags.Private,
-      flags.Protected      ->    Flags.Protected,
-      flags.Var            ->    Flags.Mutable,
-      flags.Implicit       ->    Flags.Implicit,
-      flags.Sealed         ->    Flags.Sealed,
-      flags.Override       ->    Flags.Override,
-      flags.Abstract       ->    Flags.Abstract,
-      flags.Lazy           ->    Flags.Lazy,
-      flags.Case           ->    Flags.Case,
-      flags.Inline         ->    Flags.Inline,
-      flags.Contravariant  ->    Flags.Contravariant,
-      flags.Covariant      ->    Flags.Covariant
-    )
-  }
-
   case class DottyModifiers(dottyMods: d.Modifiers) extends Modifiers {
-    import ModifiersHelper._
+    def isPrivate: Boolean = dottyMods.is(Flags.Private)
+    def isProtected: Boolean = dottyMods.is(Flags.Protected)
+    def isOverride: Boolean = dottyMods.is(Flags.Override)
+    def isFinal: Boolean = dottyMods.is(Flags.Final)
+    def isImplicit: Boolean = dottyMods.is(Flags.Implicit)
+    def isLazy: Boolean = dottyMods.is(Flags.Lazy)
+    def isSealed: Boolean = dottyMods.is(Flags.Sealed)
+    def isAbstract: Boolean = dottyMods.is(Flags.Abstract)
+    def isMutable: Boolean = dottyMods.is(Flags.Mutable)
+    def isCase: Boolean = dottyMods.is(Flags.Case)
+    def isContravariant: Boolean = dottyMods.is(Flags.Contravariant)
+    def isCovariant: Boolean = dottyMods.is(Flags.Covariant)
+    def isInline: Boolean = dottyMods.is(Flags.Inline)
 
-    def is(fs: flags.FlagSet): Boolean = FlagPairs.forall { case (gflag, dflag) =>
-      !fs.is(gflag) || dottyMods.is(dflag)
-    }
+    // can be empty or `this`
+    def setPrivate(within: String): Mods =
+      if (within == "this") DottyModifiers(dottyMods | Flags.Private | Flags.Local)
+      else DottyModifiers(dottyMods.withPrivateWithin(within.toTypeName) | Flags.Private)
 
-    def | (fs: flags.FlagSet): Mods = {
-      val mods = FlagPairs.foldRight(dottyMods) { case ((gflag, dflag), mods) =>
-        if (fs.is(gflag)) mods | dflag
-        else mods
-      }
+    def setProtected(within: String): Mods =
+      if (within == "this") DottyModifiers(dottyMods | Flags.Protected | Flags.Local)
+      else DottyModifiers(dottyMods.withPrivateWithin(within.toTypeName) | Flags.Protected)
 
-      DottyModifiers(mods)
-    }
-
-    def &~(fs: flags.FlagSet): Mods = {
-      val mods = FlagPairs.foldRight(dottyMods) { case ((gflag, dflag), mods) =>
-        if (fs.is(gflag)) mods &~ dflag
-        else mods
-      }
-
-      DottyModifiers(mods)
-    }
+    def setOverride: Mods = DottyModifiers(dottyMods | Flags.Override)
+    def setFinal: Mods = DottyModifiers(dottyMods | Flags.Final)
+    def setImplicit: Mods = DottyModifiers(dottyMods | Flags.Implicit)
+    def setLazy: Mods = DottyModifiers(dottyMods | Flags.Lazy)
+    def setSealed: Mods = DottyModifiers(dottyMods | Flags.Sealed)
+    def setAbstract: Mods = DottyModifiers(dottyMods | Flags.Abstract)
+    def setMutable: Mods = DottyModifiers(dottyMods | Flags.Mutable)
+    def setCase: Mods = DottyModifiers(dottyMods | Flags.Case)
+    def setContravariant: Mods = DottyModifiers(dottyMods | Flags.Contravariant)
+    def setCovariant: Mods = DottyModifiers(dottyMods | Flags.Covariant)
+    def setInline: Mods = DottyModifiers(dottyMods | Flags.Inline)
 
     def withAddedAnnotation(annot: d.Tree): Mods = DottyModifiers(dottyMods.withAddedAnnotation(annot))
 
     def hasAnnotations: Boolean = dottyMods.hasAnnotations
-
-    // can be empty or `this`
-    def withPrivateWithin(pw: String): Mods =
-      if (pw == "this") DottyModifiers(dottyMods | Flags.Local)
-      else DottyModifiers(dottyMods.withPrivateWithin(pw.toTypeName))
 
     def privateWithin: String =
       if (dottyMods.is(Flags.Local)) "this"

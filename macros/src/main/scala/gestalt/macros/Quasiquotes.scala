@@ -6,11 +6,11 @@ import scala.gestalt._
 class modsTest extends StaticAnnotation {
   def apply(defn: Any): Any = meta {
     val q"$mods object $name" = q"private object A"
-    assert(mods.is(flags.Private))
+    assert(mods.isPrivate)
 
     val q"$mods1 class $name2 $mods2 ($params)" = q"case class A private[core](x: Int)"
-    assert(mods1.is(flags.Case))
-    assert(mods2.is(flags.Private))
+    assert(mods1.isCase)
+    assert(mods2.isPrivate)
     assert(mods2.privateWithin == "core")
 
     defn
