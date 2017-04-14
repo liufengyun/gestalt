@@ -39,11 +39,11 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     // can be empty or `this`
     def setPrivate(within: String): Mods =
       if (within == "this") DottyModifiers(dottyMods | Flags.Private | Flags.Local)
-      else DottyModifiers(dottyMods | Flags.Private)
+      else DottyModifiers(dottyMods.withPrivateWithin(within.toTypeName) | Flags.Private)
 
     def setProtected(within: String): Mods =
       if (within == "this") DottyModifiers(dottyMods | Flags.Protected | Flags.Local)
-      else DottyModifiers(dottyMods | Flags.Protected)
+      else DottyModifiers(dottyMods.withPrivateWithin(within.toTypeName) | Flags.Protected)
 
     def setOverride: Mods = DottyModifiers(dottyMods | Flags.Override)
     def setFinal: Mods = DottyModifiers(dottyMods | Flags.Final)
