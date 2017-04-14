@@ -28,5 +28,5 @@ c) Features
 
 ## Paper
 
-[Gestalt : The Road for Lightweight Portable Macros](https://dl.dropboxusercontent.com/u/54580502/gestalt.pdf)
+[Gestalt : The Road for Lightweight Portable Macros](https://www.dropbox.com/s/2xzcczr3q77veg1/gestalt.pdf)
 
