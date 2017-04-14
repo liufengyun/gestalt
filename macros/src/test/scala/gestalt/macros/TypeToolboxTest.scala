@@ -81,5 +81,16 @@ class TypeToolboxTest extends TestSuite {
 
     val m = new Child
     assert(asSeenFrom[m.type, m.Inner]("x"))
+
+    trait Box {
+      type T
+      val x: T
+    }
+    class InBox extends Box {
+      type T = Int
+      val x = 3
+    }
+    val box = new InBox
+    assert(asSeenFrom[box.type, Int]("x"))
   }
 }
