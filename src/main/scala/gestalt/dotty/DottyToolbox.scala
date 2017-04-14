@@ -459,14 +459,51 @@ class StructToolbox(enclosingPosition: Position)(implicit ctx: Context) extends 
 
 class TypeToolbox(enclosingPosition: Position)(implicit ctx: Context) extends Toolbox(enclosingPosition)(ctx) with TTbox {
   type Type = Types.Type
+  type Member = Symbols.Symbol
 
-  def =:=(tp1: Type, tp2: Type): Boolean = ???
-  def <:<(tp1: Type, tp2: Type): Boolean = ???
-  def typeOf(path: String): Type = ???
   /** get the location where the def macro is used */
   def currentLocation: Location = Location(ctx.compilationUnit.source.file.name, enclosingPosition.line(), enclosingPosition.column())
 
   /** are the two types equal? */
+  def =:=(tp1: Type, tp2: Type): Boolean = tp1 =:= tp2
+
+  /** is `tp1` a subtype of `tp2` */
+  def <:<(tp1: Type, tp2: Type): Boolean = tp1 <:< tp2
+
+  /** returning a type referring to a type definition */
+  def typeRef(path: String): Type = ctx.staticRef(path.toTypeName, false).symbol.typeRef
+
+  /** returning a type referring to a term definition */
+  def termRef(path: String): Type = ctx.staticRef(path.toTermName, false).symbol.termRef
+
+  /** type associated with the tree */
+  def typeOf(tree: Tree): Type = tree.tpe
+
+  /** does the type refer to a case class? */
+  def isCaseClass(tp: Type): Boolean = tp.classSymbol.is(Flags.Case)
+
+  /** val fields of a case class Type -- only the ones declared in primary constructor */
+  def caseFields(tp: Type): Seq[Member] = {
+    val sym = tp.classSymbol.asClass
+    if (!sym.is(Flags.Case)) return Nil
+
+    sym.info.decls.filter(fd => fd.is(Flags.ParamAccessor)).toSeq
+  }
+
+  /* field with the given name */
+  def field(tp: Type, name: String): Option[Member] = {
+    val sym = tp.widen.classSymbol.asClass
+    val denot = sym.info.memberExcluding(name.toTermName, Flags.Method)
+
+    if (denot.exists) Some(denot.symbol)
+    else None
+  }
+
+  /** name of a member */
+  def name(mem: Member): String = mem.showName
+
+  /** type of a member with respect to a prefix */
+  def asSeenFrom(mem: Member, prefix: Type): Type = mem.asSeenFrom(prefix).info
 
   object Ascribe extends AscribeHelper {
     def unapply(tree: Tree): Option[(Tree, TypeTree)] = tree match {

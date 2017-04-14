@@ -250,23 +250,44 @@ trait StructToolbox extends Toolbox {
   }
 }
 
-/** TypeToolbox defines extractors for inspecting expression trees as well as check types of trees
+/** TypeToolbox defines extractors for inspecting expression trees as well as APIs for types
  */
 trait TypeToolbox extends Toolbox { t =>
-  type Tree <: { def tpe: Type }
   type Type
+  type Member
 
-  // type operations
-  implicit class TypeOps(val tp1: Type) {
-    def =:=(tp2: Type) = t.=:=(tp1, tp2)
-    def <:<(tp2: Type) = t.<:<(tp1, tp2)
-  }
   /** get the location where the def macro is used */
   def currentLocation: Location
 
+  /** are the two types equal? */
   def =:=(tp1: Type, tp2: Type): Boolean
+
+  /** is `tp1` a subtype of `tp2` */
   def <:<(tp1: Type, tp2: Type): Boolean
-  def typeOf(path: String): Type
+
+  /** returning a type referring to a type definition */
+  def typeRef(path: String): Type
+
+  /** returning a type referring to a value definition */
+  def termRef(path: String): Type
+
+  /** type associated with the tree */
+  def typeOf(tree: Tree): Type
+
+  /** does the type refer to a case class? */
+  def isCaseClass(tp: Type): Boolean
+
+  /** val fields of a case class Type -- only the ones declared in primary constructor */
+  def caseFields(tp: Type): Seq[Member]
+
+  /* field with the given name */
+  def field(tp: Type, name: String): Option[Member]
+
+  /** name of a member */
+  def name(mem: Member): String
+
+  /** type of a member with respect to a prefix */
+  def asSeenFrom(mem: Member, prefix: Type): Type
 
   val Ascribe: AscribeHelper
   trait AscribeHelper {
