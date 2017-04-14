@@ -1,7 +1,5 @@
 package scala.gestalt
 
-import scala.collection.immutable.Seq
-
 /** Modelling of modifiers
  *
  * Code adapted from Dotty
@@ -86,6 +84,8 @@ object flags {
 
 import flags._
 
+case class Location(fileName: String, line: Int, column: Int)
+
 trait Toolbox {
   type Tree
   type TypeTree <: Tree      // safety by construction -- implementation can have TypeTree = Tree
@@ -110,6 +110,9 @@ trait Toolbox {
 
   // diagnostics - the implementation takes the position from the tree
   def error(message: String, tree: Tree): Unit
+
+  // generate fresh name
+  def fresh(prefix: String = "$local"): String
 
   // modifiers
   def emptyMods: Mods
@@ -258,6 +261,8 @@ trait TypeToolbox extends Toolbox { t =>
     def =:=(tp2: Type) = t.=:=(tp1, tp2)
     def <:<(tp2: Type) = t.<:<(tp1, tp2)
   }
+  /** get the location where the def macro is used */
+  def currentLocation: Location
 
   def =:=(tp1: Type, tp2: Type): Boolean
   def <:<(tp1: Type, tp2: Type): Boolean

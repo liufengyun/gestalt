@@ -166,4 +166,11 @@ class DefMacroTest extends TestSuite {
     implicit val defaultName = "test"
     assert(implicitly[Some[String]] == Some("test"))
   }
+
+  test("location") {
+    import Locations._
+    val pos = currentLocation()
+    assert(pos.fileName == "DefMacroTest.scala")
+    assert(pos.line == 171) // starts from 0
+  }
 }
