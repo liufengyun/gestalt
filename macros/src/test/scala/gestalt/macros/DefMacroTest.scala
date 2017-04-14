@@ -173,4 +173,14 @@ class DefMacroTest extends TestSuite {
     assert(pos.fileName == "DefMacroTest.scala")
     assert(pos.line == 171) // starts from 0
   }
+
+  test("case info") {
+    import CaseInfo._
+    case class Student(name: String, age: Int)
+    assert(fields[Student] == List("name", "age"))
+
+    // compile-time error message: Not a case class
+    // class Teacher(name: String, age: Int)
+    // assert(fields[Teacher] == List())
+  }
 }

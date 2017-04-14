@@ -8,6 +8,7 @@ object Driver {
     new AnnotationMacroTest
     new DefMacroTest
     new QuasiquoteTest
+    new TypeToolboxTest
 
     var success = false
     var total = 0
