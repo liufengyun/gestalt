@@ -49,7 +49,7 @@ object Scanners {
     }
   }
 
-  abstract class ScannerCommon(val buf: Array[Char]) extends CharArrayReader with TokenData {
+  class Scanner(buf: Array[Char], override val startFrom: Offset = 0)(implicit tb: Toolbox) extends CharArrayReader with TokenData {
 
     // Errors -----------------------------------------------------------------
 
@@ -159,10 +159,6 @@ object Scanners {
     }
 
     def floatVal: Double = floatVal(false)
-
-  }
-
-  class Scanner(buf: Array[Char], override val startFrom: Offset = 0) extends ScannerCommon(buf) {
 
     private class TokenData0 extends TokenData
 
@@ -485,6 +481,8 @@ object Scanners {
             error("illegal character")
             nextChar()
           }
+        case '\u2203' =>
+          nextChar(); token = QUASI
         case _ =>
           def fetchOther() = {
             if (ch == '\u21D2') {
