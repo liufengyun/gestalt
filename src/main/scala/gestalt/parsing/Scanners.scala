@@ -482,7 +482,9 @@ object Scanners {
             nextChar()
           }
         case '\u2203' =>
-          nextChar(); token = QUASI
+          nextChar();
+          base = digit2int(getc(), 10) // reuse base to remember quasi rank
+          token = QUASI
         case _ =>
           def fetchOther() = {
             if (ch == '\u21D2') {
