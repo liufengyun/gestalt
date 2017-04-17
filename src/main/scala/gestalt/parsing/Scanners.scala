@@ -49,7 +49,7 @@ object Scanners {
     }
   }
 
-  class Scanner(buf: Array[Char], override val startFrom: Offset = 0)(implicit tb: Toolbox) extends CharArrayReader with TokenData {
+  class Scanner(val buf: Array[Char], override val startFrom: Offset = 0)(implicit tb: Toolbox) extends CharArrayReader with TokenData {
 
     // Errors -----------------------------------------------------------------
 

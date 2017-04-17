@@ -9,7 +9,7 @@ trait TreeHelper { self: Parser =>
   private implicit class TreeOps(val tree: Tree) {
     def select(name: String): Tree = Select(tree, name)
 
-    def appliedTo(args: Tree*): t.Tree = Apply(tree, args.toList)
+    def appliedTo(args: Tree*): Tree = Apply(tree, args.toList)
 
     def appliedToType(args: TypeTree*): Tree = ApplyType(tree, args.toList)
   }
@@ -19,17 +19,17 @@ trait TreeHelper { self: Parser =>
   lazy val scalaList = select("scala.List")
   lazy val scalaSome = select("scala.Some")
   lazy val scalaNone = select("scala.None")
-  lazy val toolbox = Ident(tbName)
+  lazy val toolbox = Ident(self.tbName)
   lazy val root = Ident("_root_")
 
   private def select(path: String, isTerm: Boolean = true): Tree = {
     val parts = path.split('.')
 
-    val qual = parts.init.foldLeft[t.Tree](root) { (prefix, name) =>
+    val qual = parts.init.foldLeft[Tree](root) { (prefix, name) =>
       prefix.select(name)
     }
 
-    if (isTerm) t.Select(qual, parts.last) else t.TypeSelect(qual, parts.last)
+    if (isTerm) Select(qual, parts.last) else TypeSelect(qual, parts.last)
   }
 
   /* -------------------- lifting terms -------------------------- */
@@ -61,7 +61,7 @@ trait TreeHelper { self: Parser =>
   }
 
   def liftInterpolate(tag: String, parts: Seq[String], args: Seq[Tree]): Tree = {
-    val liftedParts = parts.foldLeft(scalaNil) { (acc, str) => tb.Infix(str, "::", acc) }
+    val liftedParts = parts.foldLeft(scalaNil) { (acc, str) => tb.Infix(Lit(str), "::", acc) }
     val liftedArgs = args.foldLeft(scalaNil) { (acc, tree) => tb.Infix(tree, "::", acc) }
     toolbox.select("Interpolate").appliedTo(Lit(tag), liftedParts, liftedArgs)
   }
@@ -76,7 +76,7 @@ trait TreeHelper { self: Parser =>
     toolbox.select("TypeApplyInfix").appliedTo(lhs, liftIdent(op), rhs)
 
   def liftTypeFunction(params: Seq[Tree], res: Tree): Tree = {
-    val liftedParams = args.foldLeft(scalaNil) { (acc, tree) => Infix(tree, "::", acc) }
+    val liftedParams = params.foldLeft(scalaNil) { (acc, tree) => Infix(tree, "::", acc) }
     toolbox.select("TypeFunction").appliedTo(liftedParams, res)
   }
 
@@ -105,9 +105,9 @@ trait TreeHelper { self: Parser =>
     toolbox.select("TypeApply").appliedTo(tpe, liftedArgs)
   }
 
-  def liftyTypeByName(tpe: Tree): Tree = toolbox.select("TypeByName").appliedTo(tpe)
+  def liftTypeByName(tpe: Tree): Tree = toolbox.select("TypeByName").appliedTo(tpe)
 
-  def liftyTypeRepeated(tpe: Tree): Tree = toolbox.select("TypeRepeated").appliedTo(tpe)
+  def liftTypeRepeated(tpe: Tree): Tree = toolbox.select("TypeRepeated").appliedTo(tpe)
 
   def liftTypeBounds(lo: Tree, hi: Tree): Tree = {
     val liftedLO = if (lo == null) scalaNone else scalaSome.appliedTo(lo)

@@ -4,8 +4,6 @@ package parsing
 import collection.immutable.BitSet
 
 object Tokens {
-  val maxToken: Int
-
   type Token = Int
   type TokenSet = BitSet
 

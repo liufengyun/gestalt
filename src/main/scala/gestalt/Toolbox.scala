@@ -3,7 +3,7 @@ package scala.gestalt
 case class Location(fileName: String, line: Int, column: Int)
 
 trait Toolbox {
-  type Tree
+  type Tree >: Null
   type TypeTree <: Tree      // safety by construction -- implementation can have TypeTree = Tree
   type Mods <: Modifiers
 
