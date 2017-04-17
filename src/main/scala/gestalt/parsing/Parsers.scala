@@ -449,7 +449,11 @@ object Parsers {
       if (in.token == USCORE) wildcardIdent() else termIdent()
 
     /** Accept identifier acting as a selector on given tree `t`. */
-    def selector(t: Tree): Tree = liftSelect(t, ident())
+    def selector(t: Tree, isType: Boolean): Tree = {
+      val name = ident()
+      if (in.token == DOT || !isType) liftSelect(t, name)
+      else liftTypeSelect(t. name)
+    }
 
     /** Selectors ::= id { `.' id }
      *
@@ -457,9 +461,9 @@ object Parsers {
      *  @param finish   An alternative parse in case the next token is not an identifier.
      *                  If the alternative does not apply, its tree argument is returned unchanged.
      */
-    def selectors(t: Tree, finish: Tree => Tree): Tree = {
+    def selectors(t: Tree, finish: Tree => Tree, isType: Boolean): Tree = {
       val t1 = finish(t)
-      if (t1 ne t) t1 else dotSelectors(selector(t), finish)
+      if (t1 ne t) t1 else dotSelectors(selector(t, isType), finish)
     }
 
     /** DotSelectors ::= { `.' id }
@@ -468,8 +472,8 @@ object Parsers {
      *  @param finish   An alternative parse in case the token following a `.' is not an identifier.
      *                  If the alternative does not apply, its tree argument is returned unchanged.
      */
-     def dotSelectors(t: Tree, finish: Tree => Tree = id) =
-      if (in.token == DOT) { in.nextToken(); selectors(t, finish) }
+     def dotSelectors(t: Tree, finish: Tree => Tree = id, isType: Boolean = false) =
+      if (in.token == DOT) { in.nextToken(); selectors(t, finish, isType) }
       else t
 
     private val id: Tree => Tree = x => x
@@ -482,30 +486,31 @@ object Parsers {
      *  @param finish   An alternative parse in case the token following a `.' is not an identifier.
      *                  If the alternative does not apply, its tree argument is returned unchanged.
      */
-    def path(thisOK: Boolean, finish: Tree => Tree = id): Tree = {
+    def path(thisOK: Boolean, finish: Tree => Tree = id, isType: Boolean = false): Tree = {
       def handleThis(qual: String) = {
         in.nextToken()
         val t = liftThis(qual)
         if (!thisOK && in.token != DOT) syntaxError("dangling this in path")
-        dotSelectors(t, finish)
+        dotSelectors(t, finish, isType)
       }
       def handleSuper(qual: String) = {
         in.nextToken()
         val mix = mixinQualifierOpt()
         val t = liftSuper(qual, mix)
         accept(DOT)
-        dotSelectors(selector(t), finish)
+        dotSelectors(selector(t), finish, isType)
       }
-      if (in.token == THIS) handleThis(EmptyTypeIdent)
-      else if (in.token == SUPER) handleSuper(EmptyTypeIdent)
+      if (in.token == THIS) handleThis("")
+      else if (in.token == SUPER) handleSuper("")
       else {
         val t = ident()
         if (in.token == DOT) {
           in.nextToken()
           if (in.token == THIS) handleThis(t)
           else if (in.token == SUPER) handleSuper(t)
-          else selectors(t, finish)
+          else selectors(liftIdent(t), finish, isType)
         }
+        else if (isType) liftTypeIdent(t)
         else liftIdent(t)
       }
     }
@@ -622,13 +627,8 @@ object Parsers {
      *  returns a tree for type `Any` instead.
      */
     def toplevelTyp(): Tree = {
-      val t = typ()
-      findWildcardType(t) match {
-        case Some(wildcardPos) =>
-          syntaxError(UnboundWildcardType(), wildcardPos)
-          scalaAny
-        case None => t
-      }
+      // TODO: some checking required, add a flag to `typ()`.
+      typ()
     }
 
     /** Type        ::=  [`implicit'] FunArgTypes `=>' Type
@@ -644,7 +644,8 @@ object Parsers {
       def functionRest(params: List[Tree]): Tree =
         atPos(start, accept(ARROW)) {
           val t = typ()
-          if (isImplicit) new ImplicitFunction(params, t) else Function(params, t)
+          if (isImplicit) syntaxError("implicit function type not supported yet")
+          else liftTypeFunction(params, t)
         }
       val t =
         if (in.token == LPAREN) {
@@ -662,8 +663,8 @@ object Parsers {
             else {
               for (t <- ts)
                 if (t.isInstanceOf[ByNameTypeTree])
-                  syntaxError(ByNameParameterNotSupported())
-              val tuple = atPos(start) { makeTupleOrParens(ts) }
+                  syntaxError("by-name parameter not supported")
+              val tuple = if (ts.size == 1) ts.head else liftTuple(tuple)
               infixTypeRest(
                 refinedTypeRest(
                   withTypeRest(
@@ -676,14 +677,15 @@ object Parsers {
           val start = in.offset
           val tparams = typeParamClause(ParamOwner.TypeParam)
           if (in.token == ARROW)
-            atPos(start, in.skipToken())(LambdaTypeTree(tparams, typ()))
+            // LambdaTypeTree(tparams, typ())
+            syntaxError("lambda type tree not supported yet")
           else { accept(ARROW); typ() }
         }
         else infixType()
 
       in.token match {
         case ARROW => functionRest(t :: Nil)
-        case FORSOME => syntaxError(ExistentialTypesNoLongerSupported()); t
+        case FORSOME => syntaxError("Existential types not supported"); t
         case _ => t
       }
     }
@@ -693,7 +695,7 @@ object Parsers {
     def infixType(): Tree = infixTypeRest(refinedType())
 
     def infixTypeRest(t: Tree): Tree =
-      infixOps(t, canStartTypeTokens, refinedType, isType = true, notAnOperator = nme.raw.STAR)
+      infixOps(t, canStartTypeTokens, refinedType, isType = true, notAnOperator = "*")
 
     /** RefinedType        ::=  WithType {Annotation | [nl] Refinement}
      */
@@ -701,7 +703,7 @@ object Parsers {
 
     def refinedTypeRest(t: Tree): Tree = {
       newLineOptWhenFollowedBy(LBRACE)
-      if (in.token == LBRACE) refinedTypeRest(atPos(startOffset(t)) { RefinedTypeTree(t, refinement()) })
+      if (in.token == LBRACE) refinedTypeRest(liftTypeRefine(t, refinement()))
       else t
     }
 
@@ -711,19 +713,19 @@ object Parsers {
 
     def withTypeRest(t: Tree): Tree =
       if (in.token == WITH) {
-        deprecationWarning(DeprecatedWithOperator())
+        deprecationWarning("with is deprecated")
         in.nextToken()
-        AndTypeTree(t, withType())
+        liftAndType(t, withType())
       }
       else t
 
     /** AnnotType ::= SimpleType {Annotation}
      */
-    def annotType(): Tree = annotTypeRest(simpleType())
+    def annotType(): Tree = annotTypeRest(simpleType(), Nil)
 
-    def annotTypeRest(t: Tree): Tree =
-      if (in.token == AT) annotTypeRest(atPos(startOffset(t)) { Annotated(t, annot()) })
-      else t
+    def annotTypeRest(t: Tree, annots: Seq[Tree]): Tree =
+      if (in.token == AT) annotTypeRest(t, annots :+ annot())
+      else liftTypeAnnotated(t, annots)
 
     /** SimpleType       ::=  SimpleType TypeArgs
      *                     |  SimpleType `#' id
@@ -735,40 +737,41 @@ object Parsers {
      *                     |  Literal
      */
     def simpleType(): Tree = simpleTypeRest {
-      if (in.token == LPAREN)
-        atPos(in.offset) {
-          makeTupleOrParens(inParens(argTypes(namedOK = false, wildOK = true)))
-        }
+      if (in.token == LPAREN) {
+        val tuple = inParens(argTypes(namedOK = false, wildOK = true))
+        if (tuple.size == 0) tuple.head else liftTuple(tuple)
+      }
       else if (in.token == LBRACE)
-        atPos(in.offset) { RefinedTypeTree(EmptyTree, refinement()) }
-      else if (isSimpleLiteral) { SingletonTypeTree(literal()) }
+        liftTypeRefine(null, refinement())
+      else if (isSimpleLiteral) { liftTypeSingleton(literal()) }
       else if (in.token == USCORE) {
         val start = in.skipToken()
-        typeBounds().withPos(Position(start, in.lastOffset, start))
+        typeBounds()
       }
-      else path(thisOK = false, handleSingletonType) match {
-        case r @ SingletonTypeTree(_) => r
-        case r => convertToTypeId(r)
-      }
+      else path(thisOK = false, handleSingletonType, isType = true)
     }
 
     val handleSingletonType: Tree => Tree = t =>
       if (in.token == TYPE) {
         in.nextToken()
-        atPos(startOffset(t)) { SingletonTypeTree(t) }
+        liftTypeSingleton(t)
       } else t
 
     private def simpleTypeRest(t: Tree): Tree = in.token match {
-      case HASH => simpleTypeRest(typeProjection(t))
-      case LBRACKET => simpleTypeRest(atPos(startOffset(t)) {
-        AppliedTypeTree(t, typeArgs(namedOK = false, wildOK = true)) })
+      case HASH =>
+        // simpleTypeRest(typeProjection(t))
+        sytaxError("type projection not supported")
+      case LBRACKET =>
+        simpleTypeRest(
+          liftTypeApply(t, typeArgs(namedOK = false, wildOK = true))
+        )
       case _ => t
     }
 
     private def typeProjection(t: Tree): Tree = {
       accept(HASH)
-      val id = typeIdent()
-      atPos(startOffset(t), startOffset(id)) { Select(t, id.name) }
+      val id = ident()
+      liftTypeSelect(t, id)
     }
 
     /** NamedTypeArg      ::=  id `=' Type
@@ -776,7 +779,7 @@ object Parsers {
     val namedTypeArg = () => {
       val name = ident()
       accept(EQUALS)
-      NamedArg(name.toTypeName, typ())
+      // NamedArg(name.toTypeName, typ())
     }
 
     /**   ArgTypes          ::=  Type {`,' Type}
@@ -795,9 +798,10 @@ object Parsers {
       def typParser() = if (wildOK) typ() else toplevelTyp()
       if (namedOK && in.token == IDENTIFIER)
         typParser() match {
-          case Ident(name) if in.token == EQUALS =>
+          case _ if in.token == EQUALS =>
             in.nextToken()
-            otherArgs(NamedArg(name, typ()), namedTypeArg)
+            // otherArgs(NamedArg(name, typ()), namedTypeArg)
+            syntaxError("Named type arguments not supported yet")
           case firstArg =>
             if (in.token == EQUALS) println(s"??? $firstArg")
             otherArgs(firstArg, typ)
@@ -808,22 +812,22 @@ object Parsers {
     /** FunArgType ::=  Type | `=>' Type
      */
     val funArgType = () =>
-      if (in.token == ARROW) atPos(in.skipToken()) { ByNameTypeTree(typ()) }
+      if (in.token == ARROW) { in.skipToken();  liftTypeByName(typ()) }
       else typ()
 
     /** ParamType ::= [`=>'] ParamValueType
      */
     def paramType(): Tree =
-      if (in.token == ARROW) atPos(in.skipToken()) { ByNameTypeTree(paramValueType()) }
+      if (in.token == ARROW) liftTypeByName(paramValueType())
       else paramValueType()
 
     /** ParamValueType ::= Type [`*']
      */
     def paramValueType(): Tree = {
       val t = toplevelTyp()
-      if (isIdent(nme.raw.STAR)) {
+      if (isIdent("*")) {
         in.nextToken()
-        atPos(startOffset(t)) { PostfixOp(t, Ident(nme.raw.STAR)) }
+        liftTypeRepeated(t)
       } else t
     }
 
@@ -839,54 +843,45 @@ object Parsers {
     /** TypeBounds ::= [`>:' Type] [`<:' Type]
      */
     def typeBounds(): TypeBoundsTree =
-      atPos(in.offset) { TypeBoundsTree(bound(SUPERTYPE), bound(SUBTYPE)) }
+      TypeBoundsTree(bound(SUPERTYPE), bound(SUBTYPE))
 
     private def bound(tok: Int): Tree =
       if (in.token == tok) { in.nextToken(); toplevelTyp() }
-      else EmptyTree
+      else null
 
     /** TypeParamBounds   ::=  TypeBounds {`<%' Type} {`:' Type}
      */
-    def typeParamBounds(pname: TypeName): Tree = {
+    def typeParamBounds(pname: String): Tree = {
       val t = typeBounds()
       val cbs = contextBounds(pname)
       if (cbs.isEmpty) t
-      else atPos((t.pos union cbs.head.pos).start) { ContextBounds(t, cbs) }
+      else {
+        // TODO: context bounds
+        // ContextBounds(t, cbs)
+        syntaxError("Context bounds not supported")
+      }
     }
 
-    def contextBounds(pname: TypeName): List[Tree] = in.token match {
+    def contextBounds(pname: String): List[Tree] = in.token match {
       case COLON =>
-        atPos(in.skipToken) {
-          AppliedTypeTree(toplevelTyp(), Ident(pname))
-        } :: contextBounds(pname)
+         liftTypeApply(toplevelTyp(), liftTypeIdent(pname)) :: contextBounds(pname)
       case VIEWBOUND =>
-        deprecationWarning("view bounds `<%' are deprecated, use a context bound `:' instead")
-        atPos(in.skipToken) {
-          Function(Ident(pname) :: Nil, toplevelTyp())
-        } :: contextBounds(pname)
+        syntaxError("view bounds `<%' not supported, use a context bound `:' instead")
+        // atPos(in.skipToken) {
+        //  Function(Ident(pname) :: Nil, toplevelTyp())
+        // } :: contextBounds(pname)
       case _ =>
         Nil
     }
 
     def typedOpt(): Tree =
       if (in.token == COLON) { in.nextToken(); toplevelTyp() }
-      else TypeTree()
+      else null
 
     def typeDependingOn(location: Location.Value): Tree =
       if (location == Location.InParens) typ()
       else if (location == Location.InPattern) refinedType()
       else infixType()
-
-    /** Checks whether `t` is a wildcard type.
-     *  If it is, returns the [[Position]] where the wildcard occurs.
-     */
-    @tailrec
-    private final def findWildcardType(t: Tree): Option[Position] = t match {
-      case TypeBoundsTree(_, _) => Some(t.pos)
-      case Parens(t1) => findWildcardType(t1)
-      case Annotated(t1, _) => findWildcardType(t1)
-      case _ => None
-    }
 
 /* ----------- EXPRESSIONS ------------------------------------------------ */
 
