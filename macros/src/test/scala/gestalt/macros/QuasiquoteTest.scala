@@ -1,5 +1,3 @@
-import scala.collection.immutable.Seq
-
 import dotty.tools._
 import dotc.core.Contexts._
 

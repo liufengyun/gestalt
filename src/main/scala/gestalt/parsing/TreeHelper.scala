@@ -1,10 +1,11 @@
 package scala.gestalt
 package parsing
 
-import Parsers._
+trait TreeHelper {
+  val tb: Toolbox
+  val tbName: String
 
-trait TreeHelper { self: Parser =>
-  import self.tb._
+  import tb._
 
   private implicit class TreeOps(val tree: Tree) {
     def select(name: String): Tree = Select(tree, name)
@@ -19,7 +20,7 @@ trait TreeHelper { self: Parser =>
   lazy val scalaList = select("scala.List")
   lazy val scalaSome = select("scala.Some")
   lazy val scalaNone = select("scala.None")
-  lazy val toolbox = Ident(self.tbName)
+  lazy val toolbox = Ident(tbName)
   lazy val root = Ident("_root_")
 
   private def select(path: String, isTerm: Boolean = true): Tree = {
@@ -45,7 +46,7 @@ trait TreeHelper { self: Parser =>
     toolbox.select("This").appliedTo(Lit(thisp), Lit(superp))
 
   def liftInfix(lhs: Tree, op: String, rhs: Tree): Tree =
-    toolbox.select("Infix").appliedTo(lhs, liftIdent(op), rhs)
+    toolbox.select("Infix").appliedTo(lhs, liftLit(op), rhs)
 
   def liftPostfix(od: Tree, op: String): Tree =
     toolbox.select("Postfix").appliedTo(od, liftIdent(op))
@@ -73,7 +74,7 @@ trait TreeHelper { self: Parser =>
     toolbox.select("TypeSelect").appliedTo(qual, Lit(name))
 
   def liftTypeApplyInfix(lhs: Tree, op: String, rhs: Tree): Tree =
-    toolbox.select("TypeApplyInfix").appliedTo(lhs, liftIdent(op), rhs)
+    toolbox.select("TypeApplyInfix").appliedTo(lhs, liftLit(op), rhs)
 
   def liftTypeFunction(params: Seq[Tree], res: Tree): Tree = {
     val liftedParams = params.foldLeft(scalaNil) { (acc, tree) => Infix(tree, "::", acc) }

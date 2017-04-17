@@ -59,7 +59,7 @@ object Parsers {
   }
 
 
-  abstract class Parser(val tb: Toolbox, val tbName: String, isTerm: Boolean, buf: Array[Char])
+  abstract class Parser(val tb: Toolbox, val tbName: String, isPattern: Boolean, buf: Array[Char])
   extends TreeHelper {
     import tb._
 
@@ -380,8 +380,12 @@ object Parsers {
           if (prec < opPrec || leftAssoc && prec == opPrec) {
             opStack = opStack.tail
             recur {
-              if (opInfo.isType) liftInfix(opInfo.operand, opInfo.operator, top)
-              else liftTypeApplyInfix(opInfo.operand, opInfo.operator, top)
+              if (opInfo.isType) {
+                if (opInfo.operator == "&") liftTypeAnd(opInfo.operand, top)
+                else if (opInfo.operator == "|") liftTypeOr(opInfo.operand, top)
+                else liftTypeApplyInfix(opInfo.operand, opInfo.operator, top)
+              }
+              else liftInfix(opInfo.operand, opInfo.operator, top)
             }
           }
           else top
@@ -448,8 +452,9 @@ object Parsers {
     /** Accept identifier acting as a selector on given tree `t`. */
     def selector(t: Tree, isType: Boolean): Tree = {
       val name = ident()
-      if (in.token == DOT || !isType) liftSelect(t, name)
-      else liftTypeSelect(t, name)
+      if (in.token == DOT) liftSelect(t, name)
+      else if (isType) liftTypeSelect(t, name)  // last part of type select
+      else liftSelect(t, name)
     }
 
     /** Selectors ::= id { `.' id }
@@ -460,7 +465,7 @@ object Parsers {
      */
     def selectors(t: Tree, finish: Tree => Tree, isType: Boolean): Tree = {
       val t1 = finish(t)
-      if (t1 != t) t1 else dotSelectors(selector(t, isType), finish)
+      if (t1 ne t) t1 else dotSelectors(selector(t, isType), finish, isType)
     }
 
     /** DotSelectors ::= { `.' id }
@@ -469,7 +474,7 @@ object Parsers {
      *  @param finish   An alternative parse in case the token following a `.' is not an identifier.
      *                  If the alternative does not apply, its tree argument is returned unchanged.
      */
-     def dotSelectors(t: Tree, finish: Tree => Tree = id, isType: Boolean = false) =
+     def dotSelectors(t: Tree, finish: Tree => Tree = id, isType: Boolean) =
       if (in.token == DOT) { in.nextToken(); selectors(t, finish, isType) }
       else t
 
@@ -528,7 +533,7 @@ object Parsers {
     /** QualId ::= id {`.' id}
     */
     def qualId(): Tree =
-      dotSelectors(termIdent())
+      dotSelectors(termIdent(), isType = false)
 
     /** SimpleExpr    ::= literal
      *                  | symbol
@@ -736,7 +741,8 @@ object Parsers {
         // annotTypeRest(t, annots :+ annot())
         t
       }
-      else liftTypeAnnotated(t, annots)
+      else if (annots.size > 0) liftTypeAnnotated(t, annots)
+      else t
 
     /** SimpleType       ::=  SimpleType TypeArgs
      *                     |  SimpleType `#' id

@@ -25,7 +25,6 @@ object Tokens {
 
   def enter(token: Int, str: String, debugStr: String = ""): Unit = {
     assert(tokenString(token) == null)
-    assert(!tokenMap.contains(str))
     tokenMap(str) = token
     tokenString(token) = str
     debugString(token) = if (debugStr.isEmpty) str else debugStr
