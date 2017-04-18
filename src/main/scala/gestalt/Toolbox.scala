@@ -145,12 +145,44 @@ trait Toolbox {
     case _ => Apply(fun, Nil)
   }
 
+  object ApplySeq {
+    def unapply(call: Tree):  Option[(Tree, Seq[Seq[Tree]])] = {
+      def recur(acc: Seq[Seq[Tree]], term: Tree): (Tree, Seq[Seq[Tree]])  = term match {
+        case Apply(fun, args) => recur(args +: acc, fun) // inner-most is in the front
+        case fun => (fun, acc)
+      }
+
+      Some(recur(Nil, call))
+    }
+  }
+
   // importees
   def Import(items: Seq[Tree]): Tree
   def ImportItem(ref: Tree, importees: Seq[Tree]): Tree
   def ImportName(name: String): Tree
   def ImportRename(from: String, to: String): Tree
   def ImportHide(name: String): Tree
+
+  // extractors
+  val Lit: LitHelper
+  trait LitHelper {
+    def unapply(tree: Tree): Option[Any]
+  }
+
+  val Apply: ApplyHelper
+  trait ApplyHelper {
+    def unapply(tree: Tree): Option[(Tree, Seq[Tree])]
+  }
+
+  val Ident: IdentHelper
+  trait IdentHelper {
+    def unapply(tree: Tree): Option[String]
+  }
+
+  val Select: SelectHelper
+  trait SelectHelper {
+    def unapply(tree: Tree): Option[(Tree, String)]
+  }
 }
 
 /** StructToolbox defines extractors available for inspecting definition trees
@@ -232,27 +264,4 @@ trait TypeToolbox extends Toolbox { t =>
   trait SeqLiteralHelper {
     def unapply(tree: Tree): Option[Seq[Tree]]
   }
-
-  val Lit: LitHelper
-  trait LitHelper {
-    def unapply(tree: Tree): Option[Any]
-  }
-
-  val Apply: ApplyHelper
-  trait ApplyHelper {
-    def unapply(tree: Tree): Option[(Tree, Seq[Tree])]
-  }
-
-  // helper
-  object ApplySeq {
-    def unapply(call: Tree):  Option[(Tree, Seq[Seq[Tree]])] = {
-      def recur(acc: Seq[Seq[Tree]], term: Tree): (Tree, Seq[Seq[Tree]])  = term match {
-        case Apply(fun, args) => recur(args +: acc, fun) // inner-most is in the front
-        case fun => (fun, acc)
-      }
-
-      Some(recur(Nil, call))
-    }
-  }
-
 }

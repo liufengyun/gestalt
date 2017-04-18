@@ -386,6 +386,35 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   def ImportHide(name: String): Tree =
     d.Thicket(d.Ident(name.toTermName), d.Ident(nme.WILDCARD)).withPosition
 
+  object Lit extends LitHelper {
+    def unapply(tree: Tree): Option[Any] = tree match {
+      case c.Literal(Constant(v)) => Some(v)
+      case _ => None
+    }
+  }
+
+  object Ident extends IdentHelper {
+    def unapply(tree: Tree): Option[String] = tree match {
+      case c.Ident(name) if name.isTermName => Some(name.show)
+      case _ => None
+    }
+  }
+
+  object Select extends SelectHelper {
+    def unapply(tree: Tree): Option[(Tree, String)] = tree match {
+      case c.Select(qual, name) if name.isTermName => Some((qual, name.show))
+      case _ => None
+    }
+  }
+
+  object Apply extends ApplyHelper {
+    def unapply(tree: Tree): Option[(Tree, Seq[Tree])] = tree match {
+      case c.Apply(fun, Seq(c.Typed(c.SeqLiteral(args, _), _))) => Some((fun, args))
+      case c.Apply(fun, args) => Some((fun, args))
+      case _ => None
+    }
+  }
+
 }
 
 class StructToolbox(enclosingPosition: Position)(implicit ctx: Context) extends Toolbox(enclosingPosition)(ctx) with STbox {
@@ -501,20 +530,6 @@ class TypeToolbox(enclosingPosition: Position)(implicit ctx: Context) extends To
     }
   }
 
-  object Lit extends LitHelper {
-    def unapply(tree: Tree): Option[Any] = tree match {
-      case c.Literal(Constant(v)) => Some(v)
-      case _ => None
-    }
-  }
-
-  object Apply extends ApplyHelper {
-    def unapply(tree: Tree): Option[(Tree, Seq[Tree])] = tree match {
-      case c.Apply(fun, Seq(c.Typed(c.SeqLiteral(args, _), _))) => Some((fun, args))
-      case c.Apply(fun, args) => Some((fun, args))
-      case _ => None
-    }
-  }
 
   object SeqLiteral extends SeqLiteralHelper {
     def unapply(tree: Tree): Option[Seq[Tree]] = tree match {

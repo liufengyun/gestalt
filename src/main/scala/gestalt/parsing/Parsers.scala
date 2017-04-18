@@ -313,8 +313,8 @@ object Parsers {
         placeholderParams = savedPlaceholderParams
       }
     }
-    /*
-    def isWildcard(t: Tree): Boolean = t match {
+
+    /* def isWildcard(t: Tree): Boolean = t match {
       case Ident(name1) => placeholderParams.nonEmpty && name1 == placeholderParams.head.name
       case Typed(t1, _) => isWildcard(t1)
       case Annotated(t1, _) => isWildcard(t1)
@@ -919,7 +919,7 @@ object Parsers {
 
     def condExpr(altToken: Token): Tree = {
       if (in.token == LPAREN) {
-        val t = atPos(in.offset) { Parens(inParens(exprInParens())) }
+        val t = inParens(exprInParens())
         if (in.token == altToken) in.nextToken()
         t
       } else {
@@ -964,8 +964,12 @@ object Parsers {
 
     def expr(location: Location.Value): Tree = {
       val start = in.offset
-      if (in.token == IMPLICIT)
-        implicitClosure(start, location, implicitMods())
+      if (in.token == IMPLICIT) {
+        // TODO: implicit function
+        // implicitClosure(start, location, implicitMods())
+        syntaxError("Implicit closure not supported yet")
+        null
+      }
       else {
         val saved = placeholderParams
         placeholderParams = Nil
@@ -980,75 +984,74 @@ object Parsers {
           placeholderParams = Nil // don't interpret `_' to the left of `=>` as placeholder
           wrapPlaceholders(closureRest(start, location, convertToParams(t)))
         }
-        else if (isWildcard(t)) {
-          placeholderParams = placeholderParams ::: saved
-          t
-        }
+        // TODO: support placeholders
+        //else if (isWildcard(t)) {
+        //  placeholderParams = placeholderParams ::: saved
+        //  t
+        //}
         else wrapPlaceholders(t)
       }
     }
 
     def expr1(location: Location.Value = Location.ElseWhere): Tree = in.token match {
       case IF =>
-        atPos(in.skipToken()) {
-          val cond = condExpr(THEN)
-          newLinesOpt()
-          val thenp = expr()
-          val elsep = if (in.token == ELSE) { in.nextToken(); expr() }
-                      else EmptyTree
-          If(cond, thenp, elsep)
-        }
+        in.skipToken()
+        val cond = condExpr(THEN)
+        newLinesOpt()
+        val thenp = expr()
+        val elsep = if (in.token == ELSE) { in.nextToken(); expr() }
+                    else null
+        If(cond, thenp, elsep)
       case WHILE =>
-        atPos(in.skipToken()) {
-          val cond = condExpr(DO)
-          newLinesOpt()
-          val body = expr()
-          WhileDo(cond, body)
-        }
+        in.skipToken()
+        val cond = condExpr(DO)
+        newLinesOpt()
+        val body = expr()
+        WhileDo(cond, body)
       case DO =>
-        atPos(in.skipToken()) {
-          val body = expr()
-          if (isStatSep) in.nextToken()
-          accept(WHILE)
-          val cond = expr()
-          DoWhile(body, cond)
-        }
+        in.skipToken()
+        val body = expr()
+        if (isStatSep) in.nextToken()
+        accept(WHILE)
+        val cond = expr()
+        DoWhile(body, cond)
       case TRY =>
         val tryOffset = in.offset
-        atPos(in.skipToken()) {
-          val body = expr()
-          val (handler, handlerStart) =
-            if (in.token == CATCH) {
-              val pos = in.offset
-              in.nextToken()
-              (expr(), pos)
-            } else (EmptyTree, -1)
+        in.skipToken()
+        val body = expr()
+        val (handler, handlerStart) =
+          if (in.token == CATCH) {
+            val pos = in.offset
+            in.nextToken()
+            (expr(), pos)
+          } else (EmptyTree, -1)
 
-          handler match {
-            case Block(Nil, EmptyTree) =>
-              assert(handlerStart != -1)
-              syntaxError(
-                EmptyCatchBlock(body),
-                Position(handlerStart, endOffset(handler))
-              )
-            case _ =>
-          }
-
-          val finalizer =
-            if (in.token == FINALLY) { accept(FINALLY); expr() }
-            else {
-              if (handler.isEmpty) warning(
-                EmptyCatchAndFinallyBlock(body),
-                source atPos Position(tryOffset, endOffset(body))
-              )
-              EmptyTree
-            }
-          ParsedTry(body, handler, finalizer)
+        handler match {
+          case Block(Nil, EmptyTree) =>
+            assert(handlerStart != -1)
+            syntaxError(
+              EmptyCatchBlock(body),
+              Position(handlerStart, endOffset(handler))
+            )
+          case _ =>
         }
+
+        val finalizer =
+          if (in.token == FINALLY) { accept(FINALLY); expr() }
+          else {
+            if (handler.isEmpty) warning(
+              EmptyCatchAndFinallyBlock(body),
+              source atPos Position(tryOffset, endOffset(body))
+            )
+            EmptyTree
+          }
+        ParsedTry(body, handler, finalizer)
       case THROW =>
-        atPos(in.skipToken()) { Throw(expr()) }
+        in.skipToken()
+        Throw(expr())
       case RETURN =>
-        atPos(in.skipToken()) { Return(if (isExprIntro) expr() else EmptyTree, EmptyTree) }
+        in.skipToken()
+        Return(if (isExprIntro) expr() else EmptyTree, null)
       case FOR =>
         forExpr()
       case _ =>
@@ -1059,16 +1062,16 @@ object Parsers {
       case EQUALS =>
          t match {
            case Ident(_) | Select(_, _) | Apply(_, _) =>
-             atPos(startOffset(t), in.skipToken()) { Assign(t, expr()) }
+             in.skipToken()
+             Assign(t, expr())
            case _ =>
              t
          }
       case COLON =>
         ascription(t, location)
       case MATCH =>
-        atPos(startOffset(t), in.skipToken()) {
-          inBraces(Match(t, caseClauses()))
-        }
+        in.skipToken()
+        inBraces(Match(t, caseClauses()))
       case _ =>
         t
     }
