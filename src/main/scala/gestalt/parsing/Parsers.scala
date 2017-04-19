@@ -59,11 +59,11 @@ object Parsers {
   }
 
 
-  abstract class Parser(val tb: Toolbox, val tbName: String, isPattern: Boolean, buf: Array[Char])
+  abstract class Parser(val tb: StructToolbox, val tbName: String, isPattern: Boolean, buf: Array[Char])
   extends TreeHelper {
     import tb._
 
-    val splices: Seq[tb.Tree]
+    val splices: Seq[Tree]
 
     /* ------------- ERROR HANDLING ------------------------------------------- */
     /** The offset where the last syntax error was reported, or if a skip to a
@@ -298,7 +298,7 @@ object Parsers {
     /** The implicit parameters introduced by `_` in the current expression.
      *  Parameters appear in reverse order.
      */
-    var placeholderParams: List[Tree] = Nil
+    var placeholderParams: List[Param] = Nil
 
     def checkNoEscapingPlaceholders[T](op: => T): T = {
       val savedPlaceholderParams = placeholderParams
@@ -314,13 +314,12 @@ object Parsers {
       }
     }
 
-    /* def isWildcard(t: Tree): Boolean = t match {
-      case Ident(name1) => placeholderParams.nonEmpty && name1 == placeholderParams.head.name
-      case Typed(t1, _) => isWildcard(t1)
-      case Annotated(t1, _) => isWildcard(t1)
-      case Parens(t1) => isWildcard(t1)
+    def isWildcard(t: Tree): Boolean = unlift(t) match {
+      case tb.Ident(name1) => placeholderParams.nonEmpty && name1 == placeholderParams.head.name
+      case tb.Ascribe(t1, _) => isWildcard(t1)
+      case tb.Annotated(t1, _) => isWildcard(t1)
       case _ => false
-    } */
+    }
 
 /* -------- COMBINATORS -------------------------------------------------------- */
 

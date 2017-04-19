@@ -1,23 +1,27 @@
+import scala.annotation.StaticAnnotation
 import scala.gestalt._
 import parsing._
 
 object Parsing {
-  def parseType(tb: Toolbox, code: String): tb.Tree = {
+  def parseType(tb: StructToolbox, code: String): tb.Tree = {
     val parser = new Parsers.Parser(tb, "toolbox", true, code.toCharArray) {
       val splices = Nil
     }
     parser.typ().asInstanceOf[tb.Tree]
   }
 
-  def helper(tb1: Toolbox): TreeHelper = {
+  def helper(tb1: StructToolbox): TreeHelper = {
     new TreeHelper {
       val tb = tb1
       val tbName = "toolbox"
     }
   }
+}
 
-  def testTypes(): Boolean = meta {
+class testTypes extends StaticAnnotation {
+  def apply(defn: Any): Any = meta {
     val helper = Parsing.helper(toolbox)
+
     def parse(code: String) = Parsing.parseType(toolbox, code)
 
     var actual = parse("Int")
@@ -69,6 +73,6 @@ object Parsing {
     // println(s"expect: $expect"); println(s"actual: $actual")
     assert(actual.toString == expect.toString)
 
-    toolbox.Lit(true)
+    defn
   }
 }

@@ -18,6 +18,7 @@ import scala.collection.mutable.ListBuffer
 
 class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   type Tree = d.Tree
+  type Param = d.ValDef
   type TypeTree = d.Tree
   type Mods = DottyModifiers
 
@@ -190,8 +191,9 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     ApplySeq(fun, argss).withPosition
   }
 
-  def Param(mods: Mods, name: String, tpe: Option[TypeTree], default: Option[Tree]): Tree = {
-    d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), getOrEmpty(default)).withMods(mods).withFlags(Flags.TermParam).withPosition
+  def Param(mods: Mods, name: String, tpe: Option[TypeTree], default: Option[Tree]): Param = {
+    d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), getOrEmpty(default))
+      .withMods(mods).withFlags(Flags.TermParam).withPosition.asInstanceOf[Param]
   }
 
   def TypeParam(mods: Mods, name: String, tparams: Seq[TypeTree], tboundsOpt: Option[TypeTree], cbounds: Seq[TypeTree]): TypeTree = {
@@ -386,6 +388,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   def ImportHide(name: String): Tree =
     d.Thicket(d.Ident(name.toTermName), d.Ident(nme.WILDCARD)).withPosition
 
+  // extractors
   object Lit extends LitHelper {
     def unapply(tree: Tree): Option[Any] = tree match {
       case c.Literal(Constant(v)) => Some(v)
@@ -414,6 +417,38 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case _ => None
     }
   }
+
+  object Ascribe extends AscribeHelper {
+    def unapply(tree: Tree): Option[(Tree, TypeTree)] = tree match {
+      case c.Typed(expr, tpe) => Some((expr, tpe))
+      case _ => None
+    }
+  }
+
+  object Annotated extends AnnotatedHelper {
+    def unapply(tree: Tree): Option[(Tree, Seq[Tree])] = {
+      def recur(acc: Seq[Tree], term: Tree): (Tree, Seq[Tree])  = term match {
+        case c.Annotated(expr, annot) => recur(annot +: acc, expr) // inner-most is in the front
+        case expr => (expr, acc)
+      }
+      Some(recur(Nil, tree))
+    }
+  }
+
+  object Block extends BlockHelper {
+    def unapply(tree: Tree): Option[Seq[Tree]] = tree match {
+      case c.Block(stats, expr) => Some(stats :+ expr)
+      case _ => None
+    }
+  }
+
+  object Tuple extends TupleHelper {
+    def unapply(tree: Tree): Option[Seq[Tree]] = tree match {
+      case d.Tuple(trees) => Some(trees)
+      case _ => None
+    }
+  }
+
 
 }
 
@@ -473,6 +508,24 @@ class StructToolbox(enclosingPosition: Position)(implicit ctx: Context) extends 
     }
   }*/
 
+   // accessors
+  def toRep(tree: Param): ParamRep = new ParamRep {
+    def mods: Mods = tree.mods
+    def name: String = tree.name.show
+    def tpt: Option[TypeTree] = if (tree.tpt.isInstanceOf[d.TypeTree]) None else Some(tree.tpt)
+    def default: Option[Tree] = if (tree.forceIfLazy == d.EmptyTree) None else Some(tree.forceIfLazy)
+    def copy(
+      name: String = this.name,
+      mods: Mods = this.mods,
+      tptOpt: Option[TypeTree] = this.tpt,
+      defaultOpt: Option[Tree] = this.default
+    ): Param =
+      d.cpy.ValDef(tree)(
+        name.toTermName,
+        tptOpt.getOrElse(d.TypeTree()),
+        defaultOpt.getOrElse(d.EmptyTree)
+      ).withMods(mods)
+  }
 }
 
 class TypeToolbox(enclosingPosition: Position)(implicit ctx: Context) extends Toolbox(enclosingPosition)(ctx) with TTbox {
@@ -522,13 +575,6 @@ class TypeToolbox(enclosingPosition: Position)(implicit ctx: Context) extends To
 
   /** type of a member with respect to a prefix */
   def asSeenFrom(mem: Member, prefix: Type): Type = mem.asSeenFrom(prefix).info
-
-  object Ascribe extends AscribeHelper {
-    def unapply(tree: Tree): Option[(Tree, TypeTree)] = tree match {
-      case c.Typed(expr, tpt) => Some((expr, tpt))
-      case _ => None
-    }
-  }
 
 
   object SeqLiteral extends SeqLiteralHelper {

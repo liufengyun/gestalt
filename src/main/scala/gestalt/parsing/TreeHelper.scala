@@ -4,7 +4,7 @@ package parsing
 import java.util.IdentityHashMap
 
 trait TreeHelper {
-  val tb: Toolbox
+  val tb: StructToolbox
   val tbName: String
 
   import tb._

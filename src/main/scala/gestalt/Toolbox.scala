@@ -4,6 +4,7 @@ case class Location(fileName: String, line: Int, column: Int)
 
 trait Toolbox {
   type Tree >: Null <: AnyRef
+  type Param <: Tree
   type TypeTree <: Tree      // safety by construction -- implementation can have TypeTree = Tree
   type Mods <: Modifiers
 
@@ -70,7 +71,7 @@ trait Toolbox {
   def VarDef(mods: Mods, pats: Seq[Tree], tpe: Option[TypeTree], rhs: Tree): Tree
   def VarDecl(mods: Mods, name: String, tpe: TypeTree): Tree
   def VarDecl(mods: Mods, vars: Seq[String], tpe: TypeTree): Tree
-  def Param(mods: Mods, name: String, tpe: Option[TypeTree], default: Option[Tree]): Tree
+  def Param(mods: Mods, name: String, tpe: Option[TypeTree], default: Option[Tree]): Param
   def TypeParam(mods: Mods, name: String, tparams: Seq[TypeTree], tbounds: Option[TypeTree], cbounds: Seq[TypeTree]): TypeTree
   // extends qual.T[A, B](x, y)(z)
   def InitCall(qual: Option[Tree], name: String, tparams: Seq[TypeTree], argss: Seq[Seq[Tree]]): Tree
@@ -164,24 +165,44 @@ trait Toolbox {
   def ImportHide(name: String): Tree
 
   // extractors
-  val Lit: LitHelper
+  private[gestalt] val Lit: LitHelper
   trait LitHelper {
     def unapply(tree: Tree): Option[Any]
   }
 
-  val Apply: ApplyHelper
+  private[gestalt] val Apply: ApplyHelper
   trait ApplyHelper {
     def unapply(tree: Tree): Option[(Tree, Seq[Tree])]
   }
 
-  val Ident: IdentHelper
+  private[gestalt] val Ident: IdentHelper
   trait IdentHelper {
     def unapply(tree: Tree): Option[String]
   }
 
-  val Select: SelectHelper
+  private[gestalt] val Select: SelectHelper
   trait SelectHelper {
     def unapply(tree: Tree): Option[(Tree, String)]
+  }
+
+  private[gestalt] val Ascribe: AscribeHelper
+  trait AscribeHelper {
+    def unapply(tree: Tree): Option[(Tree, TypeTree)]
+  }
+
+  private[gestalt] val Annotated: AnnotatedHelper
+  trait AnnotatedHelper {
+    def unapply(tree: Tree): Option[(Tree, Seq[Tree])]
+  }
+
+  private[gestalt] val Block: BlockHelper
+  trait BlockHelper {
+    def unapply(tree: Tree): Option[Seq[Tree]]
+  }
+
+  private[gestalt] val Tuple: TupleHelper
+  trait TupleHelper {
+    def unapply(tree: Tree): Option[Seq[Tree]]
   }
 }
 
@@ -214,6 +235,18 @@ trait StructToolbox extends Toolbox {
   trait PrimaryCtorHelper {
     def unapply(tree: Tree): Option[(Mods, Seq[Seq[Tree]])]
   }
+
+  // accessors for definition trees
+  trait ParamRep {
+    def mods: Mods
+    def name: String
+    def tpt: Option[TypeTree]
+    def default: Option[Tree]
+    def copy(name: String = this.name, mods:Mods = this.mods,
+             tptOpt: Option[TypeTree] = this.tpt, defaultOpt: Option[Tree] = this.default): Param
+  }
+
+  implicit def toRep(tree: Param): ParamRep
 }
 
 /** TypeToolbox defines extractors for inspecting expression trees as well as APIs for types
@@ -255,10 +288,15 @@ trait TypeToolbox extends Toolbox { t =>
   /** type of a member with respect to a prefix */
   def asSeenFrom(mem: Member, prefix: Type): Type
 
+  /*----------------------- extractors ------------------------*/
+  val Lit: LitHelper
+  val Apply: ApplyHelper
+  val Ident: IdentHelper
+  val Select: SelectHelper
   val Ascribe: AscribeHelper
-  trait AscribeHelper {
-    def unapply(arg: Tree): Option[(Tree, TypeTree)]
-  }
+  val Annotated: AnnotatedHelper
+  val Block: BlockHelper
+  val Tuple: TupleHelper
 
   val SeqLiteral: SeqLiteralHelper
   trait SeqLiteralHelper {
