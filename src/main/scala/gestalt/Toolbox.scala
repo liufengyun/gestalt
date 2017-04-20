@@ -58,9 +58,9 @@ trait Toolbox {
 
   // definition trees
   def Object(mods: Mods, name: String, parents: Seq[Tree], selfOpt: Option[Tree], stats: Seq[Tree]): Tree
-  def Class(mods: Mods, name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], self: Option[Tree], stats: Seq[Tree]): Tree
+  def Class(mods: Mods, name: String, tparams: Seq[Tree], ctorMods: Mods, paramss: Seq[Seq[Tree]], parents: Seq[Tree], self: Option[Tree], stats: Seq[Tree]): Tree
   def AnonymClass(parents: Seq[Tree], self: Option[Tree], stats: Seq[Tree]): Tree
-  def Trait(mods: Mods, name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], self: Option[Tree], stats: Seq[Tree]): Tree
+  def Trait(mods: Mods, name: String, tparams: Seq[Tree], ctorMods: Mods, paramss: Seq[Seq[Tree]], parents: Seq[Tree], self: Option[Tree], stats: Seq[Tree]): Tree
   def TypeDecl(mods: Mods, name: String, tparams: Seq[Tree], tbounds: Option[TypeTree]): Tree
   def TypeAlias(mods: Mods, name: String, tparams: Seq[Tree], rhs: TypeTree): Tree
   def DefDef(mods: Mods, name: String, tparams: Seq[Tree], paramss: Seq[Seq[Tree]], tpe: Option[TypeTree], rhs: Tree): Tree
@@ -74,7 +74,6 @@ trait Toolbox {
   def TypeParam(mods: Mods, name: String, tparams: Seq[TypeTree], tbounds: Option[TypeTree], cbounds: Seq[TypeTree]): TypeTree
   // extends qual.T[A, B](x, y)(z)
   def InitCall(qual: Option[Tree], name: String, tparams: Seq[TypeTree], argss: Seq[Seq[Tree]]): Tree
-  def PrimaryCtor(mods: Mods, paramss: Seq[Seq[Tree]]): Tree
   def SecondaryCtor(mods: Mods, paramss: Seq[Seq[Tree]], rhs: Tree): Tree
   def Self(name: String, tpe: TypeTree): Tree
   def Self(name: String): Tree
@@ -232,18 +231,12 @@ trait StructToolbox extends Toolbox {
 
   val Class: ClassHelper
   trait ClassHelper {
-    def unapply(tree: Tree): Option[(Mods, String, Seq[Tree], Option[Tree], Seq[Tree], Option[Tree], Seq[Tree])]
-    // def cpy(tree: Tree)(mods: Mods, name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], self: Option[Tree], stats: Seq[Tree])
+    def unapply(tree: Tree): Option[(Mods, String, Seq[Tree], Mods, Seq[Seq[Tree]], Seq[Tree], Option[Tree], Seq[Tree])]
   }
 
   val Trait: TraitHelper
   trait TraitHelper {
-    def unapply(tree: Tree): Option[(Mods, String, Seq[Tree], Option[Tree], Seq[Tree], Option[Tree], Seq[Tree])]
-  }
-
-  val PrimaryCtor: PrimaryCtorHelper
-  trait PrimaryCtorHelper {
-    def unapply(tree: Tree): Option[(Mods, Seq[Seq[Tree]])]
+    def unapply(tree: Tree): Option[(Mods, String, Seq[Tree], Mods, Seq[Seq[Tree]], Seq[Tree], Option[Tree], Seq[Tree])]
   }
 
   // accessors for definition trees

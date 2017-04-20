@@ -109,14 +109,13 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     d.ModuleDef(name.toTermName, templ).withMods(mods).withPosition
   }
 
-  def Class(mods: Mods, name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], selfOpt: Option[Tree], stats: Seq[Tree]): Tree = {
+  def Class(mods: Mods, name: String, tparams: Seq[Tree], ctorMods: Mods, paramss: Seq[Seq[Tree]], parents: Seq[Tree], selfOpt: Option[Tree], stats: Seq[Tree]): Tree = {
     val constr =
-      if (ctor.isEmpty) d.DefDef(nme.CONSTRUCTOR, Nil, Nil, d.TypeTree(), d.EmptyTree)
+      if (paramss.isEmpty) d.DefDef(nme.CONSTRUCTOR, Nil, Nil, d.TypeTree(), d.EmptyTree)
       else {
-        val PrimaryCtorTree(mods, paramss) = ctor.get
         val tparamsCast = tparams.toList.asInstanceOf[List[d.TypeDef]]
         val paramssCast = paramss.map(_.toList).toList.asInstanceOf[List[List[d.ValDef]]]
-        d.DefDef(nme.CONSTRUCTOR, tparamsCast, paramssCast, d.TypeTree(), d.EmptyTree).withMods(mods)
+        d.DefDef(nme.CONSTRUCTOR, tparamsCast, paramssCast, d.TypeTree(), d.EmptyTree).withMods(ctorMods)
       }
 
     val self = if (selfOpt.isEmpty) d.EmptyValDef else selfOpt.get.asInstanceOf[d.ValDef]
@@ -130,8 +129,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     d.Template(init, parents.toList, self, stats).withPosition
   }
 
-  def Trait(mods: Mods, name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], self: Option[Tree], stats: Seq[Tree]): Tree =
-    Class(mods, name, tparams, ctor, parents, self, stats).asInstanceOf[d.TypeDef].withFlags(Flags.Trait).withPosition
+  def Trait(mods: Mods, name: String, tparams: Seq[Tree], ctorMods: Mods, paramss: Seq[Seq[Tree]], parents: Seq[Tree], self: Option[Tree], stats: Seq[Tree]): Tree =
+    Class(mods, name, tparams, ctorMods, paramss, parents, self, stats).asInstanceOf[d.TypeDef].withFlags(Flags.Trait).withPosition
 
   def TypeDecl(mods: Mods, name: String, tparams: Seq[Tree], tboundsOpt: Option[TypeTree]): Tree = {
     val tbounds = tboundsOpt.getOrElse(d.TypeBoundsTree(d.EmptyTree, d.EmptyTree))
@@ -174,10 +173,6 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   def SeqDecl(mods: Mods, vals: Seq[String], tpe: TypeTree): Tree =
     d.PatDef(mods, vals.map(n => d.Ident(n.toTermName)).toList, tpe, d.EmptyTree).withPosition
-
-  // Dummy trees to retrofit Dotty AST
-  protected case class PrimaryCtorTree(mods: Mods, paramss: Seq[Seq[Tree]]) extends d.Tree
-  def PrimaryCtor(mods: Mods, paramss: Seq[Seq[Tree]]): Tree = PrimaryCtorTree(mods, paramss).withPosition
 
   def SecondaryCtor(mods: Mods, paramss: Seq[Seq[Tree]], rhs: Tree): Tree =
     DefDef(mods, nme.CONSTRUCTOR.toString, Nil, paramss, Some(d.TypeTree()), rhs).withPosition
@@ -478,23 +473,23 @@ class StructToolbox(enclosingPosition: Position)(implicit ctx: Context) extends 
   }
 
   object Class extends ClassHelper {
-    def unapply(tree: Tree): Option[(Mods, String, Seq[Tree], Option[Tree], Seq[Tree], Option[Tree], Seq[Tree])] = tree match {
+    def unapply(tree: Tree): Option[(Mods, String, Seq[Tree], Mods, Seq[Seq[Tree]], Seq[Tree], Option[Tree], Seq[Tree])] = tree match {
       case cdef @ c.TypeDef(name, templ @ c.Template(constr, parents, self, body)) =>
         var tparams: List[Tree] = Nil
-        val ctor = constr match {
-          case c.DefDef(nme.CONSTRUCTOR, Nil, Nil, c.TypeTree(), d.EmptyTree) => None
+        val (paramss, cmods) = constr match {
+          case c.DefDef(nme.CONSTRUCTOR, Nil, Nil, c.TypeTree(), d.EmptyTree) => (Nil, emptyMods)
           case pctor @ c.DefDef(nme.CONSTRUCTOR, tps, paramss, c.TypeTree(), d.EmptyTree) =>
             tparams = tps
-            Some(PrimaryCtor(pctor.mods, paramss))
+            (paramss, pctor.mods : Mods)
         }
         val selfOpt = if (self == d.EmptyValDef) None else Some(Self(self.name.toString, self.tpt))
-        Some((cdef.mods, name.toString, tparams, ctor, tparams, selfOpt, templ.body))  // TODO: parents
+        Some((cdef.mods, name.toString, tparams, cmods, paramss, parents, selfOpt, templ.body))
       case _ => None
     }
   }
 
   object Trait extends TraitHelper {
-    def unapply(tree: Tree): Option[(Mods, String, Seq[Tree], Option[Tree], Seq[Tree], Option[Tree], Seq[Tree])] =
+    def unapply(tree: Tree): Option[(Mods, String, Seq[Tree], Mods, Seq[Seq[Tree]], Seq[Tree], Option[Tree], Seq[Tree])] =
       if (!tree.isInstanceOf[d.TypeDef]) return None
       else {
         val typedef = tree.asInstanceOf[d.TypeDef]
@@ -502,13 +497,6 @@ class StructToolbox(enclosingPosition: Position)(implicit ctx: Context) extends 
 
         Class.unapply(typedef)
       }
-  }
-
-  object PrimaryCtor extends PrimaryCtorHelper {
-    def unapply(tree: Tree): Option[(Mods, Seq[Seq[Tree]])] = tree match {
-      case PrimaryCtorTree(mods, paramss) => Some((mods, paramss))
-      case _                              => None
-    }
   }
 
   /*

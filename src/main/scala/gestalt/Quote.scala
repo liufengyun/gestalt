@@ -527,21 +527,31 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     case m.Defn.Type(mods, name, tparams, body) =>
       selectToolbox("TypeAlias").appliedTo(liftMods(mods), liftName(name), liftSeq(tparams), lift(body))
     case m.Defn.Class(mods, name, tparams, ctor, m.Template(_, parents, self, stats)) =>
+      val (cmods, paramss) = ctor match {
+        case m.Ctor.Primary(mods, name, paramss) =>
+          (mods, paramss)
+      }
       selectToolbox("Class").appliedTo(
         liftMods(mods),
         liftName(name),
         liftSeq(tparams),
-        scalaSome.appliedTo(lift(ctor)),
+        liftMods(cmods),
+        liftSeqSeq(paramss),
         liftSeqTrees(parents.map(liftInitCall)),
         liftSelf(self),
         liftOptSeq(stats)
       )
     case m.Defn.Trait(mods, name, tparams, ctor, m.Template(_, parents, self, stats)) =>
+       val (cmods, paramss) = ctor match {
+        case m.Ctor.Primary(mods, name, paramss) =>
+          (mods, paramss)
+      }
       selectToolbox("Trait").appliedTo(
         liftMods(mods),
         liftName(name),
         liftSeq(tparams),
-        scalaSome.appliedTo(lift(ctor)),
+        liftMods(cmods),
+        liftSeqSeq(paramss),
         liftSeqTrees(parents.map(liftInitCall)),
         liftSelf(self),
         liftOptSeq(stats)
@@ -558,8 +568,6 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     // case m.Pkg(ref, stats) =>
     // case m.Pkg.Object(mods, name, templ) =>
 
-    case m.Ctor.Primary(mods, name, paramss) =>
-      selectToolbox("PrimaryCtor").appliedTo(liftMods(mods), liftSeqSeq(paramss))
     case m.Ctor.Secondary(mods, name, paramss, body) =>
       selectToolbox("SecondaryCtor").appliedTo(liftMods(mods), liftSeqSeq(paramss), lift(body))
     // case m.Ctor.Ref.Name(v) =>                       // handled by liftInitCall
