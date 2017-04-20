@@ -31,11 +31,21 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def isLazy: Boolean = dottyMods.is(Flags.Lazy)
     def isSealed: Boolean = dottyMods.is(Flags.Sealed)
     def isAbstract: Boolean = dottyMods.is(Flags.Abstract)
-    def isMutable: Boolean = dottyMods.is(Flags.Mutable)
     def isCase: Boolean = dottyMods.is(Flags.Case)
     def isContravariant: Boolean = dottyMods.is(Flags.Contravariant)
     def isCovariant: Boolean = dottyMods.is(Flags.Covariant)
     def isInline: Boolean = dottyMods.is(Flags.Inline)
+    def isMutable: Boolean = dottyMods.is(Flags.Mutable)
+
+    def isValParam: Boolean =
+      dottyMods.is(Flags.Param) &&
+        !dottyMods.is(Flags.Mutable) &&
+        !dottyMods.is(Flags.allOf(Flags.Private | Flags.Local))
+
+    def isVarParam: Boolean =
+      dottyMods.is(Flags.Param) &&
+        dottyMods.is(Flags.Mutable) &&
+        !dottyMods.is(Flags.allOf(Flags.Private | Flags.Local))
 
     // can be empty or `this`
     def setPrivate(within: String): Mods =
@@ -52,11 +62,14 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def setLazy: Mods = DottyModifiers(dottyMods | Flags.Lazy)
     def setSealed: Mods = DottyModifiers(dottyMods | Flags.Sealed)
     def setAbstract: Mods = DottyModifiers(dottyMods | Flags.Abstract)
-    def setMutable: Mods = DottyModifiers(dottyMods | Flags.Mutable)
     def setCase: Mods = DottyModifiers(dottyMods | Flags.Case)
     def setContravariant: Mods = DottyModifiers(dottyMods | Flags.Contravariant)
     def setCovariant: Mods = DottyModifiers(dottyMods | Flags.Covariant)
     def setInline: Mods = DottyModifiers(dottyMods | Flags.Inline)
+    def setMutable: Mods = DottyModifiers(dottyMods | Flags.Mutable)
+
+    def setValParam: Mods = DottyModifiers(dottyMods &~ Flags.Local &~ Flags.Mutable)
+    def setVarParam: Mods = DottyModifiers(dottyMods &~ Flags.Local | Flags.Mutable)
 
     def withAddedAnnotation(annot: d.Tree): Mods = DottyModifiers(dottyMods.withAddedAnnotation(annot))
 
@@ -150,32 +163,17 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   def ValDef(mods: Mods, name: String, tpe: Option[TypeTree], rhs: Tree): Tree =
     d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), rhs).withMods(mods).withPosition
 
-  def ValDef(mods: Mods, lhs: Tree, tpe: Option[TypeTree], rhs: Tree): Tree =
+  def PatDef(mods: Mods, lhs: Tree, tpe: Option[TypeTree], rhs: Tree): Tree =
     d.PatDef(mods, List(lhs), tpe.getOrElse(d.TypeTree()), rhs).withPosition
 
-  def ValDef(mods: Mods, pats: Seq[Tree], tpe: Option[TypeTree], rhs: Tree): Tree =
+  def SeqDef(mods: Mods, pats: Seq[Tree], tpe: Option[TypeTree], rhs: Tree): Tree =
     d.PatDef(mods, pats.toList, tpe.getOrElse(d.TypeTree()), rhs).withPosition
 
   def ValDecl(mods: Mods, name: String, tpe: TypeTree): Tree =
     d.ValDef(name.toTermName, tpe, d.EmptyTree).withMods(mods).withPosition
 
-  def ValDecl(mods: Mods, vals: Seq[String], tpe: TypeTree): Tree =
+  def SeqDecl(mods: Mods, vals: Seq[String], tpe: TypeTree): Tree =
     d.PatDef(mods, vals.map(n => d.Ident(n.toTermName)).toList, tpe, d.EmptyTree).withPosition
-
-  def VarDef(mods: Mods, name: String, tpe: Option[TypeTree], rhs: Tree): Tree =
-    d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), rhs).withMods((mods : d.Modifiers) | Flags.Mutable).withPosition
-
-  def VarDef(mods: Mods, lhs: Tree, tpe: Option[TypeTree], rhs: Tree): Tree =
-    d.PatDef((mods: d.Modifiers) | Flags.Mutable, List(lhs), tpe.getOrElse(d.TypeTree()), rhs).withPosition
-
-  def VarDef(mods: Mods, pats: Seq[Tree], tpe: Option[TypeTree], rhs: Tree): Tree =
-    d.PatDef((mods: d.Modifiers) | Flags.Mutable, pats.toList, tpe.getOrElse(d.TypeTree()), rhs).withPosition
-
-  def VarDecl(mods: Mods, name: String, tpe: TypeTree): Tree =
-    d.ValDef(name.toTermName, tpe, d.EmptyTree).withMods((mods: d.Modifiers) | Flags.Mutable).withPosition
-
-  def VarDecl(mods: Mods, vals: Seq[String], tpe: TypeTree): Tree =
-    d.PatDef((mods: d.Modifiers)| Flags.Mutable, vals.map(n => d.Ident(n.toTermName)).toList, tpe, d.EmptyTree).withPosition
 
   // Dummy trees to retrofit Dotty AST
   protected case class PrimaryCtorTree(mods: Mods, paramss: Seq[Seq[Tree]]) extends d.Tree
@@ -299,6 +297,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   def Return(expr: Tree): Tree = d.Return(expr, d.EmptyTree).withPosition
 
+  def Return: Tree = d.Return(d.EmptyTree, d.EmptyTree).withPosition
+
   def Throw(expr: Tree): Tree = d.Throw(expr).withPosition
 
   def Ascribe(expr: Tree, tpe: Tree): Tree = d.Typed(expr, tpe).withPosition
@@ -367,8 +367,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   def Bind(name: String, expr: Tree): Tree =
     d.Bind(name.toTermName, expr).withPosition
 
-  def Alternative(lhs: Tree, rhs: Tree): Tree =
-    d.Alternative(List(lhs, rhs)).withPosition
+  def Alternative(trees: Seq[Tree]): Tree =
+    d.Alternative(trees.toList).withPosition
 
   // importees
   def Import(items: Seq[Tree]): Tree =
@@ -403,6 +403,13 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     }
   }
 
+  object This extends ThisHelper {
+    def unapply(tree: Tree): Option[String] = tree match {
+      case c.This(c.Ident(name)) => Some(name.show)
+      case _ => None
+    }
+  }
+
   object Select extends SelectHelper {
     def unapply(tree: Tree): Option[(Tree, String)] = tree match {
       case c.Select(qual, name) if name.isTermName => Some((qual, name.show))
@@ -421,6 +428,13 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   object Ascribe extends AscribeHelper {
     def unapply(tree: Tree): Option[(Tree, TypeTree)] = tree match {
       case c.Typed(expr, tpe) => Some((expr, tpe))
+      case _ => None
+    }
+  }
+
+  object Assign extends AssignHelper {
+    def unapply(tree: Tree): Option[(Tree, Tree)] = tree match {
+      case c.Assign(lhs, rhs) => Some((lhs, rhs))
       case _ => None
     }
   }
@@ -509,7 +523,7 @@ class StructToolbox(enclosingPosition: Position)(implicit ctx: Context) extends 
   }*/
 
    // accessors
-  def toRep(tree: Param): ParamRep = new ParamRep {
+  def toParamRep(tree: Param): ParamRep = new ParamRep {
     def mods: Mods = tree.mods
     def name: String = tree.name.show
     def tpt: Option[TypeTree] = if (tree.tpt.isInstanceOf[d.TypeTree]) None else Some(tree.tpt)

@@ -7,7 +7,7 @@ object Parsing {
     val parser = new Parsers.Parser(tb, "toolbox", true, code.toCharArray) {
       val splices = Nil
     }
-    parser.typ().asInstanceOf[tb.Tree]
+    parser.unlift(parser.typ()).asInstanceOf[tb.Tree]
   }
 
   def helper(tb1: StructToolbox): TreeHelper = {
@@ -20,56 +20,57 @@ object Parsing {
 
 class testTypes extends StaticAnnotation {
   def apply(defn: Any): Any = meta {
+    import toolbox._
     val helper = Parsing.helper(toolbox)
 
     def parse(code: String) = Parsing.parseType(toolbox, code)
 
-    var actual = parse("Int")
-    var expect = helper.liftTypeIdent("Int")
+    var actual: AnyRef = parse("Int")
+    var expect: AnyRef = Ident("Int")
     assert(actual.toString == expect.toString)
 
     actual = parse("scala.Nil.type")
-    expect = helper.liftTypeSingleton(helper.liftSelect(helper.liftIdent("scala"), "Nil"))
+    expect = TypeSingleton(Select(Ident("scala"), "Nil"))
     // println(s"expect: $expect"); println(s"actual: $actual")
     assert(actual.toString == expect.toString)
 
     actual = parse("a.T")
-    expect = helper.liftTypeSelect(helper.liftIdent("a"), "T")
+    expect = TypeSelect(Ident("a"), "T")
     // println(s"expect: $expect"); println(s"actual: $actual")
     assert(actual.toString == expect.toString)
 
     actual = parse("a.b.T")
-    expect = helper.liftTypeSelect(helper.liftSelect(helper.liftIdent("a"), "b"), "T")
+    expect = TypeSelect(Select(Ident("a"), "b"), "T")
     // println(s"expect: $expect"); println(s"actual: $actual")
     assert(actual.toString == expect.toString)
 
     actual = parse("Int & String")
-    expect = helper.liftTypeAnd(helper.liftTypeIdent("Int"), helper.liftTypeIdent("String"))
+    expect = TypeAnd(TypeIdent("Int"), TypeIdent("String"))
     // println(s"expect: $expect"); println(s"actual: $actual")
     assert(actual.toString == expect.toString)
 
     actual = parse("Int | String")
-    expect = helper.liftTypeOr(helper.liftTypeIdent("Int"), helper.liftTypeIdent("String"))
+    expect = TypeOr(TypeIdent("Int"), TypeIdent("String"))
     // println(s"expect: $expect"); println(s"actual: $actual")
     assert(actual.toString == expect.toString)
 
     actual = parse("List[Int]")
-    expect = helper.liftTypeApply(helper.liftTypeIdent("List"), List(helper.liftTypeIdent("Int")))
+    expect = TypeApply(TypeIdent("List"), List(TypeIdent("Int")))
     // println(s"expect: $expect"); println(s"actual: $actual")
     assert(actual.toString == expect.toString)
 
     actual = parse("Int => String")
-    expect = helper.liftTypeFunction(List(helper.liftTypeIdent("Int")), helper.liftTypeIdent("String"))
+    expect = TypeFunction(List(TypeIdent("Int")), TypeIdent("String"))
     // println(s"expect: $expect"); println(s"actual: $actual")
     assert(actual.toString == expect.toString)
 
     actual = parse("(Int, Int) => String")
-    expect = helper.liftTypeFunction(List(helper.liftTypeIdent("Int"), helper.liftTypeIdent("Int")), helper.liftTypeIdent("String"))
+    expect = TypeFunction(List(TypeIdent("Int"), TypeIdent("Int")), TypeIdent("String"))
     // println(s"expect: $expect"); println(s"actual: $actual")
     assert(actual.toString == expect.toString)
 
     actual = parse("Int ~ String")
-    expect = helper.liftTypeApplyInfix(helper.liftTypeIdent("Int"), "~", helper.liftTypeIdent("String"))
+    expect = TypeApplyInfix(TypeIdent("Int"), "~", TypeIdent("String"))
     // println(s"expect: $expect"); println(s"actual: $actual")
     assert(actual.toString == expect.toString)
 

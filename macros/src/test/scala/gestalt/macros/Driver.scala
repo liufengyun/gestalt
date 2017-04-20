@@ -9,6 +9,7 @@ object Driver {
     new DefMacroTest
     new QuasiquoteTest
     new TypeToolboxTest
+    new ParsingTest
 
     var success = false
     var total = 0

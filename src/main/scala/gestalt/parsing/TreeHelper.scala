@@ -18,10 +18,14 @@ trait TreeHelper {
   }
 
   // sometimes, the parser needs to check the unlifted Tree
-  val liftedToUnlifted = new IdentityHashMap[Tree, Tree]
-  def unlift(tree: Tree): Tree = liftedToUnlifted.get(tree)
-  def unliftTypeTree(tree: Tree): TypeTree = liftedToUnlifted.get(tree).asInstanceOf[TypeTree]
-  def map(lifted: Tree, unlifted: Tree): Unit = liftedToUnlifted.put(lifted, unlifted)
+  val biMap = new IdentityHashMap[Tree, Tree]
+  def unlift(tree: AnyRef): Tree = biMap.get(tree)
+  def unliftTypeTree(tree: AnyRef): TypeTree = biMap.get(tree).asInstanceOf[TypeTree]
+  def lift(tree: Tree): Tree = biMap.get(tree)
+  def map(lifted: Tree, unlifted: Tree): Unit = {
+    biMap.put(lifted, unlifted)
+    biMap.put(unlifted, lifted)
+  }
 
   // lifted trees
   lazy val scalaNil = select("scala.Nil")
@@ -40,6 +44,49 @@ trait TreeHelper {
 
     if (isTerm) Select(qual, parts.last) else TypeSelect(qual, parts.last)
   }
+
+  /* -------------------- lifting definitions -------------------------- */
+  def liftMods(mods: Mods): Tree = ???
+
+  def liftFunctionParam(name: String, tpe: Tree): Tree = {
+    val rawTpe = if (tpe == null) None else Some(unliftTypeTree(tpe))
+    val raw = Param(emptyMods, name, rawTpe, None)
+
+    val liftedTpe = if (tpe == null) scalaNone else scalaSome.appliedTo(tpe)
+    val lifted = toolbox.select("Param").appliedTo(toolbox.select("emptyMods"), Lit(name), liftedTpe, scalaNone)
+
+    map(lifted, raw)
+    lifted
+  }
+
+  def liftParam(mods: Mods, name: String, tpe: Tree, default: Tree): Tree = ???
+
+
+  def liftSelf(name: String, tpe: Tree): Tree = ???
+  def liftSelf(name: String): Tree = ???
+
+  def liftInitCall(qual: Tree, name: String, tparams: Seq[Tree], argss: Seq[Seq[Tree]]): Tree = ???
+
+  def liftTypeParam(mods: Mods, name: String, tparams: Seq[Tree], tbounds: Tree, cbounds: Seq[Tree]): Tree = ???
+
+  def liftValDef(mods: Mods, name: String, tpe: Tree, rhs: Tree): Tree = ???
+  def liftPatDef(mods: Mods, lhs: Tree, tpe: Tree, rhs: Tree): Tree = ???
+  def liftSeqDef(mods: Mods, pats: Seq[Tree], tpe: Tree, rhs: Tree): Tree = ???
+  def liftValDecl(mods: Mods, name: String, tpe: Tree): Tree = ???
+  def liftSeqDecl(mods: Mods, vals: Seq[String], tpe: Tree): Tree = ???
+
+  def liftDefDef(mods: Mods, name: String, tparams: Seq[Tree], paramss: Seq[Seq[Tree]], tpe: Tree, rhs: Tree): Tree = ???
+  def liftDefDecl(mods: Mods, name: String, tparams: Seq[Tree], paramss: Seq[Seq[Tree]], tpe: Tree): Tree = ???
+
+  def liftObject(mods: Mods, name: String, parents: Seq[Tree], self: Tree, stats: Seq[Tree]): Tree = ???
+  def liftClass(mods: Mods, name: String, tparams: Seq[Tree], ctor: Tree, parents: Seq[Tree], self: Tree, stats: Seq[Tree]): Tree = ???
+  def liftAnonymClass(parents: Seq[Tree], self: Tree, stats: Seq[Tree]): Tree = ???
+  def liftTrait(mods: Mods, name: String, tparams: Seq[Tree], ctor: Tree, parents: Seq[Tree], self: Tree, stats: Seq[Tree]): Tree = ???
+  def liftTypeDecl(mods: Mods, name: String, tparams: Seq[Tree], tbounds: Tree): Tree = ???
+  def liftTypeAlias(mods: Mods, name: String, tparams: Seq[Tree], rhs: Tree): Tree = ???
+
+  def liftPrimaryCtor(mods: Mods, paramss: Seq[Seq[Tree]]): Tree = ???
+  def liftSecondaryCtor(mods: Mods, paramss: Seq[Seq[Tree]], rhs: Tree): Tree = ???
 
   /* -------------------- lifting terms -------------------------- */
   def liftLit(value: Any): Tree = {
@@ -62,6 +109,10 @@ trait TreeHelper {
     map(lifted, raw)
     lifted
   }
+
+  def liftApply(fun: Tree, args: Seq[Tree]): Tree = ???
+
+  def liftApplyType(fun: Tree, args: Seq[Tree]): Tree = ???
 
   def liftThis(qual: String): Tree = {
     val raw = This(qual)
@@ -91,9 +142,16 @@ trait TreeHelper {
     lifted
   }
 
+  def liftPrefix(op: String, od: Tree): Tree = {
+    val raw = Prefix(op, unlift(od))
+    val lifted = toolbox.select("Prefix").appliedTo(liftIdent(op), od)
+    map(lifted, raw)
+    lifted
+  }
+
   def liftBlock(trees: Seq[Tree]): Tree = {
     val raw = Block(trees.map(unlift))
-    val args = trees.foldLeft(scalaNil) { (acc, tree) => tb.Infix(tree, "::", acc) }
+    val args = trees.foldLeft(scalaNil) { (acc, tree) => Infix(tree, "::", acc) }
     val lifted = toolbox.select("Block").appliedTo(args)
     map(lifted, raw)
     lifted
@@ -101,7 +159,7 @@ trait TreeHelper {
 
   def liftTuple(trees: Seq[Tree]): Tree = {
     val raw = Tuple(trees.map(unlift))
-    val args = trees.foldLeft(scalaNil) { (acc, tree) => tb.Infix(tree, "::", acc) }
+    val args = trees.foldLeft(scalaNil) { (acc, tree) => Infix(tree, "::", acc) }
     val lifted = toolbox.select("Tuple").appliedTo(args)
     map(lifted, raw)
     lifted
@@ -109,12 +167,136 @@ trait TreeHelper {
 
   def liftInterpolate(tag: String, parts: Seq[String], args: Seq[Tree]): Tree = {
     val raw = Interpolate(tag, parts, args.map(unlift))
-    val liftedParts = parts.foldLeft(scalaNil) { (acc, str) => tb.Infix(Lit(str), "::", acc) }
-    val liftedArgs = args.foldLeft(scalaNil) { (acc, tree) => tb.Infix(tree, "::", acc) }
+    val liftedParts = parts.foldLeft(scalaNil) { (acc, str) => Infix(Lit(str), "::", acc) }
+    val liftedArgs = args.foldLeft(scalaNil) { (acc, tree) => Infix(tree, "::", acc) }
     val lifted = toolbox.select("Interpolate").appliedTo(Lit(tag), liftedParts, liftedArgs)
     map(lifted, raw)
     lifted
   }
+
+  def liftIf(cond: Tree, thenp: Tree, elsep: Tree): Tree = {
+    val elsep1 = if (elsep == null) None else Some(unlift(elsep))
+    val raw = If(unlift(cond), unlift(thenp), elsep1)
+    val liftedElsep = if (elsep == null) scalaNone else scalaSome.appliedTo(elsep)
+    val lifted = toolbox.select("If").appliedTo(cond, thenp, liftedElsep)
+    map(lifted, raw)
+    lifted
+  }
+
+  def liftWhile(expr: Tree, body: Tree): Tree = {
+    val raw = While(unlift(expr), unlift(body))
+    val lifted = toolbox.select("While").appliedTo(expr, body)
+    map(lifted, raw)
+    lifted
+  }
+
+  def liftDoWhile(body: Tree, expr: Tree): Tree = {
+    val raw = DoWhile(unlift(body), unlift(expr))
+    val lifted = toolbox.select("DoWhile").appliedTo(expr, body)
+    map(lifted, raw)
+    lifted
+  }
+
+  def liftTry(body: Tree, cases: Seq[Tree], finalizer: Tree): Tree = {
+    val raw =
+      Try(
+        unlift(body),
+        cases.map(unlift),
+        if (finalizer == null) None else Some(unlift(finalizer))
+      )
+
+    val liftedCases = cases.foldLeft(scalaNil) { (acc, tree) => Infix(tree, "::", acc) }
+    val lifted = toolbox.select("Try").appliedTo(body, liftedCases, finalizer)
+    map(lifted, raw)
+    lifted
+  }
+
+  def liftTry(body: Tree, handler: Tree, finalizer: Tree): Tree = {
+    val raw =
+      Try(
+        unlift(body),
+        unlift(handler),
+        if (finalizer == null) None else Some(unlift(finalizer))
+      )
+
+    val lifted = toolbox.select("Try").appliedTo(body, handler, finalizer)
+    map(lifted, raw)
+    lifted
+  }
+
+  def liftThrow(expr: Tree): Tree = {
+    val raw = Throw(unlift(expr))
+    val lifted = toolbox.select("Throw").appliedTo(expr)
+    map(lifted, raw)
+    lifted
+  }
+
+  def liftReturn(expr: Tree): Tree = {
+    val raw = Return(unlift(expr))
+    val lifted = toolbox.select("Return").appliedTo(expr)
+    map(lifted, raw)
+    lifted
+  }
+
+  def liftReturn: Tree = {
+    val raw = Return
+    val lifted = toolbox.select("Return")
+    map(lifted, raw)
+    lifted
+  }
+
+  def liftMatch(expr: Tree, cases: Seq[Tree]): Tree = {
+    val raw = Match(unlift(expr), cases.map(unlift))
+    val liftedCases = cases.foldLeft(scalaNil) { (acc, tree) => Infix(tree, "::", acc) }
+    val lifted = toolbox.select("Match").appliedTo(expr, liftedCases)
+    map(lifted, raw)
+    lifted
+  }
+
+  def liftCase(pat: Tree, cond: Tree, body: Tree): Tree = ???
+
+  def liftAscribe(expr: Tree, tpe: Tree): Tree = {
+    val raw = Ascribe(unlift(expr), unlift(tpe))
+    val lifted = toolbox.select("Ascribe").appliedTo(expr, tpe)
+    map(lifted, raw)
+    lifted
+  }
+
+  def liftAnnotated(expr: Tree, annots: Seq[Tree]): Tree = {
+    val raw = Annotated(unlift(expr), annots.map(unlift))
+    val liftedAnnots = annots.foldLeft(scalaNil) { (acc, tree) => Infix(tree, "::", acc) }
+    val lifted = toolbox.select("Annotated").appliedTo(expr, liftedAnnots)
+    map(lifted, raw)
+    lifted
+  }
+
+  def liftFunction(params: Seq[Tree], body: Tree): Tree = {
+    val raw = Function(params.map(unlift), body)
+    val liftedParams = params.foldLeft(scalaNil) { (acc, tree) => Infix(tree, "::", acc) }
+    val lifted = toolbox.select("Function").appliedTo(liftedParams, body)
+    map(lifted, raw)
+    lifted
+  }
+
+  def liftNew(tpe: Tree): Tree = ???
+  def liftNamed(name: String, expr: Tree): Tree = ???
+
+
+  def liftFor(enums: Seq[Tree], body: Tree): Tree = ???
+  def liftGenFrom(pat: Tree, rhs: Tree): Tree = ???
+  def liftGenAlias(pat: Tree, rhs: Tree): Tree = ???
+  def liftGuard(cond: Tree): Tree = ???
+  def liftYield(expr: Tree): Tree = ???
+
+  def liftBind(name: String, expr: Tree): Tree = ???
+  def liftAlternative(trees: Seq[Tree]): Tree = ???
+
+  /* -------------------- importing  ----------------------------- */
+  def liftImport(items: Seq[Tree]): Tree = ???
+  def liftImportItem(ref: Tree, importees: Seq[Tree]): Tree = ???
+  def liftImportName(name: String): Tree = ???
+  def liftImportRename(from: String, to: String): Tree = ???
+  def liftImportHide(name: String): Tree = ???
 
   /* -------------------- lifting types -------------------------- */
   def liftTypeIdent(name: String): Tree = {

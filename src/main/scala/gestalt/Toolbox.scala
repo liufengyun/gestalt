@@ -6,7 +6,7 @@ trait Toolbox {
   type Tree >: Null <: AnyRef
   type Param <: Tree
   type TypeTree <: Tree      // safety by construction -- implementation can have TypeTree = Tree
-  type Mods <: Modifiers
+  type Mods >: Null <: Modifiers
 
   trait Modifiers {
     def isPrivate: Boolean
@@ -17,11 +17,13 @@ trait Toolbox {
     def isLazy: Boolean
     def isSealed: Boolean
     def isAbstract: Boolean
-    def isMutable: Boolean
+    def isValParam: Boolean
+    def isVarParam: Boolean
     def isCase: Boolean
     def isContravariant: Boolean
     def isCovariant: Boolean
     def isInline: Boolean
+    def isMutable: Boolean
     def privateWithin: String
     def hasAnnotations: Boolean
 
@@ -34,11 +36,13 @@ trait Toolbox {
     def setLazy: Mods
     def setSealed: Mods
     def setAbstract: Mods
-    def setMutable: Mods
+    def setValParam: Mods
+    def setVarParam: Mods
     def setCase: Mods
     def setContravariant: Mods
     def setCovariant: Mods
     def setInline: Mods
+    def setMutable: Mods
 
     def withAddedAnnotation(annot: Tree): Mods
   }
@@ -62,15 +66,10 @@ trait Toolbox {
   def DefDef(mods: Mods, name: String, tparams: Seq[Tree], paramss: Seq[Seq[Tree]], tpe: Option[TypeTree], rhs: Tree): Tree
   def DefDecl(mods: Mods, name: String, tparams: Seq[Tree], paramss: Seq[Seq[Tree]], tpe: TypeTree): Tree
   def ValDef(mods: Mods, name: String, tpe: Option[TypeTree], rhs: Tree): Tree
-  def ValDef(mods: Mods, lhs: Tree, tpe: Option[TypeTree], rhs: Tree): Tree
-  def ValDef(mods: Mods, pats: Seq[Tree], tpe: Option[TypeTree], rhs: Tree): Tree
+  def PatDef(mods: Mods, lhs: Tree, tpe: Option[TypeTree], rhs: Tree): Tree
+  def SeqDef(mods: Mods, pats: Seq[Tree], tpe: Option[TypeTree], rhs: Tree): Tree
   def ValDecl(mods: Mods, name: String, tpe: TypeTree): Tree
-  def ValDecl(mods: Mods, vals: Seq[String], tpe: TypeTree): Tree
-  def VarDef(mods: Mods, name: String, tpe: Option[TypeTree], rhs: Tree): Tree
-  def VarDef(mods: Mods, lhs: Tree, tpe: Option[TypeTree], rhs: Tree): Tree
-  def VarDef(mods: Mods, pats: Seq[Tree], tpe: Option[TypeTree], rhs: Tree): Tree
-  def VarDecl(mods: Mods, name: String, tpe: TypeTree): Tree
-  def VarDecl(mods: Mods, vars: Seq[String], tpe: TypeTree): Tree
+  def SeqDecl(mods: Mods, vals: Seq[String], tpe: TypeTree): Tree
   def Param(mods: Mods, name: String, tpe: Option[TypeTree], default: Option[Tree]): Param
   def TypeParam(mods: Mods, name: String, tparams: Seq[TypeTree], tbounds: Option[TypeTree], cbounds: Seq[TypeTree]): TypeTree
   // extends qual.T[A, B](x, y)(z)
@@ -112,6 +111,7 @@ trait Toolbox {
   def Postfix(od: Tree, op: String): Tree
   def Assign(lhs: Tree, rhs: Tree): Tree
   def Return(expr: Tree): Tree
+  def Return: Tree
   def Throw(expr: Tree): Tree
   def Ascribe(expr: Tree, tpe: Tree): Tree
   def Annotated(expr: Tree, annots: Seq[Tree]): Tree
@@ -138,7 +138,7 @@ trait Toolbox {
 
   // patterns
   def Bind(name: String, expr: Tree): Tree
-  def Alternative(lhs: Tree, rhs: Tree): Tree
+  def Alternative(trees: Seq[Tree]): Tree
 
   // helpers
   def ApplySeq(fun: Tree, argss: Seq[Seq[Tree]]): Tree = argss match {
@@ -180,6 +180,11 @@ trait Toolbox {
     def unapply(tree: Tree): Option[String]
   }
 
+  private[gestalt] val This: ThisHelper
+  trait ThisHelper {
+    def unapply(tree: Tree): Option[String]
+  }
+
   private[gestalt] val Select: SelectHelper
   trait SelectHelper {
     def unapply(tree: Tree): Option[(Tree, String)]
@@ -188,6 +193,11 @@ trait Toolbox {
   private[gestalt] val Ascribe: AscribeHelper
   trait AscribeHelper {
     def unapply(tree: Tree): Option[(Tree, TypeTree)]
+  }
+
+  private[gestalt] val Assign: AssignHelper
+  trait AssignHelper {
+    def unapply(tree: Tree): Option[(Tree, Tree)]
   }
 
   private[gestalt] val Annotated: AnnotatedHelper
@@ -237,6 +247,7 @@ trait StructToolbox extends Toolbox {
   }
 
   // accessors for definition trees
+  implicit def toParamRep(tree: Param): ParamRep
   trait ParamRep {
     def mods: Mods
     def name: String
@@ -245,8 +256,6 @@ trait StructToolbox extends Toolbox {
     def copy(name: String = this.name, mods:Mods = this.mods,
              tptOpt: Option[TypeTree] = this.tpt, defaultOpt: Option[Tree] = this.default): Param
   }
-
-  implicit def toRep(tree: Param): ParamRep
 }
 
 /** TypeToolbox defines extractors for inspecting expression trees as well as APIs for types

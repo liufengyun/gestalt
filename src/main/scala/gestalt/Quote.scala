@@ -21,8 +21,6 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     def select(name: String): t.Tree = t.Select(tree, name)
 
     def appliedTo(args: t.Tree*): t.Tree = t.Apply(tree, args.toList)
-
-    def appliedToType(args: t.TypeTree*): t.Tree = t.ApplyType(tree, args.toList)
   }
 
   // lifted trees
@@ -281,9 +279,9 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
         case m.Mod.Lazy() =>
           t.Select(acc, "setLazy")
         case m.Mod.ValParam() =>
-          acc
+          t.Select(acc, "setValParam")
         case m.Mod.VarParam() =>
-          t.Select(acc, "setMutable")
+          t.Select(acc, "setVarParam")
         case m.Mod.Inline() =>
           t.Select(acc, "setInline")
       }
@@ -459,7 +457,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     case m.Pat.Bind(m.Pat.Var.Term(name), expr) =>
       selectToolbox("Bind").appliedTo(t.Lit(name), lift(expr))
     case m.Pat.Alternative(lhs, rhs) =>
-      selectToolbox("Alternative").appliedTo(lift(lhs), lift(rhs))
+      selectToolbox("Alternative").appliedTo(scalaList.appliedTo(lift(lhs), lift(rhs)))
     case m.Pat.Tuple(args) =>
       selectToolbox("Tuple").appliedTo(liftSeq(args))
     case m.Pat.Extract(ref, targs, args) =>
