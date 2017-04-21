@@ -3,22 +3,23 @@ package scala.gestalt
 case class Location(fileName: String, line: Int, column: Int)
 
 trait Toolbox {
-  type Tree >: Null <: AnyRef
-  type TypeTree <: Tree      // safety by construction -- implementation can have TypeTree = Tree
-  type TermTree <: Tree
-  type DefTree  <: Tree
+  // safety by construction -- implementation can have TypeTree = Tree
+  type Tree     >: Null <: AnyRef
+  type TypeTree >: Null <: Tree
+  type TermTree >: Null <: Tree
+  type DefTree  >: Null <: Tree
 
-  type Class <: DefTree
-  type Trait <: DefTree
-  type Object <: DefTree
-  type Param <: DefTree
+  type Class     <: DefTree
+  type Trait     <: DefTree
+  type Object    <: DefTree
+  type Param     <: DefTree
   type TypeParam <: DefTree
-  type ValDef <: DefTree
-  type ValDecl <: DefTree
-  type DefDef <: DefTree
-  type DefDecl <: DefTree
-  type Self <: DefTree
-  type InitCall <: Tree
+  type ValDef    <: DefTree
+  type ValDecl   <: DefTree
+  type DefDef    <: DefTree
+  type DefDecl   <: DefTree
+  type Self      <: DefTree
+  type InitCall  <: Tree
 
   type Mods >: Null <: Modifiers
 
@@ -190,7 +191,7 @@ trait Toolbox {
 
   private[gestalt] val Ascribe: AscribeHelper
   trait AscribeHelper {
-    def unapply(tree: Tree): Option[(Tree, TypeTree)]
+    def unapply(tree: Tree): Option[(TermTree, TypeTree)]
   }
 
   private[gestalt] val Assign: AssignHelper
@@ -336,6 +337,6 @@ trait TypeToolbox extends Toolbox { t =>
 
   val SeqLiteral: SeqLiteralHelper
   trait SeqLiteralHelper {
-    def unapply(tree: Tree): Option[Seq[Tree]]
+    def unapply(tree: Tree): Option[Seq[TermTree]]
   }
 }

@@ -144,7 +144,7 @@ trait TreeHelper {
     lifted
   }
 
-  def liftValDef(mods: Mods, name: String, tpe: TermTree, rhs: TermTree): Tree = {
+  def liftValDef(mods: Mods, name: String, tpe: TermTree, rhs: TermTree): TermTree = {
     val rawMods = mods.withAnnotations(mods.annotations.map(unlift))
     val rawTpe = if (tpe == null) None else Some(unliftAs[TypeTree](tpe))
     val raw = ValDef(rawMods, name, rawTpe, unliftAs[TermTree](rhs))
@@ -394,7 +394,7 @@ trait TreeHelper {
     lifted
   }
 
-  def liftPrefix(op: String, od: TermTree): Tree = {
+  def liftPrefix(op: String, od: TermTree): TermTree = {
     val raw = Prefix(op, unliftAs[TermTree](od))
     val lifted = toolbox.select("Prefix").appliedTo(Lit(op), od)
     map(lifted, raw)
@@ -424,7 +424,7 @@ trait TreeHelper {
     lifted
   }
 
-  def liftIf(cond: TermTree, thenp: TermTree, elsep: TermTree): Tree = {
+  def liftIf(cond: TermTree, thenp: TermTree, elsep: TermTree): TermTree = {
     val elsep1 = if (elsep == null) None else Some(unliftAs[TermTree](elsep))
     val raw = If(unliftAs[TermTree](cond), unliftAs[TermTree](thenp), elsep1)
     val liftedElsep = liftOption(elsep)
@@ -679,7 +679,7 @@ trait TreeHelper {
     lifted
   }
 
-  def liftTypeOr(lhs: TermTree, rhs: TermTree): Tree = {
+  def liftTypeOr(lhs: TermTree, rhs: TermTree): TermTree = {
     val raw = TypeOr(unliftAs[TypeTree](lhs), unliftAs[TypeTree](rhs))
     val lifted = toolbox.select("TypeOr").appliedTo(lhs, rhs)
     map(lifted, raw)

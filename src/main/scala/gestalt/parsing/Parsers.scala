@@ -80,7 +80,7 @@ object Parsers {
 
   abstract class Parser(val tb: StructToolbox, val tbName: String, isPattern: Boolean, buf: Array[Char])
   extends TreeHelper {
-    import tb._
+    import tb.{ Tree => _, TermTree => Tree, _}
 
     val splices: Seq[Tree]
 
@@ -281,8 +281,8 @@ object Parsers {
     /** Convert tree to formal parameter list
      */
     def convertToFunctionParams(tree: Tree): List[Tree] = unlift(tree) match {
-      case Tuple(ts)  => ts.toList map (convertToFunctionParam(_))
-      case t          => convertToFunctionParam(t) :: Nil
+      case Tuple(ts)  => ts.toList map (t => convertToFunctionParam(lift(t)))
+      case t          => convertToFunctionParam(lift(t)) :: Nil
     }
 
     /** Convert tree to formal parameter
@@ -320,8 +320,8 @@ object Parsers {
 
     def isWildcard(t: Tree): Boolean = unlift(t) match {
       case tb.Ident(name1) => placeholderParams.nonEmpty && name1 == placeholderParams.head.name
-      case tb.Ascribe(t1, _) => isWildcard(t1)
-      case tb.Annotated(t1, _) => isWildcard(t1)
+      case tb.Ascribe(t1, _) => isWildcard(lift(t1))
+      case tb.Annotated(t1, _) => isWildcard(lift(t1))
       case _ => false
     }
 
@@ -1102,7 +1102,7 @@ object Parsers {
           if (isWildcard(t) && location != Location.InPattern) {
             val vd :: rest = placeholderParams
             placeholderParams =
-              vd.copy(tptOpt = Some(unliftTypeTree(tpt))) :: rest
+              vd.copy(tptOpt = Some(unliftAs[TypeTree](tpt))) :: rest
           }
           liftAscribe(t, tpt)
       }
@@ -1268,7 +1268,7 @@ object Parsers {
 
     val argumentExpr = () => unlift(exprInParens()) match {
       case a @ Assign(Ident(id), rhs) => liftNamed(id, lift(rhs))
-      case e => e
+      case e => lift(e)
     }
 
     /** ArgumentExprss ::= {ArgumentExprs}
@@ -1375,7 +1375,7 @@ object Parsers {
           enumerators()
         }
       newLinesOpt()
-      if (in.token == YIELD) { in.nextToken(); liftFor(enums, liftYield(expr())) }
+      if (in.token == YIELD) { in.nextToken(); liftForYield(enums, expr()) }
       else if (in.token == DO) { in.nextToken(); liftFor(enums, expr()) }
       else {
         if (!wrappedEnums) syntaxErrorOrIncomplete(""""yield" or "do" expected""")
@@ -1415,7 +1415,7 @@ object Parsers {
       else Nil
 
     // TODO: check backquoted ident
-    def isVarPattern(tree: Tree): Boolean = tree match {
+    def isVarPattern(tree: tb.Tree): Boolean = tree match {
       case Ident(_) => true
       case _ => false
     }
@@ -1902,7 +1902,7 @@ object Parsers {
           if (rhs == null) liftValDecl(mods, name, tpt)
           else liftValDef(mods, name, tpt, rhs)
         case pat :: Nil =>
-          liftPatDef(mods, pat, tpt, rhs)
+          liftPatDef(mods, lift(pat), tpt, rhs)
         case _ =>
           if (rhs == null && allIdents) liftSeqDecl(mods, allNames, tpt)
           else liftSeqDef(mods, lhs, tpt, rhs)
@@ -2044,12 +2044,11 @@ object Parsers {
       val tparams = typeParamClauseOpt(ParamOwner.Class)
       val cmods = constrModsOpt(name)
       val vparamss = paramClauses(name, isType = true, ofCaseClass = mods.isCase)
-      val ctor = liftPrimaryCtor(cmods, vparamss)
       val (parents, self, stats) = templateOpt
       if (isTrait)
-        liftTrait(mods, name, tparams, ctor, parents, self, stats)
+        liftTrait(mods, name, tparams, cmods, vparamss, parents, self, stats)
       else
-        liftClass(mods, name, tparams, ctor, parents, self, stats)
+        liftClass(mods, name, tparams, cmods, vparamss, parents, self, stats)
     }
 
     /** ConstrMods        ::=  AccessModifier
