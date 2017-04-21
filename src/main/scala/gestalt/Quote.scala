@@ -31,14 +31,12 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
   lazy val toolbox   = t.Ident(toolboxName)
   lazy val root      = t.Ident("_root_")
 
-  private def select(path: String, isTerm: Boolean = true): t.Tree = {
+  private def select(path: String): t.Tree = {
     val parts = path.split('.')
 
-    val qual = parts.init.foldLeft[t.Tree](root) { (prefix, name) =>
+    parts.foldLeft[t.Tree](root) { (prefix, name) =>
       prefix.select(name)
     }
-
-    if (isTerm) t.Select(qual, parts.last) else t.TypeSelect(qual, parts.last)
   }
 
   private def selectToolbox(path: String): t.Tree = {

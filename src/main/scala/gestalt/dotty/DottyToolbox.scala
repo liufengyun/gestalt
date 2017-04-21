@@ -85,8 +85,11 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def setVarParam: Mods = DottyModifiers(dottyMods &~ Flags.Local | Flags.Mutable)
 
     def withAddedAnnotation(annot: d.Tree): Mods = DottyModifiers(dottyMods.withAddedAnnotation(annot))
+    def withAnnotations(annots: Seq[d.Tree]): Mods = DottyModifiers(dottyMods.withAnnotations(annots.toList))
 
     def hasAnnotations: Boolean = dottyMods.hasAnnotations
+
+    def annotations: Seq[Tree] = dottyMods.annotations
 
     def privateWithin: String =
       if (dottyMods.is(Flags.Local)) "this"
@@ -336,10 +339,10 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   def Case(pat: TermTree, cond: Option[TermTree], body: TermTree): Tree =
     d.CaseDef(pat, cond.getOrElse(d.EmptyTree), body).withPosition
 
-  def Try(expr: TermTree, cases: Seq[Tree], finallyp: Option[Tree]): TermTree =
+  def Try(expr: TermTree, cases: Seq[Tree], finallyp: Option[TermTree]): TermTree =
     d.Try(expr, cases.toList.asInstanceOf[List[d.CaseDef]], finallyp.getOrElse(d.EmptyTree)).withPosition
 
-  def Try(expr: TermTree, handler: Tree, finallyp: Option[Tree]): TermTree =
+  def Try(expr: TermTree, handler: Tree, finallyp: Option[TermTree]): TermTree =
     d.ParsedTry(expr, handler, finallyp.getOrElse(d.EmptyTree)).withPosition
 
   def Function(params: Seq[Param], body: TermTree): TermTree =
@@ -352,15 +355,15 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   def DoWhile(body: TermTree, expr: TermTree): TermTree = d.DoWhile(body, expr).withPosition
 
-  def For(enums: Seq[Tree], body: Tree): TermTree = ???
+  def For(enums: Seq[Tree], body: TermTree): TermTree = ???
+
+  def ForYield(enums: Seq[Tree], body: TermTree): TermTree = ???
 
   def GenFrom(pat: TermTree, rhs: TermTree): Tree = ???
 
   def GenAlias(pat: TermTree, rhs: TermTree): Tree = ???
 
   def Guard(cond: TermTree): Tree = ???
-
-  def Yield(expr: TermTree): Tree = ???
 
   // can be InitCall or AnonymClass
   def New(tpe: Tree): TermTree = d.New(tpe).withPosition

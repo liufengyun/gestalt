@@ -59,6 +59,8 @@ trait Toolbox {
     def setMutable: Mods
 
     def withAddedAnnotation(annot: Tree): Mods
+    def withAnnotations(annots: Seq[Tree]): Mods
+    def annotations: Seq[Tree]
   }
 
   // diagnostics - the implementation takes the position from the tree
@@ -85,7 +87,7 @@ trait Toolbox {
   def ValDecl(mods: Mods, name: String, tpe: TypeTree): ValDecl
   def SeqDecl(mods: Mods, vals: Seq[String], tpe: TypeTree): DefTree
   def Param(mods: Mods, name: String, tpe: Option[TypeTree], default: Option[Tree]): Param
-  def TypeParam(mods: Mods, name: String, tparams: Seq[TypeTree], tbounds: Option[TypeTree], cbounds: Seq[TypeTree]): TypeParam
+  def TypeParam(mods: Mods, name: String, tparams: Seq[TypeParam], tbounds: Option[TypeTree], cbounds: Seq[TypeTree]): TypeParam
   // extends qual.T[A, B](x, y)(z)
   def InitCall(qual: Option[Tree], name: String, targs: Seq[TypeTree], argss: Seq[Seq[TermTree]]): InitCall
   def SecondaryCtor(mods: Mods, paramss: Seq[Seq[Param]], rhs: TermTree): Tree
@@ -133,17 +135,17 @@ trait Toolbox {
   def If(cond: TermTree, thenp: TermTree, elsep: Option[TermTree]): TermTree
   def Match(expr: TermTree, cases: Seq[Tree]): TermTree
   def Case(pat: TermTree, cond: Option[TermTree], body: TermTree): Tree
-  def Try(expr: Tree, cases: Seq[Tree], finallyp: Option[Tree]): TermTree
-  def Try(expr: TermTree, handler: Tree, finallyp: Option[Tree]): Tree
+  def Try(expr: Tree, cases: Seq[Tree], finallyp: Option[TermTree]): TermTree
+  def Try(expr: TermTree, handler: Tree, finallyp: Option[TermTree]): Tree
   def Function(params: Seq[Param], body: TermTree): TermTree
   def PartialFunction(cases: Seq[Tree]): TermTree
   def While(expr: TermTree, body: TermTree): TermTree
   def DoWhile(body: TermTree, expr: TermTree): TermTree
-  def For(enums: Seq[Tree], body: Tree): TermTree
+  def For(enums: Seq[Tree], body: TermTree): TermTree
+  def ForYield(enums: Seq[Tree], body: TermTree): TermTree
   def GenFrom(pat: TermTree, rhs: TermTree): Tree
   def GenAlias(pat: TermTree, rhs: TermTree): Tree
   def Guard(cond: TermTree): Tree
-  def Yield(expr: TermTree): Tree
   // can be InitCall or AnonymClass
   def New(tpe: Tree): TermTree
   def Named(name: String, expr: Tree): TermTree

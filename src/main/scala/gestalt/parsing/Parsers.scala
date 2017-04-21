@@ -2288,11 +2288,11 @@ object Parsers {
       while (!isStatSeqEnd && !exitOnError) {
         setLastStatOffset()
         if (in.token == IMPORT)
-          null // stats ++= importClause()
+          stats += importClause()
         else if (isExprIntro)
           stats += expr1()
         else if (isDefIntro(modifierTokensOrCase))
-          null //stats +++= defOrDcl(in.offset, defAnnotsMods(modifierTokens))
+          stats += defOrDcl(in.offset, defAnnotsMods(modifierTokens))
         else if (!isStatSep) {
           exitOnError = mustStartStat
           syntaxErrorOrIncomplete("illegal start of definition")
