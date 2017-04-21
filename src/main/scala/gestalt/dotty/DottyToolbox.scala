@@ -553,11 +553,11 @@ class StructToolbox(enclosingPosition: Position)(implicit ctx: Context) extends 
 
   def toClassRep(tree: Class): ClassRep = tree match {
     case cdef@c.TypeDef(name, templ@c.Template(constr, parents, self, body)) =>
-      var tparams: List[TypeParam] = Nil
-      val (paramss, cmods) = constr match {
+      var tparams1: List[TypeParam] = Nil
+      val (paramss1, cmods) = constr match {
         case c.DefDef(nme.CONSTRUCTOR, Nil, Nil, c.TypeTree(), d.EmptyTree) => (Nil, emptyMods)
         case pctor@c.DefDef(nme.CONSTRUCTOR, tps, paramss, c.TypeTree(), d.EmptyTree) =>
-          tparams = tps
+          tparams1 = tps
           (paramss, pctor.mods: Mods)
       }
       val selfOpt = if (self == d.EmptyValDef) None else Some(self)
@@ -566,8 +566,8 @@ class StructToolbox(enclosingPosition: Position)(implicit ctx: Context) extends 
         def mods: Mods = cdef.mods
         def ctorMods: Mods = cmods
         def name: String = name.toString
-        def tparams: Seq[TypeParam] = tparams
-        def paramss: Seq[Seq[Param]] = paramss
+        def tparams: Seq[TypeParam] = tparams1
+        def paramss: Seq[Seq[Param]] = paramss1
         def self: Option[Self] = selfOpt
         def stats: Seq[Tree] = templ.body
 

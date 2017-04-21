@@ -17,10 +17,10 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
   def enclosingTree: t.Tree
 
   // helpers
-  private implicit class TreeOps(val tree: t.Tree) {
-    def select(name: String): t.Tree = t.Select(tree, name)
+  private implicit class TreeOps(val tree: t.TermTree) {
+    def select(name: String): t.TermTree = t.Select(tree, name)
 
-    def appliedTo(args: t.Tree*): t.Tree = t.Apply(tree, args.toList)
+    def appliedTo(args: t.TermTree*): t.TermTree = t.Apply(tree, args.toList)
   }
 
   // lifted trees
@@ -31,18 +31,18 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
   lazy val toolbox   = t.Ident(toolboxName)
   lazy val root      = t.Ident("_root_")
 
-  private def select(path: String): t.Tree = {
+  private def select(path: String): t.TermTree = {
     val parts = path.split('.')
 
-    parts.foldLeft[t.Tree](root) { (prefix, name) =>
+    parts.foldLeft[t.TermTree](root) { (prefix, name) =>
       prefix.select(name)
     }
   }
 
-  private def selectToolbox(path: String): t.Tree = {
+  private def selectToolbox(path: String): t.TermTree = {
     val parts = path.split('.')
 
-    val qual = parts.init.foldLeft[t.Tree](toolbox) { (prefix, name) =>
+    val qual = parts.init.foldLeft[t.TermTree](toolbox) { (prefix, name) =>
       prefix.select(name)
     }
 
@@ -53,8 +53,8 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     * AnyTree = t.Tree | t.TypeTree
     * (trees: Seq[m.Tree[A]]) => (t.Tree[Seq[String]] | t.Tree[Seq[AnyTree[?]]])
     * }}}*/
-  def liftSeq(trees: Seq[m.Tree]): t.Tree =  {
-    def loop(trees: List[m.Tree], acc: Option[t.Tree], prefix: List[m.Tree]): t.Tree = trees match {
+  def liftSeq(trees: Seq[m.Tree]): t.TermTree =  {
+    def loop(trees: List[m.Tree], acc: Option[t.TermTree], prefix: List[m.Tree]): t.TermTree = trees match {
       case (quasi: Quasi) +: rest if quasi.rank == 1 =>
         if (acc.isEmpty) {
           if (prefix.isEmpty) loop(rest, Some(liftQuasi(quasi)), Nil)
@@ -88,7 +88,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
   /** {{{
     * (treess: Seq[Seq[m.Tree[A]]]) => t.Tree[Seq[Seq[t.Tree[A]]]]
     * }}}*/
-  def liftSeqSeq(treess: Seq[Seq[m.Tree]]): t.Tree = {
+  def liftSeqSeq(treess: Seq[Seq[m.Tree]]): t.TermTree = {
     val tripleDotQuasis = treess.flatten.collect{ case quasi: Quasi if quasi.rank == 2 => quasi }
     if (tripleDotQuasis.length == 0) {
       val args = treess.map(liftSeq)
@@ -107,7 +107,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
   }
 
   /** (trees: Option[m.Tree[A]]) => t.Tree[Option[t.Tree[A]]] */
-  def liftOpt(treeOpt: Option[m.Tree]): t.Tree = treeOpt match {
+  def liftOpt(treeOpt: Option[m.Tree]): t.TermTree = treeOpt match {
     case Some(quasi: Quasi) =>
       liftQuasi(quasi, optional = true)
     case Some(tree) =>
@@ -117,7 +117,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
   }
 
   /**{{{(treesOpt: Option[Seq[m.Tree[A]]]) => t.Tree[Seq[t.Tree[A]}}} */
-  def liftOptSeq(treesOpt: Option[Seq[m.Tree]]): t.Tree = treesOpt match {
+  def liftOptSeq(treesOpt: Option[Seq[m.Tree]]): t.TermTree = treesOpt match {
     case Some(Seq(quasi: Quasi)) if quasi.rank > 0 && !isTerm =>
       liftQuasi(quasi)
     case Some(trees) =>
@@ -127,12 +127,12 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
   }
 
   /** {{{(tree: Quasi, Int, Boolean) => ( t.Tree[Any]| t.Tree[t.Tree[?]])}}} */
-  def liftQuasi(quasi: Quasi, expectedRank: Int = 0, optional: Boolean = false): t.Tree = {
+  def liftQuasi(quasi: Quasi, expectedRank: Int = 0, optional: Boolean = false): t.TermTree = {
     if (quasi.rank > 0) return liftQuasi(quasi.tree.asInstanceOf[Quasi], quasi.rank, optional)
 
     def arg(i: Int) =
-      if (!isTerm && optional) scalaSome.appliedTo(args(i))
-      else args(i)
+      if (!isTerm && optional) scalaSome.appliedTo(args(i).asInstanceOf[t.TermTree])
+      else args(i).asInstanceOf[t.TermTree]
 
     quasi.tree match {
       case m.Term.Name(Hole(i)) => arg(i)
@@ -142,8 +142,8 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
 
   /** Lift initcall : {{{qual.T[A, B](x, y)(z)}}}
     * {{{(tree: m.Tree[A]) => t.Tree[t.Tree[A]]}}} */
-  def liftInitCall(tree: m.Tree): t.Tree = {
-    def extractFun(tree: m.Tree): (t.Tree, t.Tree, t.Tree) = tree match {
+  def liftInitCall(tree: m.Tree): t.TermTree = {
+    def extractFun(tree: m.Tree): (t.TermTree, t.TermTree, t.TermTree) = tree match {
       case m.Type.Apply(m.Ctor.Ref.Select(qual, m.Ctor.Ref.Name(name)), targs) =>
         (scalaSome.appliedTo(lift(qual)), t.Lit(name), liftSeq(targs))
       case m.Type.Apply(m.Ctor.Ref.Name(name), targs) =>
@@ -152,7 +152,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
         (scalaNone, t.Lit(name), liftSeq(Nil))
     }
 
-    def initCall(ctor: m.Tree, argss: Seq[Seq[m.Tree]]): t.Tree = {
+    def initCall(ctor: m.Tree, argss: Seq[Seq[m.Tree]]): t.TermTree = {
       val (qualOpt, name, targs) = extractFun(ctor)
       selectToolbox("InitCall").appliedTo(qualOpt, name, targs, liftSeqSeq(argss))
     }
@@ -166,7 +166,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
   }
 
   /** {{{(trees: Seq[t.Tree[t.Tree[A]]]) => t.Tree[Seq[t.Tree[A]]]}}} */
-  def liftSeqTrees(trees: Seq[t.Tree]): t.Tree = trees match {
+  def liftSeqTrees(trees: Seq[t.TermTree]): t.TermTree = trees match {
     case head :: rest => t.Infix(head, "::", liftSeqTrees(rest))
     case _ => scalaNil
   }
@@ -182,7 +182,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     *
     * @param name "ValDecl", "VarDecl", "ValDef" or "VarDef"
     * */
-  def liftValDef(mods: t.Tree, pats: Seq[m.Pat], tpe: t.Tree, rhs: t.Tree, name: String): t.Tree = {
+  def liftValDef(mods: t.TermTree, pats: Seq[m.Pat], tpe: t.TermTree, rhs: t.TermTree, name: String): t.TermTree = {
     if (pats.size == 1) {
       // AnyTree = t.Tree | t.TypeTree
       //left: t.Tree[AnyTree[?]] | t.Tree[String]
@@ -211,7 +211,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
 
   /** Lift self annotation in class definition
     * {{{(tree: m.Tree[A]) => t.Tree[Option[t.Tree[A]]]}}} */
-  def liftSelf(tree: m.Tree): t.Tree = tree match {
+  def liftSelf(tree: m.Tree): t.TermTree = tree match {
     case m.Term.Param(_, m.Name.Anonymous(), _, _) =>
       scalaNone
     case m.Term.Param(_, m.Term.Name(name), Some(tp), _) =>
@@ -222,13 +222,13 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
 
   /** lift name to either Lit or Quasi
     * {{{(name: m.Name) => t.Tree[String]}} */
-  def liftName(name: m.Name): t.Tree = name match {
+  def liftName(name: m.Name): t.TermTree = name match {
     case quasi: Quasi => liftQuasi(quasi)
     case _ => t.Lit(name.value)
   }
 
   /** lift modifiers */
-  def liftMods(mods: Seq[m.Tree]): t.Tree = {
+  def liftMods(mods: Seq[m.Tree]): t.TermTree = {
     mods match {
       case Seq(quasi: Quasi) => return liftQuasi(quasi)
       case _ =>
@@ -238,7 +238,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
         }
     }
 
-    val zero: t.Tree = selectToolbox("emptyMods")
+    val zero: t.TermTree = selectToolbox("emptyMods")
 
     mods.foldLeft(zero) { (acc, mod) =>
       mod match {
@@ -290,7 +290,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     * AnyTree = t.Tree | t.TypeTree
     * (tree: m.Tree[A]) => t.Tree[AnyTree[A]]
     * }}} */
-  def lift(tree: m.Tree): t.Tree = tree match {
+  def lift(tree: m.Tree): t.TermTree = tree match {
     case quasi: Quasi  =>
       liftQuasi(quasi)
 

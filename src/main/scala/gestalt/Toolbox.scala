@@ -247,7 +247,7 @@ trait StructToolbox extends Toolbox {
 
   val Class: ClassHelper
   trait ClassHelper {
-    def unapply(tree: Tree): Option[(String, Seq[TypeParam], Seq[Seq[Param]], Seq[InitCall], Option[Self], Seq[Tree])]
+    def unapply(tree: Tree): Option[(Mods, String, Seq[TypeParam], Mods, Seq[Seq[Param]], Seq[InitCall], Option[Self], Seq[Tree])]
   }
 
   val Trait: TraitHelper
