@@ -318,10 +318,12 @@ object Parsers {
       }
     }
 
-    def isWildcard(t: Tree): Boolean = unlift(t) match {
-      case tb.Ident(name1) => placeholderParams.nonEmpty && name1 == placeholderParams.head.name
-      case tb.Ascribe(t1, _) => isWildcard(lift(t1))
-      case tb.Annotated(t1, _) => isWildcard(lift(t1))
+    def isWildcard(t: tb.Tree): Boolean = t match {
+      case Ident(name1) => placeholderParams.nonEmpty && name1 == placeholderParams.head.name
+      case Ascribe(t1, _) => isWildcard(t1)
+      case Annotated(t1, _) =>
+        println(t1)
+        isWildcard(t1)
       case _ => false
     }
 
@@ -920,13 +922,6 @@ object Parsers {
 
 /* ----------- EXPRESSIONS ------------------------------------------------ */
 
-    /** EqualsExpr ::= `=' Expr
-     */
-    def equalsExpr(): Tree = {
-      accept(EQUALS)
-      expr()
-    }
-
     def condExpr(altToken: Token): Tree = {
       if (in.token == LPAREN) {
         val t = inParens(exprInParens())
@@ -994,7 +989,7 @@ object Parsers {
           placeholderParams = Nil // don't interpret `_' to the left of `=>` as placeholder
           wrapPlaceholders(closureRest(start, location, convertToFunctionParams(t)))
         }
-        else if (isWildcard(t)) {
+        else if (isWildcard(unlift(t))) {
           placeholderParams = placeholderParams ::: saved
           t
         }
@@ -1069,7 +1064,7 @@ object Parsers {
          unlift(t) match {
            case tb.Ident(_) | tb.Select(_, _) | tb.Apply(_, _) =>
              in.skipToken()
-             Assign(t, expr())
+             liftAssign(t, expr())
            case _ =>
              t
          }
@@ -1096,10 +1091,12 @@ object Parsers {
             t
           }
         case AT if location != Location.InPattern =>
-          liftAnnotated(t,  annotations())
+          val annots = annotations()
+          if (annots.size > 0) liftAnnotated(t, annots)
+          else t
         case _ =>
           val tpt = typeDependingOn(location)
-          if (isWildcard(t) && location != Location.InPattern) {
+          if (isWildcard(unlift(t)) && location != Location.InPattern) {
             val vd :: rest = placeholderParams
             placeholderParams =
               vd.copy(tptOpt = Some(unliftAs[TypeTree](tpt))) :: rest
@@ -1298,7 +1295,8 @@ object Parsers {
      */
     def block(): Tree = {
       val stats = blockStatSeq()
-      liftBlock(stats)
+      if (stats.size == 1) stats.head
+      else liftBlock(stats)
     }
 
     /** Guard ::= if PostfixExpr

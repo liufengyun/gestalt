@@ -452,11 +452,13 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   object Annotated extends AnnotatedHelper {
     def unapply(tree: Tree): Option[(TermTree, Seq[Tree])] = {
-      def recur(acc: Seq[Tree], term: Tree): (Tree, Seq[Tree])  = term match {
-        case c.Annotated(expr, annot) => recur(annot +: acc, expr) // inner-most is in the front
+      def recur(term: Tree, acc: Seq[Tree]): (Tree, Seq[Tree])  = term match {
+        case c.Annotated(expr, annot) => recur(expr, annot +: acc) // inner-most is in the front
         case expr => (expr, acc)
       }
-      Some(recur(Nil, tree))
+      val (expr, annots) = recur(tree, Nil)
+      if (annots.size > 0) Some((expr, annots))
+      else None
     }
   }
 

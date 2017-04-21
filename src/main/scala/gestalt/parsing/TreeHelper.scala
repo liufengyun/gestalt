@@ -387,6 +387,13 @@ trait TreeHelper {
     lifted
   }
 
+  def liftAssign(lhs: TermTree, rhs: TermTree): TermTree = {
+    val raw = Assign(unliftAs[TermTree](lhs), unliftAs[TermTree](rhs))
+    val lifted = toolbox.select("Assign").appliedTo(lhs, rhs)
+    map(lifted, raw)
+    lifted
+  }
+
   def liftPostfix(od: TermTree, op: String): TermTree = {
     val raw = Postfix(unliftAs[TermTree](od), op)
     val lifted = toolbox.select("Postfix").appliedTo(od, Lit(op))
