@@ -258,7 +258,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   def TypeAnnotated(tpe: TypeTree, annots: Seq[Tree]): TypeTree = {
     require(annots.size > 0)
     annots.tail.foldRight(d.Annotated(tpe, annots.head).withPosition) { (ann: Tree, acc: TypeTree) =>
-      d.Annotated(acc, ann).withPosition
+      d.Annotated(acc, ann).withPosition[TypeTree]
     }
   }
 
@@ -317,7 +317,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   def Annotated(expr: TermTree, annots: Seq[Tree]): TermTree = {
     require(annots.size > 0)
     annots.tail.foldRight(d.Annotated(expr, annots.head).withPosition) { (ann: Tree, acc: TermTree) =>
-      d.Annotated(acc, ann).withPosition
+      d.Annotated(acc, ann).withPosition[TermTree]
     }
   }
 
@@ -465,6 +465,13 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   object Block extends BlockHelper {
     def unapply(tree: Tree): Option[Seq[Tree]] = tree match {
       case c.Block(stats, expr) => Some(stats :+ expr)
+      case _ => None
+    }
+  }
+
+  object PartialFunction extends PartialFunctionHelper {
+    def unapply(tree: Tree): Option[Seq[Tree]] = tree match {
+      case c.Match(c.Thicket(Nil), cases) => Some(cases)
       case _ => None
     }
   }

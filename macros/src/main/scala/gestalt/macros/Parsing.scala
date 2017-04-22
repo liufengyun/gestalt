@@ -81,6 +81,55 @@ class testTypes extends StaticAnnotation {
     // println(s"expect: $expect"); println(s"actual: $actual")
     assert(actual.toString == expect.toString)
 
+    actual = parse("(Int, String)")
+    expect = TypeTuple(TypeIdent("Int") :: TypeIdent("String") :: Nil)
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    // TODO: TypeRefine
+
+    // actual = parse(" <: A")
+    // expect = TypeBounds(None, Some(TypeIdent("A")))
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    // assert(actual.toString == expect.toString)
+
+    // actual = parse(" >: A")
+    // expect = TypeBounds(Some(TypeIdent("A")), None)
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    // assert(actual.toString == expect.toString)
+
+    // actual = parse(" >: C <: A")
+    // expect = TypeBounds(Some(TypeIdent("C")), Some(TypeIdent("A")))
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    // assert(actual.toString == expect.toString)
+
+    actual = parse("(=> Int) => Int")
+    expect = TypeFunction(List(TypeByName(TypeIdent("Int"))), TypeIdent("Int"))
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    // actual = parse("A*")
+    // expect = TypeRepeated(TypeIdent("A"))
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    // assert(actual.toString == expect.toString)
+
+    actual = parse("(T @alert(1)) => Int")
+    expect = TypeFunction(
+      TypeAnnotated(TypeIdent("T"), List(InitCall(None, "alert", Nil, List(List(Lit(1)))))) :: Nil,
+      TypeIdent("Int")
+    )
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("(T @check @unsafe) => Int")
+    expect = TypeFunction(
+      TypeAnnotated(TypeIdent("T"), List(InitCall(None, "check", Nil, Nil), InitCall(None, "unsafe", Nil, Nil))) :: Nil,
+      TypeIdent("Int")
+    )
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+
     defn
   }
 }
@@ -146,6 +195,21 @@ class testTerms extends StaticAnnotation {
     // println(s"expect: $expect"); println(s"actual: $actual")
     assert(actual.toString == expect.toString)
 
+    actual = parse("f(a = 3)")
+    expect = Apply(Ident("f"), List(Named("a", Lit(3))))
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("f(a: _*)")
+    expect = Apply(Ident("f"), List(Repeated(Ident("a"))))
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("f[A](-3.12)")
+    expect = Apply(ApplyType(Ident("f"), List(TypeIdent("A"))), List(Lit(-3.12)))
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
     actual = parse("a = b")
     expect = Assign(Ident("a"), Ident("b"))
     //println(s"expect: $expect"); println(s"actual: $actual")
@@ -186,6 +250,135 @@ class testTerms extends StaticAnnotation {
     // println(s"expect: $expect"); println(s"actual: $actual")
     assert(actual.toString == expect.toString)
 
+    actual = parse("return")
+    expect = Return
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("return null")
+    expect = Return(Lit(null))
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("throw a")
+    expect = Throw(Ident("a"))
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("a: Int")
+    expect = Ascribe(Ident("a"), TypeIdent("Int"))
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("a: @check")
+    expect = Annotated(Ident("a"), List(InitCall(None, "check", Nil, Nil)))
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("a: @alert(1)")
+    expect = Annotated(Ident("a"), List(InitCall(None, "alert", Nil, List(List(Lit(1))))))
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("a: @check @unsafe")
+    expect = Annotated(Ident("a"), List(InitCall(None, "check", Nil, Nil), InitCall(None, "unsafe", Nil, Nil)))
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("(a, b)")
+    expect = Tuple(Ident("a") :: Ident("b") :: Nil)
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("{ a ; b }")
+    expect = Block(Ident("a") :: Ident("b") :: Nil)
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("a match { case x => x }")
+    expect = Match(Ident("a"), Case(Ident("x"), None, Ident("x")) :: Nil)
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("a match { case Some(x) => x }")
+    expect = Match(Ident("a"), Case(Apply(Ident("Some"), Ident("x") :: Nil), None, Ident("x")) :: Nil)
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("a match { case Some(_) | None => 3 }")
+    expect = Match(Ident("a"),
+      Case(
+        Alternative(Apply(Ident("Some"), Ident("_") :: Nil) :: Ident("None") :: Nil),
+        None,
+        Lit(3)
+      ) :: Nil
+    )
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("a match { case x @ Some(_) => 3 }")
+    expect = Match(Ident("a"),
+      Case(
+        Bind("x", Apply(Ident("Some"), Ident("_") :: Nil)),
+        None,
+        Lit(3)
+      ) :: Nil
+    )
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("try { f(a) } catch { case _ => }")
+    expect = Try(Apply(Ident("f"), Ident("a") :: Nil),
+      Case(Ident("_"), None, Block(Nil)) :: Nil,
+      None
+    )
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("try { f(a) } catch { case _ => } finally { a = 3 }")
+    expect = Try(Apply(Ident("f"), Ident("a") :: Nil),
+      Case(Ident("_"), None, Block(Nil)) :: Nil,
+      Some(Assign(Ident("a"), Lit(3)))
+    )
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("try { f(a) } catch handler finally { a = 3 }")
+    expect = Try(Apply(Ident("f"), Ident("a") :: Nil),
+      Ident("handler"),
+      Some(Assign(Ident("a"), Lit(3)))
+    )
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("{ case Some(x) => x ; case None => 0 }")
+    expect = PartialFunction(
+      Case(Apply(Ident("Some"), Ident("x") :: Nil), None, Ident("x")) ::
+      Case(Ident("None"), None, Lit(0)) :: Nil
+    )
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("while (x > 3) x -= 1")
+    expect = While(
+      Infix(Ident("x"), ">", Lit(3)),
+      Infix(Ident("x"), "-=", Lit(1))
+    )
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("do { x -= 1 } while (x > 3)")
+    expect = DoWhile(
+      Infix(Ident("x"), "-=", Lit(1)),
+      Infix(Ident("x"), ">", Lit(3))
+    )
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("new A(1)")
+    expect = New(InitCall(None, "A", Nil, List(List(Lit(1)))))
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
 
     defn
   }

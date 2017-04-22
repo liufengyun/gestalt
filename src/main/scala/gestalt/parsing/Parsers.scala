@@ -321,9 +321,7 @@ object Parsers {
     def isWildcard(t: tb.Tree): Boolean = t match {
       case Ident(name1) => placeholderParams.nonEmpty && name1 == placeholderParams.head.name
       case Ascribe(t1, _) => isWildcard(t1)
-      case Annotated(t1, _) =>
-        println(t1)
-        isWildcard(t1)
+      case Annotated(t1, _) => isWildcard(t1)
       case _ => false
     }
 
@@ -747,7 +745,6 @@ object Parsers {
     def annotTypeRest(t: Tree, annots: Seq[Tree] = Nil): Tree =
       if (in.token == AT) {
         annotTypeRest(t, annots :+ annot())
-        t
       }
       else if (annots.size > 0) liftTypeAnnotated(t, annots)
       else t
@@ -1030,7 +1027,7 @@ object Parsers {
           } else null
 
         if (handler != null) unlift(handler) match {
-          case tb.Block(Nil) =>
+          case PartialFunction(Nil) =>
             syntaxError("empty catch block")
           case _ =>
         }
@@ -1043,7 +1040,7 @@ object Parsers {
           }
         if (handler == null) liftTry(body, Nil, finalizer)
         else unlift(handler) match {
-          case tb.Block(cases) => liftTry(body, cases.map(lift), finalizer)
+          case PartialFunction(cases) => liftTry(body, cases.map(lift), finalizer)
           case _ => liftTry(body, handler, finalizer)
         }
       case THROW =>
@@ -1085,7 +1082,7 @@ object Parsers {
           if (isIdent("*")) {
             in.nextToken()
             if (in.token != RPAREN) syntaxError("`_*' can be used only for last argument")
-            liftAscribe(t, liftTypeIdent("_*"))
+            liftRepeated(t)
           } else {
             syntaxErrorOrIncomplete("incorrect repeated argument syntax")
             t
@@ -1205,7 +1202,7 @@ object Parsers {
           canApply = false
           in.skipToken()
 
-          val (parents, self, stats) = templateOpt
+          val (parents, self, stats) = template
           val tpe =
             parents match {
               case parent :: Nil if self == null && stats.isEmpty =>
@@ -1233,7 +1230,7 @@ object Parsers {
           in.nextToken()
           simpleExprRest(selector(t, isType = false), canApply = true)
         case LBRACKET =>
-          val tapp = liftTypeApply(t, typeArgs(namedOK = true, wildOK = false))
+          val tapp = liftApplyType(t, typeArgs(namedOK = true, wildOK = false))
           simpleExprRest(tapp, canApply = true)
         case LPAREN | LBRACE if canApply =>
           val app = liftApply(t, argumentExprs())
@@ -1286,7 +1283,7 @@ object Parsers {
      */
     def blockExpr(): Tree =
       inDefScopeBraces {
-        if (in.token == CASE) liftBlock(caseClauses())
+        if (in.token == CASE) liftPartialFunction(caseClauses())
         else block()
       }
 
@@ -1482,7 +1479,7 @@ object Parsers {
     def simplePatternRest(t: Tree): Tree = {
       var p = t
       if (in.token == LBRACKET)
-        p = liftTypeApply(p, typeArgs(namedOK = false, wildOK = false))
+        p = liftApplyType(p, typeArgs(namedOK = false, wildOK = false))
       if (in.token == LPAREN)
         p = liftApply(p, argumentPatterns())
       p
@@ -1629,8 +1626,24 @@ object Parsers {
      */
     def annot() = {
       accept(AT)
-      // if (in.token == INLINE) in.token = BACKQUOTED_IDENT // allow for now
-      parArgumentExprss(simpleType())
+
+      val p = path(thisOK = true, isType = false)
+      val (qual, name) = unlift(p) match {
+        case Ident(name) => (null, name)
+        case Select(qual, name) => (lift(qual), name)
+      }
+
+      val tparams =
+        if (in.token == LBRACKET) typeArgs(namedOK = true , wildOK = false)
+        else Nil
+
+      def recur(acc: Seq[Seq[Tree]]): Seq[Seq[Tree]] =
+        if (in.token == LPAREN) recur(parArgumentExprs() +: acc)
+        else acc.reverse
+
+      val argss = recur(Nil)
+
+      liftInitCall(qual, name, tparams, argss)
     }
 
     def annotations(skipNewLines: Boolean = false): List[Tree] = {

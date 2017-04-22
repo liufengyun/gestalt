@@ -158,7 +158,7 @@ trait Toolbox {
 
   // importees
   def Import(items: Seq[Tree]): Tree
-  def ImportItem(ref: Tree, importees: Seq[Tree]): Tree
+  def ImportItem(prefix: Tree, importees: Seq[Tree]): Tree
   def ImportName(name: String): Tree
   def ImportRename(from: String, to: String): Tree
   def ImportHide(name: String): Tree
@@ -206,6 +206,11 @@ trait Toolbox {
 
   private[gestalt] val Block: BlockHelper
   trait BlockHelper {
+    def unapply(tree: Tree): Option[Seq[Tree]]
+  }
+
+  private[gestalt] val PartialFunction: PartialFunctionHelper
+  trait PartialFunctionHelper {
     def unapply(tree: Tree): Option[Seq[Tree]]
   }
 

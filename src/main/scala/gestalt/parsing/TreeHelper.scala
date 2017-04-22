@@ -541,6 +541,14 @@ trait TreeHelper {
     lifted
   }
 
+  def liftPartialFunction(cases: Seq[TermTree]): TermTree = {
+    val raw = PartialFunction(cases.map(unlift))
+    val liftedCases = liftSeq(cases)
+    val lifted = toolbox.select("PartialFunction").appliedTo(liftedCases)
+    map(lifted, raw)
+    lifted
+  }
+
   def liftNew(tpe: TermTree): TermTree = {
     val raw = New(unlift(tpe))
     val lifted = toolbox.select("New").appliedTo(tpe)
@@ -551,6 +559,13 @@ trait TreeHelper {
   def liftNamed(name: String, expr: TermTree): TermTree = {
     val raw = Named(name, unliftAs[TermTree](expr))
     val lifted = toolbox.select("Named").appliedTo(Lit(name), expr)
+    map(lifted, raw)
+    lifted
+  }
+
+  def liftRepeated(expr: TermTree): TermTree = {
+    val raw = Repeated(unliftAs[TermTree](expr))
+    val lifted = toolbox.select("Repeated").appliedTo(expr)
     map(lifted, raw)
     lifted
   }
