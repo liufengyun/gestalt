@@ -553,9 +553,57 @@ class StructToolbox(enclosingPosition: Position)(implicit ctx: Context) extends 
       ).withMods(mods)
   }
 
+
+  def toValDefRep(tree: ValDef): ValDefRep = new ValDefRep {
+    def mods: Mods = tree.mods
+    def name: String = tree.name.show
+    def tpt: Option[TypeTree] = if (tree.tpt.isInstanceOf[d.TypeTree]) None else Some(tree.tpt)
+    def rhs: TermTree = tree.forceIfLazy
+    def copy(
+              name: String = this.name,
+              mods: Mods = this.mods,
+              tptOpt: Option[TypeTree] = this.tpt,
+              rhs: TermTree = this.rhs
+            ): ValDef =
+      d.cpy.ValDef(tree)(
+        name.toTermName,
+        tptOpt.getOrElse(d.TypeTree()),
+        rhs
+      ).withMods(mods)
+  }
+
+  object ValDefRep extends ValDefRepHelper {
+    def unapply(tree: Tree): Option[ValDefRep] = tree match {
+      case vdef @ c.ValDef(_, _, _) => Some(toValDefRep(vdef))
+      case _ => None
+    }
+  }
+
+  def toValDeclRep(tree: ValDecl): ValDeclRep = new ValDeclRep {
+    def mods: Mods = tree.mods
+    def name: String = tree.name.show
+    def tpt: TypeTree = tree.tpt
+    def copy(
+              name: String = this.name,
+              mods: Mods = this.mods,
+              tpt: TypeTree = this.tpt
+            ): ValDecl =
+      d.cpy.ValDef(tree)(
+        name.toTermName,
+        tpt = tpt
+      ).withMods(mods)
+  }
+
+  object ValDeclRep extends ValDeclRepHelper {
+    def unapply(tree: Tree): Option[ValDeclRep] = tree match {
+      case vdef @ c.ValDef(_, _, _) if vdef.forceIfLazy.isEmpty  => Some(toValDeclRep(vdef))
+      case _ => None
+    }
+  }
+
   object ClassRep extends ClassRepHelper {
     def unapply(tree: Tree): Option[ClassRep] = tree match {
-      case cdef @ c.TypeDef(name, c.Template(_, _, _, _)) => Some(toClassRep(cdef))
+      case cdef @ c.TypeDef(_, c.Template(_, _, _, _)) => Some(toClassRep(cdef))
       case _ => None
     }
   }

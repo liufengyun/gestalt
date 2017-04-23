@@ -17,7 +17,7 @@ object Parsing {
     parser.unlift(parser.block()).asInstanceOf[tb.Tree]
   }
 
-  def parseDef(tb: StructToolbox, code: String): tb.Tree = {
+  def parseDefinition(tb: StructToolbox, code: String): tb.Tree = {
     val parser = new Parsers.Parser(tb, "toolbox", true, code.toCharArray) {
       val splices = Nil
     }
@@ -442,3 +442,34 @@ class testTerms extends StaticAnnotation {
   }
 }
 
+class testDefinition extends StaticAnnotation {
+  def apply(defn: Any): Any = meta {
+    import toolbox._
+    val helper = Parsing.helper(toolbox)
+
+    def parse(code: String) = Parsing.parseDefinition(toolbox, code)
+
+    var actual: AnyRef = parse("val x = 3")
+    var expect: AnyRef = ValDef(emptyMods, "x", None, Lit(3))
+    assert(actual.toString == expect.toString)
+    var mods = actual.asInstanceOf[ValDef].mods
+    assert(!mods.isPrivate)
+    assert(!mods.isLazy)
+
+    actual = parse("implicit val x = 3").asInstanceOf[ValDef]
+    expect = ValDef(emptyMods, "x", None, Lit(3))
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+    mods = actual.asInstanceOf[ValDef].mods
+    assert(mods.isImplicit)
+
+    actual = parse("private val x: Int").asInstanceOf[ValDecl]
+    expect = ValDecl(emptyMods, "x", TypeIdent("Int"))
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+    mods = actual.asInstanceOf[ValDecl].mods
+    assert(mods.isPrivate)
+
+    defn
+  }
+}
