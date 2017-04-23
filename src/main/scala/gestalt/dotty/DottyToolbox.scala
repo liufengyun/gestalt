@@ -355,15 +355,15 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   def DoWhile(body: TermTree, expr: TermTree): TermTree = d.DoWhile(body, expr).withPosition
 
-  def For(enums: Seq[Tree], body: TermTree): TermTree = ???
+  def For(enums: Seq[Tree], body: TermTree): TermTree = d.ForDo(enums.toList, body)
 
-  def ForYield(enums: Seq[Tree], body: TermTree): TermTree = ???
+  def ForYield(enums: Seq[Tree], body: TermTree): TermTree = d.ForYield(enums.toList, body)
 
-  def GenFrom(pat: TermTree, rhs: TermTree): Tree = ???
+  def GenFrom(pat: TermTree, rhs: TermTree): Tree = d.GenFrom(pat, rhs)
 
-  def GenAlias(pat: TermTree, rhs: TermTree): Tree = ???
+  def GenAlias(pat: TermTree, rhs: TermTree): Tree = d.GenAlias(pat, rhs)
 
-  def Guard(cond: TermTree): Tree = ???
+  def Guard(cond: TermTree): Tree = cond
 
   // can be InitCall or AnonymClass
   def New(tpe: Tree): TermTree = d.New(tpe).withPosition
@@ -384,7 +384,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   // importees
   def Import(items: Seq[Tree]): Tree =
     if (items.size == 1)
-      items(0).withPosition
+      items.head.withPosition
     else
       d.Thicket(items.toList).withPosition
 

@@ -1832,12 +1832,18 @@ object Parsers {
    /** ImportSelector ::= id [`=>' id | `=>' `_']
      */
     def importSelector(): Tree = {
-      if (in.token == USCORE) liftImportName("_")
+      if (in.token == USCORE) {
+        in.skipToken()
+        liftImportName("_")
+      }
       else {
         val from = ident()
         if (in.token == ARROW) {
           in.skipToken()
-          if (in.token == USCORE) liftImportHide(from)
+          if (in.token == USCORE) {
+            in.skipToken()
+            liftImportHide(from)
+          }
           else liftImportRename(from, ident())
         }
         else liftImportName(from)

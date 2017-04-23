@@ -17,6 +17,13 @@ object Parsing {
     parser.unlift(parser.block()).asInstanceOf[tb.Tree]
   }
 
+  def parseDef(tb: StructToolbox, code: String): tb.Tree = {
+    val parser = new Parsers.Parser(tb, "toolbox", true, code.toCharArray) {
+      val splices = Nil
+    }
+    parser.unlift(parser.localDef(0)).asInstanceOf[tb.Tree]
+  }
+
   def helper(tb1: StructToolbox): TreeHelper = {
     new TreeHelper {
       val tb = tb1
@@ -351,6 +358,14 @@ class testTerms extends StaticAnnotation {
     // println(s"expect: $expect"); println(s"actual: $actual")
     assert(actual.toString == expect.toString)
 
+    actual = parse("x => x * x")
+    expect = Function(
+      Param(emptyMods, "x", None, None) :: Nil,
+      Infix(Ident("x"), "*", Ident("x"))
+    )
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
     actual = parse("{ case Some(x) => x ; case None => 0 }")
     expect = PartialFunction(
       Case(Apply(Ident("Some"), Ident("x") :: Nil), None, Ident("x")) ::
@@ -377,6 +392,49 @@ class testTerms extends StaticAnnotation {
 
     actual = parse("new A(1)")
     expect = New(InitCall(None, "A", Nil, List(List(Lit(1)))))
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("for (x <- xs ; if x > 0) yield x * x")
+    expect = ForYield(
+      GenFrom(Ident("x"), Ident("xs")) :: Guard(Infix(Ident("x"), ">", Lit(0))):: Nil,
+      Infix(Ident("x"), "*", Ident("x"))
+    )
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("for (x <- xs ; if x > 0; Some(y) = x) println(y)")
+    expect = For(
+      GenFrom(Ident("x"), Ident("xs")) ::
+        Guard(Infix(Ident("x"), ">", Lit(0)))::
+        GenAlias(Apply(Ident("Some"), Ident("y") :: Nil), Ident("x")):: Nil,
+      Apply(Ident("println"), Ident("y") :: Nil)
+    )
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("import a.b.c")
+    expect = Import(ImportItem(Select(Ident("a"), "b"), ImportName("c") :: Nil) :: Nil)
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("import a.b.c, y.z._")
+    expect = Import(
+      ImportItem(Select(Ident("a"), "b"), ImportName("c") :: Nil) ::
+      ImportItem(Select(Ident("y"), "z"), ImportName("_") :: Nil) :: Nil
+    )
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("import a.b.{ x => y, u => _, _}")
+    expect = Import(
+      ImportItem(
+        Select(Ident("a"), "b"),
+        ImportRename("x", "y") ::
+          ImportHide("u") ::
+          ImportName("_") :: Nil
+      ) :: Nil
+    )
     // println(s"expect: $expect"); println(s"actual: $actual")
     assert(actual.toString == expect.toString)
 
