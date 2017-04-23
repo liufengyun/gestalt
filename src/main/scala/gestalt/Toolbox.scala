@@ -317,6 +317,39 @@ trait StructToolbox extends Toolbox {
   trait ValDeclRepHelper {
     def unapply(tree: Tree): Option[ValDeclRep]
   }
+
+  implicit def toDefDefRep(tree: DefDef): DefDefRep
+  trait DefDefRep {
+    def mods: Mods
+    def tparams: Seq[TypeParam]
+    def paramss: Seq[Seq[Param]]
+    def name: String
+    def tpt: Option[TypeTree]
+    def rhs: Tree
+    def copy(name: String = this.name, mods: Mods = this.mods,
+             tptOpt: Option[TypeTree] = this.tpt, rhs: Tree = this.rhs): DefDef
+  }
+
+  val DefDefRep: DefDefRepHelper
+  trait DefDefRepHelper {
+    def unapply(tree: Tree): Option[DefDefRep]
+  }
+
+  implicit def toDefDeclRep(tree: DefDecl): DefDeclRep
+  trait DefDeclRep {
+    def mods: Mods
+    def tparams: Seq[TypeParam]
+    def paramss: Seq[Seq[Param]]
+    def name: String
+    def tpt: TypeTree
+    def copy(name: String = this.name, mods: Mods = this.mods, tpt: TypeTree = this.tpt): DefDecl
+  }
+
+  val DefDeclRep: DefDeclRepHelper
+  trait DefDeclRepHelper {
+    def unapply(tree: Tree): Option[DefDeclRep]
+  }
+
 }
 
 /** TypeToolbox defines extractors for inspecting expression trees as well as APIs for types

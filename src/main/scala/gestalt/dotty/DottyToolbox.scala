@@ -540,12 +540,7 @@ class StructToolbox(enclosingPosition: Position)(implicit ctx: Context) extends 
     def name: String = tree.name.show
     def tpt: Option[TypeTree] = if (tree.tpt.isInstanceOf[d.TypeTree]) None else Some(tree.tpt)
     def default: Option[TermTree] = if (tree.forceIfLazy == d.EmptyTree) None else Some(tree.forceIfLazy)
-    def copy(
-      name: String = this.name,
-      mods: Mods = this.mods,
-      tptOpt: Option[TypeTree] = this.tpt,
-      defaultOpt: Option[TermTree] = this.default
-    ): Param =
+    def copy(name: String, mods: Mods, tptOpt: Option[TypeTree], defaultOpt: Option[TermTree]): Param =
       d.cpy.ValDef(tree)(
         name.toTermName,
         tptOpt.getOrElse(d.TypeTree()),
@@ -559,12 +554,7 @@ class StructToolbox(enclosingPosition: Position)(implicit ctx: Context) extends 
     def name: String = tree.name.show
     def tpt: Option[TypeTree] = if (tree.tpt.isInstanceOf[d.TypeTree]) None else Some(tree.tpt)
     def rhs: TermTree = tree.forceIfLazy
-    def copy(
-              name: String = this.name,
-              mods: Mods = this.mods,
-              tptOpt: Option[TypeTree] = this.tpt,
-              rhs: TermTree = this.rhs
-            ): ValDef =
+    def copy(name: String, mods: Mods, tptOpt: Option[TypeTree], rhs: TermTree): ValDef =
       d.cpy.ValDef(tree)(
         name.toTermName,
         tptOpt.getOrElse(d.TypeTree()),
@@ -574,7 +564,7 @@ class StructToolbox(enclosingPosition: Position)(implicit ctx: Context) extends 
 
   object ValDefRep extends ValDefRepHelper {
     def unapply(tree: Tree): Option[ValDefRep] = tree match {
-      case vdef @ c.ValDef(_, _, _) => Some(toValDefRep(vdef))
+      case vdef @ c.ValDef(_, _, _) if !vdef.forceIfLazy.isEmpty => Some(toValDefRep(vdef))
       case _ => None
     }
   }
@@ -583,11 +573,7 @@ class StructToolbox(enclosingPosition: Position)(implicit ctx: Context) extends 
     def mods: Mods = tree.mods
     def name: String = tree.name.show
     def tpt: TypeTree = tree.tpt
-    def copy(
-              name: String = this.name,
-              mods: Mods = this.mods,
-              tpt: TypeTree = this.tpt
-            ): ValDecl =
+    def copy(name: String, mods: Mods, tpt: TypeTree): ValDecl =
       d.cpy.ValDef(tree)(
         name.toTermName,
         tpt = tpt
@@ -600,6 +586,49 @@ class StructToolbox(enclosingPosition: Position)(implicit ctx: Context) extends 
       case _ => None
     }
   }
+
+  def toDefDefRep(tree: DefDef): DefDefRep = new DefDefRep {
+    def mods: Mods = tree.mods
+    def name: String = tree.name.show
+    def tpt: Option[TypeTree] = if (tree.tpt.isInstanceOf[d.TypeTree]) None else Some(tree.tpt)
+    def tparams: Seq[TypeParam] = tree.tparams
+    def paramss: Seq[Seq[Param]] = tree.vparamss
+    def rhs: TermTree = tree.forceIfLazy
+    def copy(name: String, mods: Mods, tpt: Option[TypeTree], rhs: TermTree): DefDef =
+      d.cpy.DefDef(tree)(
+        name.toTermName,
+        rhs = rhs,
+        tpt = tpt.getOrElse(d.TypeTree())
+      ).withMods(mods)
+  }
+
+  object DefDefRep extends DefDefRepHelper {
+    def unapply(tree: Tree): Option[DefDefRep] = tree match {
+      case ddef @ c.DefDef(_, _, _, _, _) if !ddef.forceIfLazy.isEmpty  => Some(toDefDefRep(ddef))
+      case _ => None
+    }
+  }
+
+  def toDefDeclRep(tree: DefDecl): DefDeclRep = new DefDeclRep {
+    def mods: Mods = tree.mods
+    def name: String = tree.name.show
+    def tpt: TypeTree = tree.tpt
+    def tparams: Seq[TypeParam] = tree.tparams
+    def paramss: Seq[Seq[Param]] = tree.vparamss
+    def copy(name: String, mods: Mods, tpt: TypeTree): DefDecl =
+      d.cpy.DefDef(tree)(
+        name.toTermName,
+        tpt = tpt
+      ).withMods(mods)
+  }
+
+  object DefDeclRep extends DefDeclRepHelper {
+    def unapply(tree: Tree): Option[DefDeclRep] = tree match {
+      case ddef @ c.DefDef(_, _, _, _, _) if ddef.forceIfLazy.isEmpty  => Some(toDefDeclRep(ddef))
+      case _ => None
+    }
+  }
+
 
   object ClassRep extends ClassRepHelper {
     def unapply(tree: Tree): Option[ClassRep] = tree match {

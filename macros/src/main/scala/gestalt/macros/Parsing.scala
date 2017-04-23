@@ -463,12 +463,49 @@ class testDefinition extends StaticAnnotation {
     mods = actual.asInstanceOf[ValDef].mods
     assert(mods.isImplicit)
 
-    actual = parse("private val x: Int").asInstanceOf[ValDecl]
+    actual = parse("val x, y, z: Int")
+    expect = SeqDecl(emptyMods, List("x", "y", "z"), TypeIdent("Int"))
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("val Some(x): M = y")
+    expect = PatDef(emptyMods, Apply(Ident("Some"), Ident("x") :: Nil), Some(TypeIdent("M")), Ident("y"))
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("private[core] val x: Int").asInstanceOf[ValDecl]
     expect = ValDecl(emptyMods, "x", TypeIdent("Int"))
     // println(s"expect: $expect"); println(s"actual: $actual")
     assert(actual.toString == expect.toString)
     mods = actual.asInstanceOf[ValDecl].mods
     assert(mods.isPrivate)
+    assert(mods.privateWithin == "core")
+
+    actual = parse("protected[core] def f: Int = 3").asInstanceOf[DefDef]
+    expect = DefDef(emptyMods, "x", Nil, Nil, Some(TypeIdent("Int")), Lit(3))
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+    mods = actual.asInstanceOf[DefDef].mods
+    assert(!mods.isPrivate)
+    assert(mods.isProtected)
+    assert(mods.privateWithin == "core")
+
+    actual = parse("def f[T]: T = ???")
+    expect = DefDef(emptyMods, "x",
+      TypeParam(emptyMods, "T", Nil, None, Nil) :: Nil,
+      Nil, Some(TypeIdent("T")), Ident("???")
+    )
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("def f[T](x: T): T = ???")
+    expect = DefDef(emptyMods, "x",
+      TypeParam(emptyMods, "T", Nil, None, Nil) :: Nil,
+      (Param(emptyMods, "x", Some(TypeIdent("T")), None) :: Nil) :: Nil,
+      Some(TypeIdent("T")), Ident("???")
+    )
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
 
     defn
   }
