@@ -4,7 +4,8 @@ lazy val dottyVersion = "0.2.2-SNAPSHOT"
 lazy val common = Seq(
   resolvers ++= Seq(
     Resolver.sonatypeRepo("snapshots"),
-    Resolver.sonatypeRepo("releases")
+    Resolver.sonatypeRepo("releases"),
+    Resolver.typesafeIvyRepo("releases")
   )
 )
 
