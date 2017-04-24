@@ -3,9 +3,25 @@ package scala.gestalt
 case class Location(fileName: String, line: Int, column: Int)
 
 trait Toolbox {
-  type Tree
-  type TypeTree <: Tree      // safety by construction -- implementation can have TypeTree = Tree
-  type Mods <: Modifiers
+  // safety by construction -- implementation can have TypeTree = Tree
+  type Tree     >: Null <: AnyRef
+  type TypeTree >: Null <: Tree
+  type TermTree >: Null <: Tree
+  type DefTree  >: Null <: Tree
+
+  type Class     <: DefTree
+  type Trait     <: DefTree
+  type Object    <: DefTree
+  type Param     <: DefTree
+  type TypeParam <: DefTree
+  type ValDef    <: DefTree
+  type ValDecl   <: DefTree
+  type DefDef    <: DefTree
+  type DefDecl   <: DefTree
+  type Self      <: DefTree
+  type InitCall  <: Tree
+
+  type Mods >: Null <: Modifiers
 
   trait Modifiers {
     def isPrivate: Boolean
@@ -16,11 +32,13 @@ trait Toolbox {
     def isLazy: Boolean
     def isSealed: Boolean
     def isAbstract: Boolean
-    def isMutable: Boolean
+    def isValParam: Boolean
+    def isVarParam: Boolean
     def isCase: Boolean
     def isContravariant: Boolean
     def isCovariant: Boolean
     def isInline: Boolean
+    def isMutable: Boolean
     def privateWithin: String
     def hasAnnotations: Boolean
 
@@ -33,13 +51,17 @@ trait Toolbox {
     def setLazy: Mods
     def setSealed: Mods
     def setAbstract: Mods
-    def setMutable: Mods
+    def setValParam: Mods
+    def setVarParam: Mods
     def setCase: Mods
     def setContravariant: Mods
     def setCovariant: Mods
     def setInline: Mods
+    def setMutable: Mods
 
     def withAddedAnnotation(annot: Tree): Mods
+    def withAnnotations(annots: Seq[Tree]): Mods
+    def annotations: Seq[Tree]
   }
 
   // diagnostics - the implementation takes the position from the tree
@@ -52,32 +74,26 @@ trait Toolbox {
   def emptyMods: Mods
 
   // definition trees
-  def Object(mods: Mods, name: String, parents: Seq[Tree], selfOpt: Option[Tree], stats: Seq[Tree]): Tree
-  def Class(mods: Mods, name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], self: Option[Tree], stats: Seq[Tree]): Tree
-  def AnonymClass(parents: Seq[Tree], self: Option[Tree], stats: Seq[Tree]): Tree
-  def Trait(mods: Mods, name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], self: Option[Tree], stats: Seq[Tree]): Tree
-  def TypeDecl(mods: Mods, name: String, tparams: Seq[Tree], tbounds: Option[TypeTree]): Tree
-  def TypeAlias(mods: Mods, name: String, tparams: Seq[Tree], rhs: TypeTree): Tree
-  def DefDef(mods: Mods, name: String, tparams: Seq[Tree], paramss: Seq[Seq[Tree]], tpe: Option[TypeTree], rhs: Tree): Tree
-  def DefDecl(mods: Mods, name: String, tparams: Seq[Tree], paramss: Seq[Seq[Tree]], tpe: TypeTree): Tree
-  def ValDef(mods: Mods, name: String, tpe: Option[TypeTree], rhs: Tree): Tree
-  def ValDef(mods: Mods, lhs: Tree, tpe: Option[TypeTree], rhs: Tree): Tree
-  def ValDef(mods: Mods, pats: Seq[Tree], tpe: Option[TypeTree], rhs: Tree): Tree
-  def ValDecl(mods: Mods, name: String, tpe: TypeTree): Tree
-  def ValDecl(mods: Mods, vals: Seq[String], tpe: TypeTree): Tree
-  def VarDef(mods: Mods, name: String, tpe: Option[TypeTree], rhs: Tree): Tree
-  def VarDef(mods: Mods, lhs: Tree, tpe: Option[TypeTree], rhs: Tree): Tree
-  def VarDef(mods: Mods, pats: Seq[Tree], tpe: Option[TypeTree], rhs: Tree): Tree
-  def VarDecl(mods: Mods, name: String, tpe: TypeTree): Tree
-  def VarDecl(mods: Mods, vars: Seq[String], tpe: TypeTree): Tree
-  def Param(mods: Mods, name: String, tpe: Option[TypeTree], default: Option[Tree]): Tree
-  def TypeParam(mods: Mods, name: String, tparams: Seq[TypeTree], tbounds: Option[TypeTree], cbounds: Seq[TypeTree]): TypeTree
+  def Object(mods: Mods, name: String, parents: Seq[InitCall], selfOpt: Option[Self], stats: Seq[Tree]): Object
+  def Class(mods: Mods, name: String, tparams: Seq[TypeParam], ctorMods: Mods, paramss: Seq[Seq[Param]], parents: Seq[InitCall], self: Option[Self], stats: Seq[Tree]): Class
+  def AnonymClass(parents: Seq[InitCall], self: Option[Self], stats: Seq[Tree]): DefTree
+  def Trait(mods: Mods, name: String, tparams: Seq[TypeParam], ctorMods: Mods, paramss: Seq[Seq[Param]], parents: Seq[InitCall], self: Option[Self], stats: Seq[Tree]): Trait
+  def TypeDecl(mods: Mods, name: String, tparams: Seq[TypeParam], tbounds: Option[TypeTree]): DefTree
+  def TypeAlias(mods: Mods, name: String, tparams: Seq[TypeParam], rhs: TypeTree): DefTree
+  def DefDef(mods: Mods, name: String, tparams: Seq[TypeParam], paramss: Seq[Seq[Param]], tpe: Option[TypeTree], rhs: Tree): DefDef
+  def DefDecl(mods: Mods, name: String, tparams: Seq[TypeParam], paramss: Seq[Seq[Param]], tpe: TypeTree): DefDecl
+  def ValDef(mods: Mods, name: String, tpe: Option[TypeTree], rhs: Tree): ValDef
+  def PatDef(mods: Mods, lhs: TermTree, tpe: Option[TypeTree], rhs: Tree): DefTree
+  def SeqDef(mods: Mods, pats: Seq[TermTree], tpe: Option[TypeTree], rhs: Tree): DefTree
+  def ValDecl(mods: Mods, name: String, tpe: TypeTree): ValDecl
+  def SeqDecl(mods: Mods, vals: Seq[String], tpe: TypeTree): DefTree
+  def Param(mods: Mods, name: String, tpe: Option[TypeTree], default: Option[Tree]): Param
+  def TypeParam(mods: Mods, name: String, tparams: Seq[TypeParam], tbounds: Option[TypeTree], cbounds: Seq[TypeTree]): TypeParam
   // extends qual.T[A, B](x, y)(z)
-  def InitCall(qual: Option[Tree], name: String, tparams: Seq[TypeTree], argss: Seq[Seq[Tree]]): Tree
-  def PrimaryCtor(mods: Mods, paramss: Seq[Seq[Tree]]): Tree
-  def SecondaryCtor(mods: Mods, paramss: Seq[Seq[Tree]], rhs: Tree): Tree
-  def Self(name: String, tpe: TypeTree): Tree
-  def Self(name: String): Tree
+  def InitCall(qual: Option[Tree], name: String, targs: Seq[TypeTree], argss: Seq[Seq[TermTree]]): InitCall
+  def SecondaryCtor(mods: Mods, paramss: Seq[Seq[Param]], rhs: TermTree): Tree
+  def Self(name: String, tpe: TypeTree): Self
+  def Self(name: String): Self
 
   // type trees
   def TypeIdent(name: String): TypeTree
@@ -97,91 +113,250 @@ trait Toolbox {
 
 
   // terms
-  def Lit(value: Any): Tree
-  def Ident(name: String): Tree
-  def Select(qual: Tree, name: String): Tree
-  def This(qual: String): Tree
-  def Super(thisp: String, superp: String): Tree
-  def Interpolate(prefix: String, parts: Seq[String], args: Seq[Tree]): Tree
-  def Apply(fun: Tree, args: Seq[Tree]): Tree
-  def ApplyType(fun: Tree, args: Seq[TypeTree]): Tree
+  def Lit(value: Any): TermTree
+  def Ident(name: String): TermTree
+  def Select(qual: TermTree, name: String): TermTree
+  def This(qual: String): TermTree
+  def Super(thisp: String, superp: String): TermTree
+  def Interpolate(prefix: String, parts: Seq[String], args: Seq[TermTree]): TermTree
+  def Apply(fun: TermTree, args: Seq[TermTree]): TermTree
+  def ApplyType(fun: TermTree, args: Seq[TypeTree]): TermTree
   // a + (b, c)  =>  Infix(a, +, Tuple(b, c))
-  def Infix(lhs: Tree, op: String, rhs: Tree): Tree
-  def Prefix(op: String, od: Tree): Tree
-  def Postfix(od: Tree, op: String): Tree
-  def Assign(lhs: Tree, rhs: Tree): Tree
-  def Return(expr: Tree): Tree
-  def Throw(expr: Tree): Tree
-  def Ascribe(expr: Tree, tpe: Tree): Tree
-  def Annotated(expr: Tree, annots: Seq[Tree]): Tree
-  def Tuple(args: Seq[Tree]): Tree
-  def Block(stats: Seq[Tree]): Tree
-  def If(cond: Tree, thenp: Tree, elsep: Option[Tree]): Tree
-  def Match(expr: Tree, cases: Seq[Tree]): Tree
-  def Case(pat: Tree, cond: Option[Tree], body: Tree): Tree
-  def Try(expr: Tree, cases: Seq[Tree], finallyp: Option[Tree]): Tree
-  def Try(expr: Tree, handler: Tree, finallyp: Option[Tree]): Tree
-  def Function(params: Seq[Tree], body: Tree): Tree
-  def PartialFunction(cases: Seq[Tree]): Tree
-  def While(expr: Tree, body: Tree): Tree
-  def DoWhile(body: Tree, expr: Tree): Tree
-  def For(enums: Seq[Tree], body: Tree): Tree
-  def GenFrom(pat: Tree, rhs: Tree): Tree
-  def GenAlias(pat: Tree, rhs: Tree): Tree
-  def Guard(cond: Tree): Tree
-  def Yield(expr: Tree): Tree
+  def Infix(lhs: TermTree, op: String, rhs: TermTree): TermTree
+  def Prefix(op: String, od: TermTree): TermTree
+  def Postfix(od: TermTree, op: String): TermTree
+  def Assign(lhs: TermTree, rhs: TermTree): TermTree
+  def Return(expr: TermTree): TermTree
+  def Return: TermTree
+  def Throw(expr: TermTree): TermTree
+  def Ascribe(expr: TermTree, tpe: TypeTree): TermTree
+  def Annotated(expr: TermTree, annots: Seq[Tree]): TermTree
+  def Tuple(args: Seq[TermTree]): TermTree
+  def Block(stats: Seq[Tree]): TermTree
+  def If(cond: TermTree, thenp: TermTree, elsep: Option[TermTree]): TermTree
+  def Match(expr: TermTree, cases: Seq[Tree]): TermTree
+  def Case(pat: TermTree, cond: Option[TermTree], body: TermTree): Tree
+  def Try(expr: Tree, cases: Seq[Tree], finallyp: Option[TermTree]): TermTree
+  def Try(expr: TermTree, handler: Tree, finallyp: Option[TermTree]): Tree
+  def Function(params: Seq[Param], body: TermTree): TermTree
+  def PartialFunction(cases: Seq[Tree]): TermTree
+  def While(expr: TermTree, body: TermTree): TermTree
+  def DoWhile(body: TermTree, expr: TermTree): TermTree
+  def For(enums: Seq[Tree], body: TermTree): TermTree
+  def ForYield(enums: Seq[Tree], body: TermTree): TermTree
+  def GenFrom(pat: TermTree, rhs: TermTree): Tree
+  def GenAlias(pat: TermTree, rhs: TermTree): Tree
+  def Guard(cond: TermTree): Tree
   // can be InitCall or AnonymClass
-  def New(tpe: Tree): Tree
-  def Named(name: String, expr: Tree): Tree
-  def Repeated(expr: Tree): Tree
+  def New(tpe: Tree): TermTree
+  def Named(name: String, expr: Tree): TermTree
+  def Repeated(expr: Tree): TermTree
 
   // patterns
-  def Bind(name: String, expr: Tree): Tree
-  def Alternative(lhs: Tree, rhs: Tree): Tree
+  def Bind(name: String, expr: TermTree): TermTree
+  def Alternative(trees: Seq[TermTree]): TermTree
+
+  // importees
+  def Import(items: Seq[Tree]): Tree
+  def ImportItem(prefix: Tree, importees: Seq[Tree]): Tree
+  def ImportName(name: String): Tree
+  def ImportRename(from: String, to: String): Tree
+  def ImportHide(name: String): Tree
+
+  // extractors
+  private[gestalt] val Lit: LitHelper
+  trait LitHelper {
+    def unapply(tree: Tree): Option[Any]
+  }
+
+  private[gestalt] val Apply: ApplyHelper
+  trait ApplyHelper {
+    def unapply(tree: Tree): Option[(TermTree, Seq[TermTree])]
+  }
+
+  private[gestalt] val Ident: IdentHelper
+  trait IdentHelper {
+    def unapply(tree: Tree): Option[String]
+  }
+
+  private[gestalt] val This: ThisHelper
+  trait ThisHelper {
+    def unapply(tree: Tree): Option[String]
+  }
+
+  private[gestalt] val Select: SelectHelper
+  trait SelectHelper {
+    def unapply(tree: Tree): Option[(TermTree, String)]
+  }
+
+  private[gestalt] val Ascribe: AscribeHelper
+  trait AscribeHelper {
+    def unapply(tree: Tree): Option[(TermTree, TypeTree)]
+  }
+
+  private[gestalt] val Assign: AssignHelper
+  trait AssignHelper {
+    def unapply(tree: Tree): Option[(TermTree, TermTree)]
+  }
+
+  private[gestalt] val Annotated: AnnotatedHelper
+  trait AnnotatedHelper {
+    def unapply(tree: Tree): Option[(TermTree, Seq[Tree])]
+  }
+
+  private[gestalt] val Block: BlockHelper
+  trait BlockHelper {
+    def unapply(tree: Tree): Option[Seq[Tree]]
+  }
+
+  private[gestalt] val PartialFunction: PartialFunctionHelper
+  trait PartialFunctionHelper {
+    def unapply(tree: Tree): Option[Seq[Tree]]
+  }
+
+  private[gestalt] val Tuple: TupleHelper
+  trait TupleHelper {
+    def unapply(tree: Tree): Option[Seq[TermTree]]
+  }
 
   // helpers
-  def ApplySeq(fun: Tree, argss: Seq[Seq[Tree]]): Tree = argss match {
+  def ApplySeq(fun: TermTree, argss: Seq[Seq[TermTree]]): Tree = argss match {
     case args :: rest => rest.foldLeft(Apply(fun, args)) { (acc, args) => Apply(acc, args) }
     case _ => Apply(fun, Nil)
   }
 
-  // importees
-  def Import(items: Seq[Tree]): Tree
-  def ImportItem(ref: Tree, importees: Seq[Tree]): Tree
-  def ImportName(name: String): Tree
-  def ImportRename(from: String, to: String): Tree
-  def ImportHide(name: String): Tree
+  object ApplySeq {
+    def unapply(call: TermTree):  Option[(Tree, Seq[Seq[TermTree]])] = {
+      def recur(acc: Seq[Seq[TermTree]], term: TermTree): (TermTree, Seq[Seq[TermTree]])  = term match {
+        case Apply(fun, args) => recur(args +: acc, fun) // inner-most is in the front
+        case fun => (fun, acc)
+      }
+
+      Some(recur(Nil, call))
+    }
+  }
 }
 
 /** StructToolbox defines extractors available for inspecting definition trees
  *
- *  To provide solid experience of macros, we only provide extractors for definition trees, like object, class, trait.
+ *  To provide solid experience of macros, we only provide extractors and representors
+ *  for definition trees, like object, class, trait.
  *
- *  TODO:
- *    Provide definition tree transformers so that attachments (docs, etc) on the
- *    current tree is not an issue.
+ *  Representors are the recommended way to work with definitions.
+ *
  */
 trait StructToolbox extends Toolbox {
   val Object: ObjectHelper
   trait ObjectHelper {
-    def unapply(tree: Tree): Option[(Mods, String, Seq[Tree], Option[Tree], Seq[Tree])]
+    def unapply(tree: Tree): Option[(Mods, String, Seq[InitCall], Option[Self], Seq[Tree])]
   }
 
   val Class: ClassHelper
   trait ClassHelper {
-    def unapply(tree: Tree): Option[(Mods, String, Seq[Tree], Option[Tree], Seq[Tree], Option[Tree], Seq[Tree])]
-    // def cpy(tree: Tree)(mods: Mods, name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], self: Option[Tree], stats: Seq[Tree])
+    def unapply(tree: Tree): Option[(Mods, String, Seq[TypeParam], Mods, Seq[Seq[Param]], Seq[InitCall], Option[Self], Seq[Tree])]
   }
 
   val Trait: TraitHelper
   trait TraitHelper {
-    def unapply(tree: Tree): Option[(Mods, String, Seq[Tree], Option[Tree], Seq[Tree], Option[Tree], Seq[Tree])]
+    def unapply(tree: Tree): Option[(Mods, String, Seq[TypeParam], Mods, Seq[Seq[Param]], Seq[InitCall], Option[Self], Seq[Tree])]
   }
 
-  val PrimaryCtor: PrimaryCtorHelper
-  trait PrimaryCtorHelper {
-    def unapply(tree: Tree): Option[(Mods, Seq[Seq[Tree]])]
+  // accessors for definition trees
+  implicit def toParamRep(tree: Param): ParamRep
+  trait ParamRep {
+    def mods: Mods
+    def name: String
+    def tpt: Option[TypeTree]
+    def default: Option[Tree]
+    def copy(name: String = this.name, mods: Mods = this.mods,
+             tptOpt: Option[TypeTree] = this.tpt, defaultOpt: Option[Tree] = this.default): Param
   }
+
+  implicit def toTypeParamRep(tree: TypeParam): TypeParamRep
+  trait TypeParamRep {
+    def mods: Mods
+    def name: String
+    def tparams: Seq[TypeParam]
+  }
+
+  implicit def toClassRep(tree: Class): ClassRep
+  trait ClassRep {
+    def mods: Mods
+    def ctorMods: Mods
+    def name: String
+    def tparams: Seq[TypeParam]
+    def paramss: Seq[Seq[Param]]
+    def self: Option[Self]
+    def stats: Seq[Tree]
+
+    def copy(mods: Mods = this.mods, paramss: Seq[Seq[Param]] = this.paramss, stats: Seq[Tree] = this.stats): Class
+  }
+
+  val ClassRep: ClassRepHelper
+  trait ClassRepHelper {
+    def unapply(tree: Tree): Option[ClassRep]
+  }
+
+  implicit def toValDefRep(tree: ValDef): ValDefRep
+  trait ValDefRep {
+    def mods: Mods
+    def name: String
+    def tpt: Option[TypeTree]
+    def rhs: Tree
+    def copy(name: String = this.name, mods: Mods = this.mods,
+             tptOpt: Option[TypeTree] = this.tpt, rhs: Tree = this.rhs): ValDef
+  }
+
+  val ValDefRep: ValDefRepHelper
+  trait ValDefRepHelper {
+    def unapply(tree: Tree): Option[ValDefRep]
+  }
+
+  implicit def toValDeclRep(tree: ValDecl): ValDeclRep
+  trait ValDeclRep {
+    def mods: Mods
+    def name: String
+    def tpt: TypeTree
+    def copy(name: String = this.name, mods: Mods = this.mods, tpt: TypeTree = this.tpt): ValDecl
+  }
+
+  val ValDeclRep: ValDeclRepHelper
+  trait ValDeclRepHelper {
+    def unapply(tree: Tree): Option[ValDeclRep]
+  }
+
+  implicit def toDefDefRep(tree: DefDef): DefDefRep
+  trait DefDefRep {
+    def mods: Mods
+    def tparams: Seq[TypeParam]
+    def paramss: Seq[Seq[Param]]
+    def name: String
+    def tpt: Option[TypeTree]
+    def rhs: Tree
+    def copy(name: String = this.name, mods: Mods = this.mods,
+             tptOpt: Option[TypeTree] = this.tpt, rhs: Tree = this.rhs): DefDef
+  }
+
+  val DefDefRep: DefDefRepHelper
+  trait DefDefRepHelper {
+    def unapply(tree: Tree): Option[DefDefRep]
+  }
+
+  implicit def toDefDeclRep(tree: DefDecl): DefDeclRep
+  trait DefDeclRep {
+    def mods: Mods
+    def tparams: Seq[TypeParam]
+    def paramss: Seq[Seq[Param]]
+    def name: String
+    def tpt: TypeTree
+    def copy(name: String = this.name, mods: Mods = this.mods, tpt: TypeTree = this.tpt): DefDecl
+  }
+
+  val DefDeclRep: DefDeclRepHelper
+  trait DefDeclRepHelper {
+    def unapply(tree: Tree): Option[DefDeclRep]
+  }
+
 }
 
 /** TypeToolbox defines extractors for inspecting expression trees as well as APIs for types
@@ -223,36 +398,20 @@ trait TypeToolbox extends Toolbox { t =>
   /** type of a member with respect to a prefix */
   def asSeenFrom(mem: Member, prefix: Type): Type
 
+  /*----------------------- extractors ------------------------*/
+  val Lit: LitHelper
+  val Apply: ApplyHelper
+  val Ident: IdentHelper
+  val Select: SelectHelper
   val Ascribe: AscribeHelper
-  trait AscribeHelper {
-    def unapply(arg: Tree): Option[(Tree, TypeTree)]
-  }
+  val Annotated: AnnotatedHelper
+  val Block: BlockHelper
+  val Tuple: TupleHelper
+  val Assign: AssignHelper
+  val This: ThisHelper
 
   val SeqLiteral: SeqLiteralHelper
   trait SeqLiteralHelper {
-    def unapply(tree: Tree): Option[Seq[Tree]]
+    def unapply(tree: Tree): Option[Seq[TermTree]]
   }
-
-  val Lit: LitHelper
-  trait LitHelper {
-    def unapply(tree: Tree): Option[Any]
-  }
-
-  val Apply: ApplyHelper
-  trait ApplyHelper {
-    def unapply(tree: Tree): Option[(Tree, Seq[Tree])]
-  }
-
-  // helper
-  object ApplySeq {
-    def unapply(call: Tree):  Option[(Tree, Seq[Seq[Tree]])] = {
-      def recur(acc: Seq[Seq[Tree]], term: Tree): (Tree, Seq[Seq[Tree]])  = term match {
-        case Apply(fun, args) => recur(args +: acc, fun) // inner-most is in the front
-        case fun => (fun, acc)
-      }
-
-      Some(recur(Nil, call))
-    }
-  }
-
 }

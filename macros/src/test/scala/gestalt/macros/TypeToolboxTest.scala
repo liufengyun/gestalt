@@ -1,8 +1,3 @@
-import scala.collection.immutable.Seq
-
-import dotty.tools._
-import dotc.core.Contexts._
-
 import scala.gestalt._
 
 class TypeToolboxTest extends TestSuite {

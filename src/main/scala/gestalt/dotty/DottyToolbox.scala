@@ -19,7 +19,21 @@ import scala.collection.mutable.ListBuffer
 class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   type Tree = d.Tree
   type TypeTree = d.Tree
+  type TermTree = d.Tree
+  type DefTree = d.Tree
   type Mods = DottyModifiers
+
+  type Param = d.ValDef
+  type TypeParam = d.TypeDef
+  type Class = d.TypeDef
+  type Trait = d.TypeDef
+  type Object = d.ModuleDef
+  type ValDef = d.ValDef
+  type ValDecl = d.ValDef
+  type DefDef = d.DefDef
+  type DefDecl = d.DefDef
+  type Self = d.ValDef
+  type InitCall = d.Tree
 
   case class DottyModifiers(dottyMods: d.Modifiers) extends Modifiers {
     def isPrivate: Boolean = dottyMods.is(Flags.Private)
@@ -30,11 +44,21 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def isLazy: Boolean = dottyMods.is(Flags.Lazy)
     def isSealed: Boolean = dottyMods.is(Flags.Sealed)
     def isAbstract: Boolean = dottyMods.is(Flags.Abstract)
-    def isMutable: Boolean = dottyMods.is(Flags.Mutable)
     def isCase: Boolean = dottyMods.is(Flags.Case)
     def isContravariant: Boolean = dottyMods.is(Flags.Contravariant)
     def isCovariant: Boolean = dottyMods.is(Flags.Covariant)
     def isInline: Boolean = dottyMods.is(Flags.Inline)
+    def isMutable: Boolean = dottyMods.is(Flags.Mutable)
+
+    def isValParam: Boolean =
+      dottyMods.is(Flags.Param) &&
+        !dottyMods.is(Flags.Mutable) &&
+        !dottyMods.is(Flags.allOf(Flags.Private, Flags.Local))
+
+    def isVarParam: Boolean =
+      dottyMods.is(Flags.Param) &&
+        dottyMods.is(Flags.Mutable) &&
+        !dottyMods.is(Flags.allOf(Flags.Private, Flags.Local))
 
     // can be empty or `this`
     def setPrivate(within: String): Mods =
@@ -51,15 +75,21 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def setLazy: Mods = DottyModifiers(dottyMods | Flags.Lazy)
     def setSealed: Mods = DottyModifiers(dottyMods | Flags.Sealed)
     def setAbstract: Mods = DottyModifiers(dottyMods | Flags.Abstract)
-    def setMutable: Mods = DottyModifiers(dottyMods | Flags.Mutable)
     def setCase: Mods = DottyModifiers(dottyMods | Flags.Case)
     def setContravariant: Mods = DottyModifiers(dottyMods | Flags.Contravariant)
     def setCovariant: Mods = DottyModifiers(dottyMods | Flags.Covariant)
     def setInline: Mods = DottyModifiers(dottyMods | Flags.Inline)
+    def setMutable: Mods = DottyModifiers(dottyMods | Flags.Mutable)
+
+    def setValParam: Mods = DottyModifiers(dottyMods &~ Flags.Local &~ Flags.Mutable)
+    def setVarParam: Mods = DottyModifiers(dottyMods &~ Flags.Local | Flags.Mutable)
 
     def withAddedAnnotation(annot: d.Tree): Mods = DottyModifiers(dottyMods.withAddedAnnotation(annot))
+    def withAnnotations(annots: Seq[d.Tree]): Mods = DottyModifiers(dottyMods.withAnnotations(annots.toList))
 
     def hasAnnotations: Boolean = dottyMods.hasAnnotations
+
+    def annotations: Seq[Tree] = dottyMods.annotations
 
     def privateWithin: String =
       if (dottyMods.is(Flags.Local)) "this"
@@ -74,7 +104,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   def getOrEmpty(treeOpt: Option[Tree]): Tree = treeOpt.getOrElse(d.EmptyTree)
 
   implicit class TreeHelper(tree: d.Tree) {
-    def withPosition = tree.withPos(enclosingPosition)
+    def withPosition[T <: Tree] = tree.withPos(enclosingPosition).asInstanceOf[T]
   }
 
   // diagnostics - the implementation takes the position from the tree
@@ -88,21 +118,20 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   //----------------------------------------
 
-  def Object(mods: Mods, name: String, parents: Seq[Tree], selfOpt: Option[Tree], stats: Seq[Tree]): Tree = {
+  def Object(mods: Mods, name: String, parents: Seq[InitCall], selfOpt: Option[Self], stats: Seq[Tree]): Object = {
     val constr = d.DefDef(nme.CONSTRUCTOR, Nil, Nil, d.TypeTree(), d.EmptyTree)
     val self = if (selfOpt.isEmpty) d.EmptyValDef else selfOpt.get.asInstanceOf[d.ValDef]
     val templ = d.Template(constr, parents.toList, self, stats)
     d.ModuleDef(name.toTermName, templ).withMods(mods).withPosition
   }
 
-  def Class(mods: Mods, name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], selfOpt: Option[Tree], stats: Seq[Tree]): Tree = {
+  def Class(mods: Mods, name: String, tparams: Seq[TypeParam], ctorMods: Mods, paramss: Seq[Seq[Param]], parents: Seq[InitCall], selfOpt: Option[Self], stats: Seq[Tree]): Class = {
     val constr =
-      if (ctor.isEmpty) d.DefDef(nme.CONSTRUCTOR, Nil, Nil, d.TypeTree(), d.EmptyTree)
+      if (paramss.isEmpty) d.DefDef(nme.CONSTRUCTOR, Nil, Nil, d.TypeTree(), d.EmptyTree)
       else {
-        val PrimaryCtorTree(mods, paramss) = ctor.get
         val tparamsCast = tparams.toList.asInstanceOf[List[d.TypeDef]]
         val paramssCast = paramss.map(_.toList).toList.asInstanceOf[List[List[d.ValDef]]]
-        d.DefDef(nme.CONSTRUCTOR, tparamsCast, paramssCast, d.TypeTree(), d.EmptyTree).withMods(mods)
+        d.DefDef(nme.CONSTRUCTOR, tparamsCast, paramssCast, d.TypeTree(), d.EmptyTree).withMods(ctorMods)
       }
 
     val self = if (selfOpt.isEmpty) d.EmptyValDef else selfOpt.get.asInstanceOf[d.ValDef]
@@ -110,16 +139,16 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     d.TypeDef(name.toTypeName, templ).withMods(mods).withPosition
   }
 
-  def AnonymClass(parents: Seq[Tree], selfOpt: Option[Tree], stats: Seq[Tree]): Tree = {
+  def AnonymClass(parents: Seq[InitCall], selfOpt: Option[Self], stats: Seq[Tree]): Tree = {
     val init = d.DefDef(nme.CONSTRUCTOR, List(), List(), d.TypeTree(), d.EmptyTree)
     val self = if (selfOpt.isEmpty) d.EmptyValDef else selfOpt.get.asInstanceOf[d.ValDef]
     d.Template(init, parents.toList, self, stats).withPosition
   }
 
-  def Trait(mods: Mods, name: String, tparams: Seq[Tree], ctor: Option[Tree], parents: Seq[Tree], self: Option[Tree], stats: Seq[Tree]): Tree =
-    Class(mods, name, tparams, ctor, parents, self, stats).asInstanceOf[d.TypeDef].withFlags(Flags.Trait).withPosition
+  def Trait(mods: Mods, name: String, tparams: Seq[TypeParam], ctorMods: Mods, paramss: Seq[Seq[Param]], parents: Seq[InitCall], self: Option[Self], stats: Seq[Tree]): Trait =
+    Class(mods.dottyMods | Flags.Trait, name, tparams, ctorMods, paramss, parents, self, stats).withPosition
 
-  def TypeDecl(mods: Mods, name: String, tparams: Seq[Tree], tboundsOpt: Option[TypeTree]): Tree = {
+  def TypeDecl(mods: Mods, name: String, tparams: Seq[TypeParam], tboundsOpt: Option[TypeTree]): DefTree = {
     val tbounds = tboundsOpt.getOrElse(d.TypeBoundsTree(d.EmptyTree, d.EmptyTree))
     val body =
       if (tparams.size == 0) tbounds
@@ -127,74 +156,56 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     d.TypeDef(name.toTypeName, body).withMods(mods).withPosition
   }
 
-  def TypeAlias(mods: Mods, name: String, tparams: Seq[Tree], rhs: TypeTree): Tree = {
+  def TypeAlias(mods: Mods, name: String, tparams: Seq[TypeParam], rhs: TypeTree): DefTree = {
     val body =
       if (tparams.size == 0) rhs
       else d.LambdaTypeTree(tparams.toList.asInstanceOf[List[d.TypeDef]], rhs)
     d.TypeDef(name.toTypeName, body).withMods(mods).withPosition
   }
 
-  def DefDef(mods: Mods, name: String, tparams: Seq[Tree], paramss: Seq[Seq[Tree]], tpe: Option[TypeTree], rhs: Tree): Tree = {
-    val types = tparams.toList.asInstanceOf[List[d.TypeDef]]
+  def DefDef(mods: Mods, name: String, tparams: Seq[TypeParam], paramss: Seq[Seq[Param]], tpe: Option[TypeTree], rhs: TermTree): DefDef = {
+    val types = tparams.toList
     val params = paramss.map(_.toList).toList.asInstanceOf[List[List[d.ValDef]]]
     d.DefDef(name.toTermName, types, params, tpe.getOrElse(d.TypeTree()), rhs).withMods(mods).withPosition
   }
 
-  def DefDecl(mods: Mods, name: String, tparams: Seq[Tree], paramss: Seq[Seq[Tree]], tpe: TypeTree): Tree = {
-    val types = tparams.toList.asInstanceOf[List[d.TypeDef]]
-    val params = paramss.map(_.toList).toList.asInstanceOf[List[List[d.ValDef]]]
+  def DefDecl(mods: Mods, name: String, tparams: Seq[TypeParam], paramss: Seq[Seq[Param]], tpe: TypeTree): DefDecl = {
+    val types = tparams.toList
+    val params = paramss.map(_.toList).toList
     d.DefDef(name.toTermName, types, params, tpe, d.EmptyTree).withMods(mods).withPosition
   }
 
-  def ValDef(mods: Mods, name: String, tpe: Option[TypeTree], rhs: Tree): Tree =
+  def ValDef(mods: Mods, name: String, tpe: Option[TypeTree], rhs: TermTree): ValDef =
     d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), rhs).withMods(mods).withPosition
 
-  def ValDef(mods: Mods, lhs: Tree, tpe: Option[TypeTree], rhs: Tree): Tree =
+  def PatDef(mods: Mods, lhs: Tree, tpe: Option[TypeTree], rhs: TermTree): DefTree =
     d.PatDef(mods, List(lhs), tpe.getOrElse(d.TypeTree()), rhs).withPosition
 
-  def ValDef(mods: Mods, pats: Seq[Tree], tpe: Option[TypeTree], rhs: Tree): Tree =
+  def SeqDef(mods: Mods, pats: Seq[Tree], tpe: Option[TypeTree], rhs: TermTree): DefTree =
     d.PatDef(mods, pats.toList, tpe.getOrElse(d.TypeTree()), rhs).withPosition
 
-  def ValDecl(mods: Mods, name: String, tpe: TypeTree): Tree =
+  def ValDecl(mods: Mods, name: String, tpe: TypeTree): ValDecl =
     d.ValDef(name.toTermName, tpe, d.EmptyTree).withMods(mods).withPosition
 
-  def ValDecl(mods: Mods, vals: Seq[String], tpe: TypeTree): Tree =
+  def SeqDecl(mods: Mods, vals: Seq[String], tpe: TypeTree): DefTree =
     d.PatDef(mods, vals.map(n => d.Ident(n.toTermName)).toList, tpe, d.EmptyTree).withPosition
 
-  def VarDef(mods: Mods, name: String, tpe: Option[TypeTree], rhs: Tree): Tree =
-    d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), rhs).withMods((mods : d.Modifiers) | Flags.Mutable).withPosition
-
-  def VarDef(mods: Mods, lhs: Tree, tpe: Option[TypeTree], rhs: Tree): Tree =
-    d.PatDef((mods: d.Modifiers) | Flags.Mutable, List(lhs), tpe.getOrElse(d.TypeTree()), rhs).withPosition
-
-  def VarDef(mods: Mods, pats: Seq[Tree], tpe: Option[TypeTree], rhs: Tree): Tree =
-    d.PatDef((mods: d.Modifiers) | Flags.Mutable, pats.toList, tpe.getOrElse(d.TypeTree()), rhs).withPosition
-
-  def VarDecl(mods: Mods, name: String, tpe: TypeTree): Tree =
-    d.ValDef(name.toTermName, tpe, d.EmptyTree).withMods((mods: d.Modifiers) | Flags.Mutable).withPosition
-
-  def VarDecl(mods: Mods, vals: Seq[String], tpe: TypeTree): Tree =
-    d.PatDef((mods: d.Modifiers)| Flags.Mutable, vals.map(n => d.Ident(n.toTermName)).toList, tpe, d.EmptyTree).withPosition
-
-  // Dummy trees to retrofit Dotty AST
-  protected case class PrimaryCtorTree(mods: Mods, paramss: Seq[Seq[Tree]]) extends d.Tree
-  def PrimaryCtor(mods: Mods, paramss: Seq[Seq[Tree]]): Tree = PrimaryCtorTree(mods, paramss).withPosition
-
-  def SecondaryCtor(mods: Mods, paramss: Seq[Seq[Tree]], rhs: Tree): Tree =
+  def SecondaryCtor(mods: Mods, paramss: Seq[Seq[Param]], rhs: TermTree): DefTree =
     DefDef(mods, nme.CONSTRUCTOR.toString, Nil, paramss, Some(d.TypeTree()), rhs).withPosition
 
   // qual.T[A, B](x, y)(z)
-  def InitCall(qual: Option[Tree], name: String, tparams: Seq[TypeTree], argss: Seq[Seq[Tree]]): Tree = {
+  def InitCall(qual: Option[Tree], name: String, targs: Seq[TypeTree], argss: Seq[Seq[TermTree]]): InitCall = {
     val select = if (qual.isEmpty) d.Ident(name.toTermName) else d.Select(qual.get, name.toTypeName)
-    val fun = if (tparams.size == 0) select else TypeApply(select, tparams.toList)
+    val fun = if (targs.size == 0) select else TypeApply(select, targs.toList)
     ApplySeq(fun, argss).withPosition
   }
 
-  def Param(mods: Mods, name: String, tpe: Option[TypeTree], default: Option[Tree]): Tree = {
-    d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), getOrEmpty(default)).withMods(mods).withFlags(Flags.TermParam).withPosition
+  def Param(mods: Mods, name: String, tpe: Option[TypeTree], default: Option[TermTree]): Param = {
+    d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), getOrEmpty(default))
+      .withMods(mods.dottyMods | Flags.TermParam).withPosition.asInstanceOf[Param]
   }
 
-  def TypeParam(mods: Mods, name: String, tparams: Seq[TypeTree], tboundsOpt: Option[TypeTree], cbounds: Seq[TypeTree]): TypeTree = {
+  def TypeParam(mods: Mods, name: String, tparams: Seq[TypeParam], tboundsOpt: Option[TypeTree], cbounds: Seq[TypeTree]): TypeParam = {
     val tbounds = tboundsOpt.getOrElse(d.TypeBoundsTree(d.EmptyTree, d.EmptyTree)).asInstanceOf[d.TypeBoundsTree]
     val inner =
       if (cbounds.size == 0) tbounds
@@ -207,10 +218,10 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     d.TypeDef(name.toTypeName, body).withMods(mods).withPosition
   }
 
-  def Self(name: String, tpe: TypeTree): Tree =
+  def Self(name: String, tpe: TypeTree): Self =
     d.ValDef(name.toTermName, tpe, d.EmptyTree).withPosition
 
-  def Self(name: String): Tree =
+  def Self(name: String): Self =
     d.ValDef(name.toTermName, d.TypeTree(), d.EmptyTree).withPosition
 
   // types
@@ -246,24 +257,24 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   def TypeAnnotated(tpe: TypeTree, annots: Seq[Tree]): TypeTree = {
     require(annots.size > 0)
-    annots.tail.foldRight(d.Annotated(tpe, annots.head).withPosition) { (ann, acc) =>
-      d.Annotated(acc, ann).withPosition
+    annots.tail.foldRight(d.Annotated(tpe, annots.head).withPosition) { (ann: Tree, acc: TypeTree) =>
+      d.Annotated(acc, ann).withPosition[TypeTree]
     }
   }
 
   // terms
-  def Lit(value: Any): Tree = d.Literal(Constant(value)).withPosition
+  def Lit(value: Any): TermTree = d.Literal(Constant(value)).withPosition
 
-  def Ident(name: String): Tree = d.Ident(name.toTermName).withPosition
+  def Ident(name: String): TermTree = d.Ident(name.toTermName).withPosition
 
-  def Select(qual: Tree, name: String): Tree = d.Select(qual, name.toTermName).withPosition
+  def Select(qual: TermTree, name: String): TermTree = d.Select(qual, name.toTermName).withPosition
 
-  def This(qual: String): Tree = d.This(d.Ident(qual.toTypeName)).withPosition
+  def This(qual: String): TermTree = d.This(d.Ident(qual.toTypeName)).withPosition
 
-  def Super(thisp: String, superp: String): Tree =
+  def Super(thisp: String, superp: String): TermTree =
     d.Super(d.Ident(thisp.toTypeName), d.Ident(superp.toTypeName)).withPosition
 
-  def Interpolate(prefix: String, parts: Seq[String], args: Seq[Tree]): Tree = {
+  def Interpolate(prefix: String, parts: Seq[String], args: Seq[TermTree]): TermTree = {
     val thickets =
       for {(arg, part) <- args.zip(parts.take(args.size))}
         yield {
@@ -281,97 +292,99 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     d.InterpolatedString(prefix.toTermName, segments.toList).withPosition
   }
 
-  def Apply(fun: Tree, args: Seq[Tree]): Tree = d.Apply(fun, args.toList).withPosition
+  def Apply(fun: TermTree, args: Seq[TermTree]): TermTree = d.Apply(fun, args.toList).withPosition
 
-  def ApplyType(fun: Tree, args: Seq[TypeTree]): Tree = d.TypeApply(fun, args.toList).withPosition
+  def ApplyType(fun: Tree, args: Seq[TypeTree]): TermTree = d.TypeApply(fun, args.toList).withPosition
 
   // a + (b, c)  =>  Infix(a, +, Tuple(b, c))
-  def Infix(lhs: Tree, op: String, rhs: Tree): Tree =
+  def Infix(lhs: TermTree, op: String, rhs: TermTree): TermTree =
     d.Apply(d.Select(lhs, op.toTermName), List(rhs)).withPosition
 
-  def Prefix(op: String, od: Tree): Tree = d.PrefixOp(d.Ident(op.toTermName), od).withPosition
+  def Prefix(op: String, od: TermTree): TermTree = d.PrefixOp(d.Ident(op.toTermName), od).withPosition
 
-  def Postfix(od: Tree, op: String): Tree = d.PostfixOp(od, d.Ident(op.toTermName)).withPosition
+  def Postfix(od: TermTree, op: String): TermTree = d.PostfixOp(od, d.Ident(op.toTermName)).withPosition
 
-  def Assign(lhs: Tree, rhs: Tree): Tree = d.Assign(lhs, rhs).withPosition
+  def Assign(lhs: TermTree, rhs: TermTree): TermTree = d.Assign(lhs, rhs).withPosition
 
-  def Return(expr: Tree): Tree = d.Return(expr, d.EmptyTree).withPosition
+  def Return(expr: TermTree): TermTree = d.Return(expr, d.EmptyTree).withPosition
 
-  def Throw(expr: Tree): Tree = d.Throw(expr).withPosition
+  def Return: TermTree = d.Return(d.EmptyTree, d.EmptyTree).withPosition
 
-  def Ascribe(expr: Tree, tpe: Tree): Tree = d.Typed(expr, tpe).withPosition
+  def Throw(expr: TermTree): TermTree = d.Throw(expr).withPosition
 
-  def Annotated(expr: Tree, annots: Seq[Tree]): Tree = {
+  def Ascribe(expr: TermTree, tpe: TypeTree): TermTree = d.Typed(expr, tpe).withPosition
+
+  def Annotated(expr: TermTree, annots: Seq[Tree]): TermTree = {
     require(annots.size > 0)
-    annots.tail.foldRight(d.Annotated(expr, annots.head).withPosition) { (ann, acc) =>
-      d.Annotated(acc, ann).withPosition
+    annots.tail.foldRight(d.Annotated(expr, annots.head).withPosition) { (ann: Tree, acc: TermTree) =>
+      d.Annotated(acc, ann).withPosition[TermTree]
     }
   }
 
-  def Tuple(args: Seq[Tree]): Tree = d.Tuple(args.toList).withPosition
+  def Tuple(args: Seq[TermTree]): TermTree = d.Tuple(args.toList).withPosition
 
-  def Block(stats: Seq[Tree]): Tree = {
+  def Block(stats: Seq[Tree]): TermTree = {
     if (stats.size == 0)
       d.Block(stats.toList, d.EmptyTree).withPosition
     else
       d.Block(stats.init.toList, stats.last).withPosition
   }
 
-  def If(cond: Tree, thenp: Tree, elsep: Option[Tree]): Tree =
+  def If(cond: TermTree, thenp: TermTree, elsep: Option[TermTree]): TermTree =
     d.If(cond, thenp, elsep.getOrElse(d.EmptyTree)).withPosition
 
-  def Match(expr: Tree, cases: Seq[Tree]): Tree =
+  def Match(expr: TermTree, cases: Seq[Tree]): TermTree =
     d.Match(expr, cases.toList.asInstanceOf[List[d.CaseDef]]).withPosition
 
-  def Case(pat: Tree, cond: Option[Tree], body: Tree): Tree =
+  def Case(pat: TermTree, cond: Option[TermTree], body: TermTree): Tree =
     d.CaseDef(pat, cond.getOrElse(d.EmptyTree), body).withPosition
 
-  def Try(expr: Tree, cases: Seq[Tree], finallyp: Option[Tree]): Tree =
+  def Try(expr: TermTree, cases: Seq[Tree], finallyp: Option[TermTree]): TermTree =
     d.Try(expr, cases.toList.asInstanceOf[List[d.CaseDef]], finallyp.getOrElse(d.EmptyTree)).withPosition
 
-  def Try(expr: Tree, handler: Tree, finallyp: Option[Tree]): Tree =
+  def Try(expr: TermTree, handler: Tree, finallyp: Option[TermTree]): TermTree =
     d.ParsedTry(expr, handler, finallyp.getOrElse(d.EmptyTree)).withPosition
 
-  def Function(params: Seq[Tree], body: Tree): Tree =
+  def Function(params: Seq[Param], body: TermTree): TermTree =
     d.Function(params.toList, body).withPosition
 
-  def PartialFunction(cases: Seq[Tree]): Tree =
+  def PartialFunction(cases: Seq[Tree]): TermTree =
     d.Match(d.Thicket(Nil), cases.toList.asInstanceOf[List[d.CaseDef]]).withPosition
 
-  def While(expr: Tree, body: Tree): Tree = d.WhileDo(expr, body).withPosition
+  def While(expr: TermTree, body: TermTree): TermTree = d.WhileDo(expr, body).withPosition
 
-  def DoWhile(body: Tree, expr: Tree): Tree = d.DoWhile(body, expr).withPosition
+  def DoWhile(body: TermTree, expr: TermTree): TermTree = d.DoWhile(body, expr).withPosition
 
-  def For(enums: Seq[Tree], body: Tree): Tree = ???
+  def For(enums: Seq[Tree], body: TermTree): TermTree = d.ForDo(enums.toList, body)
 
-  def GenFrom(pat: Tree, rhs: Tree): Tree = ???
+  def ForYield(enums: Seq[Tree], body: TermTree): TermTree = d.ForYield(enums.toList, body)
 
-  def GenAlias(pat: Tree, rhs: Tree): Tree = ???
+  def GenFrom(pat: TermTree, rhs: TermTree): Tree = d.GenFrom(pat, rhs)
 
-  def Guard(cond: Tree): Tree = ???
+  def GenAlias(pat: TermTree, rhs: TermTree): Tree = d.GenAlias(pat, rhs)
 
-  def Yield(expr: Tree): Tree = ???
+  def Guard(cond: TermTree): Tree = cond
 
   // can be InitCall or AnonymClass
-  def New(tpe: Tree): Tree = d.New(tpe).withPosition
+  def New(tpe: Tree): TermTree = d.New(tpe).withPosition
 
-  def Named(name: String, expr: Tree): Tree =
+  def Named(name: String, expr: TermTree): TermTree =
     d.NamedArg(name.toTermName, expr).withPosition
 
-  def Repeated(expr: Tree): Tree =
+  def Repeated(expr: TermTree): TermTree =
     d.Typed(expr, d.Ident(tpnme.WILDCARD_STAR)).withPosition
 
   // patterns
-  def Bind(name: String, expr: Tree): Tree =
+  def Bind(name: String, expr: TermTree): TermTree =
     d.Bind(name.toTermName, expr).withPosition
 
-  def Alternative(lhs: Tree, rhs: Tree): Tree =
-    d.Alternative(List(lhs, rhs)).withPosition
+  def Alternative(trees: Seq[TermTree]): TermTree =
+    d.Alternative(trees.toList).withPosition
 
   // importees
   def Import(items: Seq[Tree]): Tree =
     if (items.size == 1)
-      items(0).withPosition
+      items.head.withPosition
     else
       d.Thicket(items.toList).withPosition
 
@@ -386,12 +399,96 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   def ImportHide(name: String): Tree =
     d.Thicket(d.Ident(name.toTermName), d.Ident(nme.WILDCARD)).withPosition
 
+  // extractors
+  object Lit extends LitHelper {
+    def unapply(tree: Tree): Option[Any] = tree match {
+      case c.Literal(Constant(v)) => Some(v)
+      case _ => None
+    }
+  }
+
+  object Ident extends IdentHelper {
+    def unapply(tree: Tree): Option[String] = tree match {
+      case c.Ident(name) if name.isTermName => Some(name.show)
+      case _ => None
+    }
+  }
+
+  object This extends ThisHelper {
+    def unapply(tree: Tree): Option[String] = tree match {
+      case c.This(c.Ident(name)) => Some(name.show)
+      case _ => None
+    }
+  }
+
+  object Select extends SelectHelper {
+    def unapply(tree: Tree): Option[(TermTree, String)] = tree match {
+      case c.Select(qual, name) if name.isTermName => Some((qual, name.show))
+      case _ => None
+    }
+  }
+
+  object Apply extends ApplyHelper {
+    def unapply(tree: Tree): Option[(TermTree, Seq[TermTree])] = tree match {
+      case c.Apply(fun, Seq(c.Typed(c.SeqLiteral(args, _), _))) => Some((fun, args))
+      case c.Apply(fun, args) => Some((fun, args))
+      case _ => None
+    }
+  }
+
+  object Ascribe extends AscribeHelper {
+    def unapply(tree: Tree): Option[(TermTree, TypeTree)] = tree match {
+      case c.Typed(expr, tpe) => Some((expr, tpe))
+      case _ => None
+    }
+  }
+
+  object Assign extends AssignHelper {
+    def unapply(tree: Tree): Option[(TermTree, TermTree)] = tree match {
+      case c.Assign(lhs, rhs) => Some((lhs, rhs))
+      case _ => None
+    }
+  }
+
+  object Annotated extends AnnotatedHelper {
+    def unapply(tree: Tree): Option[(TermTree, Seq[Tree])] = {
+      def recur(term: Tree, acc: Seq[Tree]): (Tree, Seq[Tree])  = term match {
+        case c.Annotated(expr, annot) => recur(expr, annot +: acc) // inner-most is in the front
+        case expr => (expr, acc)
+      }
+      val (expr, annots) = recur(tree, Nil)
+      if (annots.size > 0) Some((expr, annots))
+      else None
+    }
+  }
+
+  object Block extends BlockHelper {
+    def unapply(tree: Tree): Option[Seq[Tree]] = tree match {
+      case c.Block(stats, expr) => Some(stats :+ expr)
+      case _ => None
+    }
+  }
+
+  object PartialFunction extends PartialFunctionHelper {
+    def unapply(tree: Tree): Option[Seq[Tree]] = tree match {
+      case c.Match(c.Thicket(Nil), cases) => Some(cases)
+      case _ => None
+    }
+  }
+
+  object Tuple extends TupleHelper {
+    def unapply(tree: Tree): Option[Seq[TermTree]] = tree match {
+      case d.Tuple(trees) => Some(trees)
+      case _ => None
+    }
+  }
+
 }
 
 class StructToolbox(enclosingPosition: Position)(implicit ctx: Context) extends Toolbox(enclosingPosition)(ctx) with STbox {
 
   object Object extends ObjectHelper {
-    def unapply(tree: Tree): Option[(Mods, String, Seq[Tree], Option[Tree], Seq[Tree])] = tree match {
+    def unapply(tree: Tree): Option[(Mods, String, Seq[InitCall], Option[Self], Seq[Tree])] = tree match {
       case obj @ d.ModuleDef(name, templ @ c.Template(constr, parents, self: d.ValDef, body)) =>
         val selfOpt = if (self == d.EmptyValDef) None else Some(Self(self.name.toString, self.tpt))
         Some((obj.mods, name.toString, parents, selfOpt, templ.body))
@@ -400,23 +497,23 @@ class StructToolbox(enclosingPosition: Position)(implicit ctx: Context) extends 
   }
 
   object Class extends ClassHelper {
-    def unapply(tree: Tree): Option[(Mods, String, Seq[Tree], Option[Tree], Seq[Tree], Option[Tree], Seq[Tree])] = tree match {
+    def unapply(tree: Tree): Option[(Mods, String, Seq[TypeParam], Mods, Seq[Seq[Param]], Seq[InitCall], Option[Self], Seq[Tree])] = tree match {
       case cdef @ c.TypeDef(name, templ @ c.Template(constr, parents, self, body)) =>
-        var tparams: List[Tree] = Nil
-        val ctor = constr match {
-          case c.DefDef(nme.CONSTRUCTOR, Nil, Nil, c.TypeTree(), d.EmptyTree) => None
+        var tparams: List[TypeParam] = Nil
+        val (paramss, cmods) = constr match {
+          case c.DefDef(nme.CONSTRUCTOR, Nil, Nil, c.TypeTree(), d.EmptyTree) => (Nil, emptyMods)
           case pctor @ c.DefDef(nme.CONSTRUCTOR, tps, paramss, c.TypeTree(), d.EmptyTree) =>
             tparams = tps
-            Some(PrimaryCtor(pctor.mods, paramss))
+            (paramss, pctor.mods : Mods)
         }
-        val selfOpt = if (self == d.EmptyValDef) None else Some(Self(self.name.toString, self.tpt))
-        Some((cdef.mods, name.toString, tparams, ctor, tparams, selfOpt, templ.body))  // TODO: parents
+        val selfOpt = if (self == d.EmptyValDef) None else Some(self)
+        Some((cdef.mods, name.toString, tparams, cmods, paramss, parents, selfOpt, templ.body))
       case _ => None
     }
   }
 
   object Trait extends TraitHelper {
-    def unapply(tree: Tree): Option[(Mods, String, Seq[Tree], Option[Tree], Seq[Tree], Option[Tree], Seq[Tree])] =
+    def unapply(tree: Tree): Option[(Mods, String, Seq[TypeParam], Mods, Seq[Seq[Param]], Seq[InitCall], Option[Self], Seq[Tree])] =
       if (!tree.isInstanceOf[d.TypeDef]) return None
       else {
         val typedef = tree.asInstanceOf[d.TypeDef]
@@ -424,13 +521,6 @@ class StructToolbox(enclosingPosition: Position)(implicit ctx: Context) extends 
 
         Class.unapply(typedef)
       }
-  }
-
-  object PrimaryCtor extends PrimaryCtorHelper {
-    def unapply(tree: Tree): Option[(Mods, Seq[Seq[Tree]])] = tree match {
-      case PrimaryCtorTree(mods, paramss) => Some((mods, paramss))
-      case _                              => None
-    }
   }
 
   /*
@@ -444,6 +534,151 @@ class StructToolbox(enclosingPosition: Position)(implicit ctx: Context) extends 
     }
   }*/
 
+   // accessors
+  def toParamRep(tree: Param): ParamRep = new ParamRep {
+    def mods: Mods = tree.mods
+    def name: String = tree.name.show
+    def tpt: Option[TypeTree] = if (tree.tpt.isInstanceOf[d.TypeTree]) None else Some(tree.tpt)
+    def default: Option[TermTree] = if (tree.forceIfLazy == d.EmptyTree) None else Some(tree.forceIfLazy)
+    def copy(name: String, mods: Mods, tptOpt: Option[TypeTree], defaultOpt: Option[TermTree]): Param =
+      d.cpy.ValDef(tree)(
+        name.toTermName,
+        tptOpt.getOrElse(d.TypeTree()),
+        defaultOpt.getOrElse(d.EmptyTree)
+      ).withMods(mods)
+  }
+
+  def toTypeParamRep(tree: TypeParam): TypeParamRep = tree match {
+    case c.TypeDef(_, c.LambdaTypeTree(tparams1, _)) =>
+      new TypeParamRep {
+        def mods: Mods = tree.mods
+        def name: String = tree.name.show
+        def tparams: Seq[TypeParam] = tparams1
+      }
+    case c.TypeDef(_, _) =>  // bounds
+      new TypeParamRep {
+        def mods: Mods = tree.mods
+        def name: String = tree.name.show
+        def tparams: Seq[TypeParam] = Nil
+      }
+  }
+
+  def toValDefRep(tree: ValDef): ValDefRep = new ValDefRep {
+    def mods: Mods = tree.mods
+    def name: String = tree.name.show
+    def tpt: Option[TypeTree] = if (tree.tpt.isInstanceOf[d.TypeTree]) None else Some(tree.tpt)
+    def rhs: TermTree = tree.forceIfLazy
+    def copy(name: String, mods: Mods, tptOpt: Option[TypeTree], rhs: TermTree): ValDef =
+      d.cpy.ValDef(tree)(
+        name.toTermName,
+        tptOpt.getOrElse(d.TypeTree()),
+        rhs
+      ).withMods(mods)
+  }
+
+  object ValDefRep extends ValDefRepHelper {
+    def unapply(tree: Tree): Option[ValDefRep] = tree match {
+      case vdef @ c.ValDef(_, _, _) if !vdef.forceIfLazy.isEmpty => Some(toValDefRep(vdef))
+      case _ => None
+    }
+  }
+
+  def toValDeclRep(tree: ValDecl): ValDeclRep = new ValDeclRep {
+    def mods: Mods = tree.mods
+    def name: String = tree.name.show
+    def tpt: TypeTree = tree.tpt
+    def copy(name: String, mods: Mods, tpt: TypeTree): ValDecl =
+      d.cpy.ValDef(tree)(
+        name.toTermName,
+        tpt = tpt
+      ).withMods(mods)
+  }
+
+  object ValDeclRep extends ValDeclRepHelper {
+    def unapply(tree: Tree): Option[ValDeclRep] = tree match {
+      case vdef @ c.ValDef(_, _, _) if vdef.forceIfLazy.isEmpty  => Some(toValDeclRep(vdef))
+      case _ => None
+    }
+  }
+
+  def toDefDefRep(tree: DefDef): DefDefRep = new DefDefRep {
+    def mods: Mods = tree.mods
+    def name: String = tree.name.show
+    def tpt: Option[TypeTree] = if (tree.tpt.isInstanceOf[d.TypeTree]) None else Some(tree.tpt)
+    def tparams: Seq[TypeParam] = tree.tparams
+    def paramss: Seq[Seq[Param]] = tree.vparamss
+    def rhs: TermTree = tree.forceIfLazy
+    def copy(name: String, mods: Mods, tpt: Option[TypeTree], rhs: TermTree): DefDef =
+      d.cpy.DefDef(tree)(
+        name.toTermName,
+        rhs = rhs,
+        tpt = tpt.getOrElse(d.TypeTree())
+      ).withMods(mods)
+  }
+
+  object DefDefRep extends DefDefRepHelper {
+    def unapply(tree: Tree): Option[DefDefRep] = tree match {
+      case ddef @ c.DefDef(_, _, _, _, _) if !ddef.forceIfLazy.isEmpty  => Some(toDefDefRep(ddef))
+      case _ => None
+    }
+  }
+
+  def toDefDeclRep(tree: DefDecl): DefDeclRep = new DefDeclRep {
+    def mods: Mods = tree.mods
+    def name: String = tree.name.show
+    def tpt: TypeTree = tree.tpt
+    def tparams: Seq[TypeParam] = tree.tparams
+    def paramss: Seq[Seq[Param]] = tree.vparamss
+    def copy(name: String, mods: Mods, tpt: TypeTree): DefDecl =
+      d.cpy.DefDef(tree)(
+        name.toTermName,
+        tpt = tpt
+      ).withMods(mods)
+  }
+
+  object DefDeclRep extends DefDeclRepHelper {
+    def unapply(tree: Tree): Option[DefDeclRep] = tree match {
+      case ddef @ c.DefDef(_, _, _, _, _) if ddef.forceIfLazy.isEmpty  => Some(toDefDeclRep(ddef))
+      case _ => None
+    }
+  }
+
+
+  object ClassRep extends ClassRepHelper {
+    def unapply(tree: Tree): Option[ClassRep] = tree match {
+      case cdef @ c.TypeDef(_, c.Template(_, _, _, _)) => Some(toClassRep(cdef))
+      case _ => None
+    }
+  }
+
+  def toClassRep(tree: Class): ClassRep = tree match {
+    case cdef@c.TypeDef(name, templ@c.Template(constr, parents, self, body)) =>
+      var tparams1: List[TypeParam] = Nil
+      val (paramss1, cmods) = constr match {
+        case c.DefDef(nme.CONSTRUCTOR, Nil, Nil, c.TypeTree(), d.EmptyTree) => (Nil, emptyMods)
+        case pctor@c.DefDef(nme.CONSTRUCTOR, tps, paramss, c.TypeTree(), d.EmptyTree) =>
+          tparams1 = tps
+          (paramss, pctor.mods: Mods)
+      }
+      val selfOpt = if (self == d.EmptyValDef) None else Some(self)
+
+      new ClassRep {
+        def mods: Mods = cdef.mods
+        def ctorMods: Mods = cmods
+        def name: String = name.toString
+        def tparams: Seq[TypeParam] = tparams1
+        def paramss: Seq[Seq[Param]] = paramss1
+        def self: Option[Self] = selfOpt
+        def stats: Seq[Tree] = templ.body
+
+        def copy(mods: Mods, paramss: Seq[Seq[Param]], stats: Seq[Tree]): Class = {
+          val tmpl1 = cdef.rhs.asInstanceOf[d.Template]
+          val contr2 = d.cpy.DefDef(tmpl1.constr)(vparamss = paramss.toList.map(_.toList))
+          val tmpl2 = d.cpy.Template(tmpl1)(constr = contr2)
+          d.cpy.TypeDef(cdef)(rhs = tmpl1).withMods(mods)
+        }
+      }
+  }
 }
 
 class TypeToolbox(enclosingPosition: Position)(implicit ctx: Context) extends Toolbox(enclosingPosition)(ctx) with TTbox {
@@ -494,30 +729,9 @@ class TypeToolbox(enclosingPosition: Position)(implicit ctx: Context) extends To
   /** type of a member with respect to a prefix */
   def asSeenFrom(mem: Member, prefix: Type): Type = mem.asSeenFrom(prefix).info
 
-  object Ascribe extends AscribeHelper {
-    def unapply(tree: Tree): Option[(Tree, TypeTree)] = tree match {
-      case c.Typed(expr, tpt) => Some((expr, tpt))
-      case _ => None
-    }
-  }
-
-  object Lit extends LitHelper {
-    def unapply(tree: Tree): Option[Any] = tree match {
-      case c.Literal(Constant(v)) => Some(v)
-      case _ => None
-    }
-  }
-
-  object Apply extends ApplyHelper {
-    def unapply(tree: Tree): Option[(Tree, Seq[Tree])] = tree match {
-      case c.Apply(fun, Seq(c.Typed(c.SeqLiteral(args, _), _))) => Some((fun, args))
-      case c.Apply(fun, args) => Some((fun, args))
-      case _ => None
-    }
-  }
 
   object SeqLiteral extends SeqLiteralHelper {
-    def unapply(tree: Tree): Option[Seq[Tree]] = tree match {
+    def unapply(tree: Tree): Option[Seq[TermTree]] = tree match {
       case c.Typed(c.SeqLiteral(elems,_), _) => Some(elems)
       case _ => None
     }
@@ -530,12 +744,6 @@ class TypeToolbox(enclosingPosition: Position)(implicit ctx: Context) extends To
       case _ => None
     }
   }
-
-  object Assign extends AssignHelper {
-    def unapply(tree: Tree): Option[(Tree, Tree)] = tree match {
-      case c.Assign(lhs, rhs) => Some((lhs, rhs))
-      case _ => None
-    }
-  } */
+  */
 
 }
