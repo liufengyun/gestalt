@@ -53,12 +53,12 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def isValParam: Boolean =
       dottyMods.is(Flags.Param) &&
         !dottyMods.is(Flags.Mutable) &&
-        !dottyMods.is(Flags.allOf(Flags.Private | Flags.Local))
+        !dottyMods.is(Flags.allOf(Flags.Private, Flags.Local))
 
     def isVarParam: Boolean =
       dottyMods.is(Flags.Param) &&
         dottyMods.is(Flags.Mutable) &&
-        !dottyMods.is(Flags.allOf(Flags.Private | Flags.Local))
+        !dottyMods.is(Flags.allOf(Flags.Private, Flags.Local))
 
     // can be empty or `this`
     def setPrivate(within: String): Mods =
@@ -548,6 +548,20 @@ class StructToolbox(enclosingPosition: Position)(implicit ctx: Context) extends 
       ).withMods(mods)
   }
 
+  def toTypeParamRep(tree: TypeParam): TypeParamRep = tree match {
+    case c.TypeDef(_, c.LambdaTypeTree(tparams1, _)) =>
+      new TypeParamRep {
+        def mods: Mods = tree.mods
+        def name: String = tree.name.show
+        def tparams: Seq[TypeParam] = tparams1
+      }
+    case c.TypeDef(_, _) =>  // bounds
+      new TypeParamRep {
+        def mods: Mods = tree.mods
+        def name: String = tree.name.show
+        def tparams: Seq[TypeParam] = Nil
+      }
+  }
 
   def toValDefRep(tree: ValDef): ValDefRep = new ValDefRep {
     def mods: Mods = tree.mods

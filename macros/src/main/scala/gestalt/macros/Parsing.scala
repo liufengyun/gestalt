@@ -89,21 +89,6 @@ class testTypes extends StaticAnnotation {
 
     // TODO: TypeRefine
 
-    // actual = parse(" <: A")
-    // expect = TypeBounds(None, Some(TypeIdent("A")))
-    // println(s"expect: $expect"); println(s"actual: $actual")
-    // assert(actual.toString == expect.toString)
-
-    // actual = parse(" >: A")
-    // expect = TypeBounds(Some(TypeIdent("A")), None)
-    // println(s"expect: $expect"); println(s"actual: $actual")
-    // assert(actual.toString == expect.toString)
-
-    // actual = parse(" >: C <: A")
-    // expect = TypeBounds(Some(TypeIdent("C")), Some(TypeIdent("A")))
-    // println(s"expect: $expect"); println(s"actual: $actual")
-    // assert(actual.toString == expect.toString)
-
     actual = parse("(=> Int) => Int")
     expect = TypeFunction(List(TypeByName(TypeIdent("Int"))), TypeIdent("Int"))
     // println(s"expect: $expect"); println(s"actual: $actual")
@@ -534,6 +519,74 @@ class testDefinition extends StaticAnnotation {
     expect = TypeDecl(emptyMods, "T", Nil,
       Some(TypeBounds(Some(TypeIdent("B")), Some(TypeIdent("A"))))
     )
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("trait A")
+    expect = Trait(emptyMods, "A", Nil, emptyMods, Nil, Nil, None, Nil)
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("trait A extends c.B")
+    expect = Trait(emptyMods, "A", Nil, emptyMods, Nil,
+      InitCall(Some(Ident("c")), "B", Nil, Nil) :: Nil,
+      None, Nil
+    )
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("trait A extends c.B { self => def f[T](x: T): T = ??? }")
+    expect = Trait(emptyMods, "A", Nil, emptyMods, Nil,
+      InitCall(Some(Ident("c")), "B", Nil, Nil) :: Nil,
+      Some(Self("self")),
+      DefDef(emptyMods, "f",
+        TypeParam(emptyMods, "T", Nil, None, Nil) :: Nil,
+        (Param(emptyMods, "x", Some(TypeIdent("T")), None) :: Nil) :: Nil,
+        Some(TypeIdent("T")), Ident("???")
+      ) :: Nil
+    )
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("case class A[+T](val x: T) extends c.B(3) { def this() = this(3) }")
+    expect = Class(emptyMods, "A",
+      TypeParam(emptyMods, "T", Nil, None, Nil) :: Nil,
+      emptyMods,
+      (Param(emptyMods, "x", Some(TypeIdent("T")), None) :: Nil) :: Nil,
+      InitCall(Some(Ident("c")), "B", Nil, (Lit(3) :: Nil) :: Nil ) :: Nil,
+      None,
+      SecondaryCtor(emptyMods, List(Nil), Apply(This(""), Lit(3) :: Nil)) :: Nil
+    )
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+    assert(actual.asInstanceOf[Class].mods.isCase)
+    assert(actual.asInstanceOf[Class].paramss.head.head.mods.isValParam)
+    assert(actual.asInstanceOf[Class].tparams.head.mods.isCovariant)
+    assert(!actual.asInstanceOf[Class].tparams.head.mods.isContravariant)
+
+    actual = parse("object A extends c.B { self => def f[T](x: T): T = ??? }")
+    expect = Object(emptyMods, "A",
+      InitCall(Some(Ident("c")), "B", Nil, Nil) :: Nil,
+      Some(Self("self")),
+      DefDef(emptyMods, "f",
+        TypeParam(emptyMods, "T", Nil, None, Nil) :: Nil,
+        (Param(emptyMods, "x", Some(TypeIdent("T")), None) :: Nil) :: Nil,
+        Some(TypeIdent("T")), Ident("???")
+      ) :: Nil
+    )
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("new c.B with C { self => def f[T](x: T): T = ??? }")
+    expect = New(AnonymClass(
+      InitCall(Some(Ident("c")), "B", Nil, Nil) :: InitCall(None, "C", Nil, Nil) :: Nil,
+      Some(Self("self")),
+      DefDef(emptyMods, "f",
+        TypeParam(emptyMods, "T", Nil, None, Nil) :: Nil,
+        (Param(emptyMods, "x", Some(TypeIdent("T")), None) :: Nil) :: Nil,
+        Some(TypeIdent("T")), Ident("???")
+      ) :: Nil
+    ))
     // println(s"expect: $expect"); println(s"actual: $actual")
     assert(actual.toString == expect.toString)
 

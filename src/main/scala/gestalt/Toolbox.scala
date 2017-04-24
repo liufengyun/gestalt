@@ -272,6 +272,13 @@ trait StructToolbox extends Toolbox {
              tptOpt: Option[TypeTree] = this.tpt, defaultOpt: Option[Tree] = this.default): Param
   }
 
+  implicit def toTypeParamRep(tree: TypeParam): TypeParamRep
+  trait TypeParamRep {
+    def mods: Mods
+    def name: String
+    def tparams: Seq[TypeParam]
+  }
+
   implicit def toClassRep(tree: Class): ClassRep
   trait ClassRep {
     def mods: Mods
