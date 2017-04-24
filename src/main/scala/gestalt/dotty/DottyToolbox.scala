@@ -730,12 +730,6 @@ class TypeToolbox(enclosingPosition: Position)(implicit ctx: Context) extends To
       case _ => None
     }
   }
-
-  object Assign extends AssignHelper {
-    def unapply(tree: Tree): Option[(Tree, Tree)] = tree match {
-      case c.Assign(lhs, rhs) => Some((lhs, rhs))
-      case _ => None
-    }
-  } */
+  */
 
 }

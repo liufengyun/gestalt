@@ -512,6 +512,31 @@ class testDefinition extends StaticAnnotation {
     assert(actual.asInstanceOf[DefDecl].paramss.last.head.mods.isImplicit)
     assert(actual.asInstanceOf[DefDecl].paramss.last.last.mods.isImplicit)
 
+    actual = parse("type T = Int")
+    expect = TypeAlias(emptyMods, "T", Nil, TypeIdent("Int"))
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("type T = Int")
+    expect = TypeAlias(emptyMods, "T", Nil, TypeIdent("Int"))
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("type Rep[T <: A] = Int => T")
+    expect = TypeAlias(emptyMods, "Rep",
+      TypeParam(emptyMods, "T", Nil, Some(TypeBounds(None, Some(TypeIdent("A")))), Nil) :: Nil,
+      TypeFunction(TypeIdent("Int") :: Nil, TypeIdent("T"))
+    )
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
+    actual = parse("type T >: B <: A")
+    expect = TypeDecl(emptyMods, "T", Nil,
+      Some(TypeBounds(Some(TypeIdent("B")), Some(TypeIdent("A"))))
+    )
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+
     defn
   }
 }
