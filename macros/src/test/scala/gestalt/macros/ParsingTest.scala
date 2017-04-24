@@ -8,5 +8,9 @@ class ParsingTest extends TestSuite {
   test("parse terms") {
     @testTerms val x = 3
   }
+
+  test("parse definitions ") {
+    @testDefinition val x = 3
+  }
 }
 

@@ -146,7 +146,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   }
 
   def Trait(mods: Mods, name: String, tparams: Seq[TypeParam], ctorMods: Mods, paramss: Seq[Seq[Param]], parents: Seq[InitCall], self: Option[Self], stats: Seq[Tree]): Trait =
-    Class(mods, name, tparams, ctorMods, paramss, parents, self, stats).asInstanceOf[d.TypeDef].withFlags(Flags.Trait).withPosition
+    Class(mods.dottyMods | Flags.Trait, name, tparams, ctorMods, paramss, parents, self, stats).withPosition
 
   def TypeDecl(mods: Mods, name: String, tparams: Seq[TypeParam], tboundsOpt: Option[TypeTree]): DefTree = {
     val tbounds = tboundsOpt.getOrElse(d.TypeBoundsTree(d.EmptyTree, d.EmptyTree))
@@ -202,7 +202,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   def Param(mods: Mods, name: String, tpe: Option[TypeTree], default: Option[TermTree]): Param = {
     d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), getOrEmpty(default))
-      .withMods(mods).withFlags(Flags.TermParam).withPosition.asInstanceOf[Param]
+      .withMods(mods.dottyMods | Flags.TermParam).withPosition.asInstanceOf[Param]
   }
 
   def TypeParam(mods: Mods, name: String, tparams: Seq[TypeParam], tboundsOpt: Option[TypeTree], cbounds: Seq[TypeTree]): TypeParam = {

@@ -1761,7 +1761,10 @@ object Parsers {
       def paramClause(): List[Tree] = inParens {
         if (in.token == RPAREN) Nil
         else {
-          if (in.token == IMPLICIT) isImplicit = true
+          if (in.token == IMPLICIT) {
+            in.skipToken()
+            isImplicit = true
+          }
           commaSeparated(param)
         }
       }
@@ -2316,6 +2319,23 @@ object Parsers {
         acceptStatSepUnlessAtEnd()
       }
       (self, stats.toList)
+    }
+
+    def templateStat(): Tree = {
+      val tree =
+        if (in.token == IMPORT)
+          importClause()
+        else if (isExprIntro)
+          expr1()
+        else if (isDefIntro(modifierTokensOrCase))
+          defOrDcl(in.offset, defAnnotsMods(modifierTokens))
+        else {
+          syntaxErrorOrIncomplete("illegal start of definition")
+          null
+        }
+      acceptStatSepUnlessAtEnd()
+
+      tree
     }
 
     /** RefineStatSeq    ::= RefineStat {semi RefineStat}

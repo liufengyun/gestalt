@@ -17,25 +17,19 @@ object Parsing {
     parser.unlift(parser.block()).asInstanceOf[tb.Tree]
   }
 
-  def parseDefinition(tb: StructToolbox, code: String): tb.Tree = {
+  def parseDefinition(tb: StructToolbox, code: String, debug: Boolean = false): tb.Tree = {
     val parser = new Parsers.Parser(tb, "toolbox", true, code.toCharArray) {
       val splices = Nil
     }
-    parser.unlift(parser.localDef(0)).asInstanceOf[tb.Tree]
-  }
-
-  def helper(tb1: StructToolbox): TreeHelper = {
-    new TreeHelper {
-      val tb = tb1
-      val tbName = "toolbox"
-    }
+    val lifted = parser.templateStat()
+    if (debug) println("lifted: " + lifted)
+    parser.unlift(lifted).asInstanceOf[tb.Tree]
   }
 }
 
 class testTypes extends StaticAnnotation {
   def apply(defn: Any): Any = meta {
     import toolbox._
-    val helper = Parsing.helper(toolbox)
 
     def parse(code: String) = Parsing.parseType(toolbox, code)
 
@@ -144,7 +138,6 @@ class testTypes extends StaticAnnotation {
 class testTerms extends StaticAnnotation {
   def apply(defn: Any): Any = meta {
     import toolbox._
-    val helper = Parsing.helper(toolbox)
 
     def parse(code: String) = Parsing.parseTerm(toolbox, code)
 
@@ -445,9 +438,8 @@ class testTerms extends StaticAnnotation {
 class testDefinition extends StaticAnnotation {
   def apply(defn: Any): Any = meta {
     import toolbox._
-    val helper = Parsing.helper(toolbox)
 
-    def parse(code: String) = Parsing.parseDefinition(toolbox, code)
+    def parse(code: String, debug: Boolean = false) = Parsing.parseDefinition(toolbox, code, debug)
 
     var actual: AnyRef = parse("val x = 3")
     var expect: AnyRef = ValDef(emptyMods, "x", None, Lit(3))
@@ -482,7 +474,7 @@ class testDefinition extends StaticAnnotation {
     assert(mods.privateWithin == "core")
 
     actual = parse("protected[core] def f: Int = 3").asInstanceOf[DefDef]
-    expect = DefDef(emptyMods, "x", Nil, Nil, Some(TypeIdent("Int")), Lit(3))
+    expect = DefDef(emptyMods, "f", Nil, Nil, Some(TypeIdent("Int")), Lit(3))
     // println(s"expect: $expect"); println(s"actual: $actual")
     assert(actual.toString == expect.toString)
     mods = actual.asInstanceOf[DefDef].mods
@@ -491,7 +483,7 @@ class testDefinition extends StaticAnnotation {
     assert(mods.privateWithin == "core")
 
     actual = parse("def f[T]: T = ???")
-    expect = DefDef(emptyMods, "x",
+    expect = DefDef(emptyMods, "f",
       TypeParam(emptyMods, "T", Nil, None, Nil) :: Nil,
       Nil, Some(TypeIdent("T")), Ident("???")
     )
@@ -499,13 +491,26 @@ class testDefinition extends StaticAnnotation {
     assert(actual.toString == expect.toString)
 
     actual = parse("def f[T](x: T): T = ???")
-    expect = DefDef(emptyMods, "x",
+    expect = DefDef(emptyMods, "f",
       TypeParam(emptyMods, "T", Nil, None, Nil) :: Nil,
       (Param(emptyMods, "x", Some(TypeIdent("T")), None) :: Nil) :: Nil,
       Some(TypeIdent("T")), Ident("???")
     )
     // println(s"expect: $expect"); println(s"actual: $actual")
     assert(actual.toString == expect.toString)
+
+    actual = parse("def f(x: Int)(implicit a: A, b: B): Int")
+    expect = DefDecl(emptyMods, "f", Nil,
+      (Param(emptyMods, "x", Some(TypeIdent("Int")), None) :: Nil) ::
+        (Param(emptyMods, "a", Some(TypeIdent("A")), None) ::
+          Param(emptyMods, "b", Some(TypeIdent("B")), None) :: Nil) :: Nil,
+      TypeIdent("Int")
+    )
+    // println(s"expect: $expect"); println(s"actual: $actual")
+    assert(actual.toString == expect.toString)
+    assert(!actual.asInstanceOf[DefDecl].paramss.head.head.mods.isImplicit)
+    assert(actual.asInstanceOf[DefDecl].paramss.last.head.mods.isImplicit)
+    assert(actual.asInstanceOf[DefDecl].paramss.last.last.mods.isImplicit)
 
     defn
   }

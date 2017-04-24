@@ -43,10 +43,10 @@ trait TreeHelper {
 
   /* -------------------- lifting helpers -------------------------- */
   def liftSeqSeq(trees: Seq[Seq[TermTree]]): TermTree =
-    trees.foldLeft(scalaNil) { (acc, tree) => Infix(liftSeq(tree), "::", acc) }
+    trees.foldRight(scalaNil) { (tree, acc) => Infix(liftSeq(tree), "::", acc) }
 
   def liftSeq(trees: Seq[TermTree]): TermTree =
-    trees.foldLeft(scalaNil) { (acc, tree) => Infix(tree, "::", acc) }
+    trees.foldRight(scalaNil) { (tree, acc) => Infix(tree, "::", acc) }
 
   def liftOption(tree: TermTree): TermTree =
     if (tree == null) scalaNone else scalaSome.appliedTo(tree)
@@ -192,7 +192,7 @@ trait TreeHelper {
   def liftSeqDecl(mods: Mods, vals: Seq[String], tpe: TermTree): TermTree = {
     val rawMods = mods.withAnnotations(mods.annotations.map(unlift))
     val raw = SeqDecl(rawMods, vals, unliftAs[TypeTree](tpe))
-    val liftedNames = vals.foldLeft(scalaNil) { (acc, name) => Infix(Lit(name), "::", acc) }
+    val liftedNames = vals.foldRight(scalaNil) { (name, acc) => Infix(Lit(name), "::", acc) }
     val lifted = toolbox.select("SeqDecl").appliedTo(liftMods(mods), liftedNames, tpe)
 
     map(lifted, raw)
