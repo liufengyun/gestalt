@@ -23,8 +23,8 @@ object plusObject {
 
   def varargs(items: Int*): Int = meta {
     items match {
-      case toolbox.SeqLiteral(items: Seq[toolbox.Tree]) =>
-        items.reduceLeft((a, b) => q"$a + $b")
+      case toolbox.SeqLiteral(items: Seq[toolbox.TermTree]) =>
+        items.reduceLeft[toolbox.TermTree]((a, b) => q"$a + $b")
       case q"$items: $_" =>
         q"$items.reduce((a:Int,b:Int)=> a + b)"
     }
@@ -32,8 +32,8 @@ object plusObject {
 
   def deconstructApply(items: Any): Int = meta {
     items match {
-      case toolbox.Apply(prefix: toolbox.Tree, items: Seq[toolbox.Tree]) =>
-        items.reduceLeft((a, b) => q"$a + $b")
+      case toolbox.Apply(prefix: toolbox.Tree, items: Seq[toolbox.TermTree]) =>
+        items.reduceLeft[toolbox.TermTree]((a, b) => q"$a + $b")
       case _ =>
         toolbox.error("expected application of Ints",items)
         toolbox.Lit(null)
