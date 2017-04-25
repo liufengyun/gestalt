@@ -72,7 +72,7 @@ object Expander {
           val mods1 = mdef.mods.withAnnotations(mdef.mods.annotations.filter(_ ne ann))
           mdef.withMods(mods1)
         }
-        val result = impl.invoke(null, new StructToolbox(ann.pos), ann, expandee).asInstanceOf[untpd.Tree]
+        val result = impl.invoke(null, new Toolbox(ann.pos), ann, expandee).asInstanceOf[untpd.Tree]
         Some(result)
       case _ =>
         None
@@ -97,7 +97,7 @@ object Expander {
       val impl = moduleClass.getDeclaredMethods().find(_.getName == method.toString).get
       impl.setAccessible(true)
 
-      val trees  = new TypeToolbox(tree.pos) :: prefix :: targs ++ argss.flatten
+      val trees  = new Toolbox(tree.pos) :: prefix :: targs ++ argss.flatten
       impl.invoke(null, trees: _*).asInstanceOf[untpd.Tree]
     case _ =>
       ctx.warning(s"Unknown macro expansion: $tree")

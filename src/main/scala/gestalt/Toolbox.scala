@@ -2,7 +2,15 @@ package scala.gestalt
 
 case class Location(fileName: String, line: Int, column: Int)
 
-trait Toolbox {
+trait Toolbox extends Trees with Symbols with Types {
+  // diagnostics - the implementation takes the position from the tree
+  def error(message: String, tree: Tree): Unit
+
+  // generate fresh name
+  def fresh(prefix: String = "$local"): String
+}
+
+trait Trees {
   // safety by construction -- implementation can have TypeTree = Tree
   type Tree     >: Null <: AnyRef
   type TypeTree >: Null <: Tree
@@ -64,12 +72,6 @@ trait Toolbox {
     def annotations: Seq[Tree]
   }
 
-  // diagnostics - the implementation takes the position from the tree
-  def error(message: String, tree: Tree): Unit
-
-  // generate fresh name
-  def fresh(prefix: String = "$local"): String
-
   // modifiers
   def emptyMods: Mods
 
@@ -110,7 +112,6 @@ trait Toolbox {
   def TypeRepeated(tpe: TypeTree): TypeTree
   def TypeByName(tpe: TypeTree): TypeTree
   def TypeAnnotated(tpe: TypeTree, annots: Seq[Tree]): TypeTree
-
 
   // terms
   def Lit(value: Any): TermTree
@@ -164,88 +165,71 @@ trait Toolbox {
   def ImportHide(name: String): Tree
 
   // extractors
-  private[gestalt] val Lit: LitHelper
+  val Lit: LitHelper
   trait LitHelper {
     def unapply(tree: Tree): Option[Any]
   }
 
-  private[gestalt] val Apply: ApplyHelper
+  val Apply: ApplyHelper
   trait ApplyHelper {
     def unapply(tree: Tree): Option[(TermTree, Seq[TermTree])]
   }
 
-  private[gestalt] val Ident: IdentHelper
+  val ApplyType: ApplyTypeHelper
+  trait ApplyTypeHelper {
+    def unapply(tree: Tree): Option[(TermTree, Seq[TypeTree])]
+  }
+
+  val Ident: IdentHelper
   trait IdentHelper {
     def unapply(tree: Tree): Option[String]
   }
 
-  private[gestalt] val This: ThisHelper
+  val This: ThisHelper
   trait ThisHelper {
     def unapply(tree: Tree): Option[String]
   }
 
-  private[gestalt] val Select: SelectHelper
+  val Select: SelectHelper
   trait SelectHelper {
     def unapply(tree: Tree): Option[(TermTree, String)]
   }
 
-  private[gestalt] val Ascribe: AscribeHelper
+  val Ascribe: AscribeHelper
   trait AscribeHelper {
     def unapply(tree: Tree): Option[(TermTree, TypeTree)]
   }
 
-  private[gestalt] val Assign: AssignHelper
+  val Assign: AssignHelper
   trait AssignHelper {
     def unapply(tree: Tree): Option[(TermTree, TermTree)]
   }
 
-  private[gestalt] val Annotated: AnnotatedHelper
+  val Annotated: AnnotatedHelper
   trait AnnotatedHelper {
     def unapply(tree: Tree): Option[(TermTree, Seq[Tree])]
   }
 
-  private[gestalt] val Block: BlockHelper
+  val Block: BlockHelper
   trait BlockHelper {
     def unapply(tree: Tree): Option[Seq[Tree]]
   }
 
-  private[gestalt] val PartialFunction: PartialFunctionHelper
+  val PartialFunction: PartialFunctionHelper
   trait PartialFunctionHelper {
     def unapply(tree: Tree): Option[Seq[Tree]]
   }
 
-  private[gestalt] val Tuple: TupleHelper
+  val Tuple: TupleHelper
   trait TupleHelper {
     def unapply(tree: Tree): Option[Seq[TermTree]]
   }
 
-  // helpers
-  def ApplySeq(fun: TermTree, argss: Seq[Seq[TermTree]]): Tree = argss match {
-    case args :: rest => rest.foldLeft(Apply(fun, args)) { (acc, args) => Apply(acc, args) }
-    case _ => Apply(fun, Nil)
+  val SeqLiteral: SeqLiteralHelper
+  trait SeqLiteralHelper {
+    def unapply(tree: Tree): Option[Seq[TermTree]]
   }
 
-  object ApplySeq {
-    def unapply(call: TermTree):  Option[(Tree, Seq[Seq[TermTree]])] = {
-      def recur(acc: Seq[Seq[TermTree]], term: TermTree): (TermTree, Seq[Seq[TermTree]])  = term match {
-        case Apply(fun, args) => recur(args +: acc, fun) // inner-most is in the front
-        case fun => (fun, acc)
-      }
-
-      Some(recur(Nil, call))
-    }
-  }
-}
-
-/** StructToolbox defines extractors available for inspecting definition trees
- *
- *  To provide solid experience of macros, we only provide extractors and representors
- *  for definition trees, like object, class, trait.
- *
- *  Representors are the recommended way to work with definitions.
- *
- */
-trait StructToolbox extends Toolbox {
   val Object: ObjectHelper
   trait ObjectHelper {
     def unapply(tree: Tree): Option[(Mods, String, Seq[InitCall], Option[Self], Seq[Tree])]
@@ -357,13 +341,27 @@ trait StructToolbox extends Toolbox {
     def unapply(tree: Tree): Option[DefDeclRep]
   }
 
+  // helpers
+  def ApplySeq(fun: TermTree, argss: Seq[Seq[TermTree]]): Tree = argss match {
+    case args :: rest => rest.foldLeft(Apply(fun, args)) { (acc, args) => Apply(acc, args) }
+    case _ => Apply(fun, Nil)
+  }
+
+  object ApplySeq {
+    def unapply(call: TermTree):  Option[(Tree, Seq[Seq[TermTree]])] = {
+      def recur(acc: Seq[Seq[TermTree]], term: TermTree): (TermTree, Seq[Seq[TermTree]])  = term match {
+        case Apply(fun, args) => recur(args +: acc, fun) // inner-most is in the front
+        case fun => (fun, acc)
+      }
+
+      Some(recur(Nil, call))
+    }
+  }
+
 }
 
-/** TypeToolbox defines extractors for inspecting expression trees as well as APIs for types
- */
-trait TypeToolbox extends Toolbox { t =>
+trait Types { this: Toolbox =>
   type Type
-  type Member
 
   /** get the location where the def macro is used */
   def currentLocation: Location
@@ -387,31 +385,19 @@ trait TypeToolbox extends Toolbox { t =>
   def isCaseClass(tp: Type): Boolean
 
   /** val fields of a case class Type -- only the ones declared in primary constructor */
-  def caseFields(tp: Type): Seq[Member]
+  def caseFields(tp: Type): Seq[Symbol]
 
   /* field with the given name */
-  def field(tp: Type, name: String): Option[Member]
+  def field(tp: Type, name: String): Option[Symbol]
+}
+
+
+trait Symbols { this: Toolbox =>
+  type Symbol
 
   /** name of a member */
-  def name(mem: Member): String
+  def name(mem: Symbol): String
 
   /** type of a member with respect to a prefix */
-  def asSeenFrom(mem: Member, prefix: Type): Type
-
-  /*----------------------- extractors ------------------------*/
-  val Lit: LitHelper
-  val Apply: ApplyHelper
-  val Ident: IdentHelper
-  val Select: SelectHelper
-  val Ascribe: AscribeHelper
-  val Annotated: AnnotatedHelper
-  val Block: BlockHelper
-  val Tuple: TupleHelper
-  val Assign: AssignHelper
-  val This: ThisHelper
-
-  val SeqLiteral: SeqLiteralHelper
-  trait SeqLiteralHelper {
-    def unapply(tree: Tree): Option[Seq[TermTree]]
-  }
+  def asSeenFrom(mem: Symbol, prefix: Type): Type
 }

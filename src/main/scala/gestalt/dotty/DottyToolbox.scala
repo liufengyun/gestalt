@@ -1,6 +1,6 @@
 package scala.gestalt.dotty
 
-import scala.gestalt.{Toolbox => Tbox, StructToolbox => STbox, TypeToolbox => TTbox, Location}
+import scala.gestalt.{Toolbox => Tbox, Location}
 
 import dotty.tools.dotc._
 import core._
@@ -15,6 +15,7 @@ import util.Positions
 import Positions.Position
 
 import scala.collection.mutable.ListBuffer
+
 
 class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   type Tree = d.Tree
@@ -483,9 +484,21 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     }
   }
 
-}
 
-class StructToolbox(enclosingPosition: Position)(implicit ctx: Context) extends Toolbox(enclosingPosition)(ctx) with STbox {
+  object SeqLiteral extends SeqLiteralHelper {
+    def unapply(tree: Tree): Option[Seq[TermTree]] = tree match {
+      case c.Typed(c.SeqLiteral(elems,_), _) => Some(elems)
+      case _ => None
+    }
+  }
+
+  object ApplyType extends ApplyTypeHelper {
+    def unapply(tree: Tree): Option[(TermTree, Seq[TypeTree])] = tree match {
+      case c.TypeApply(fun, args) => Some((fun, args))
+      case _ => None
+    }
+  }
+
 
   object Object extends ObjectHelper {
     def unapply(tree: Tree): Option[(Mods, String, Seq[InitCall], Option[Self], Seq[Tree])] = tree match {
@@ -679,11 +692,9 @@ class StructToolbox(enclosingPosition: Position)(implicit ctx: Context) extends 
         }
       }
   }
-}
 
-class TypeToolbox(enclosingPosition: Position)(implicit ctx: Context) extends Toolbox(enclosingPosition)(ctx) with TTbox {
   type Type = Types.Type
-  type Member = Symbols.Symbol
+  type Symbol = Symbols.Symbol
 
   /** get the location where the def macro is used */
   def currentLocation: Location = Location(ctx.compilationUnit.source.file.name, enclosingPosition.line(), enclosingPosition.column())
@@ -707,7 +718,7 @@ class TypeToolbox(enclosingPosition: Position)(implicit ctx: Context) extends To
   def isCaseClass(tp: Type): Boolean = tp.classSymbol.is(Flags.Case)
 
   /** val fields of a case class Type -- only the ones declared in primary constructor */
-  def caseFields(tp: Type): Seq[Member] = {
+  def caseFields(tp: Type): Seq[Symbol] = {
     val sym = tp.classSymbol.asClass
     if (!sym.is(Flags.Case)) return Nil
 
@@ -715,7 +726,7 @@ class TypeToolbox(enclosingPosition: Position)(implicit ctx: Context) extends To
   }
 
   /* field with the given name */
-  def field(tp: Type, name: String): Option[Member] = {
+  def field(tp: Type, name: String): Option[Symbol] = {
     val sym = tp.widen.classSymbol.asClass
     val denot = sym.info.memberExcluding(name.toTermName, Flags.Method)
 
@@ -724,26 +735,10 @@ class TypeToolbox(enclosingPosition: Position)(implicit ctx: Context) extends To
   }
 
   /** name of a member */
-  def name(mem: Member): String = mem.showName
+  def name(mem: Symbol): String = mem.showName
 
   /** type of a member with respect to a prefix */
-  def asSeenFrom(mem: Member, prefix: Type): Type = mem.asSeenFrom(prefix).info
+  def asSeenFrom(mem: Symbol, prefix: Type): Type = mem.asSeenFrom(prefix).info
 
-
-  object SeqLiteral extends SeqLiteralHelper {
-    def unapply(tree: Tree): Option[Seq[TermTree]] = tree match {
-      case c.Typed(c.SeqLiteral(elems,_), _) => Some(elems)
-      case _ => None
-    }
-  }
-
-  /*
-  object ApplyType extends ApplyTypeHelper {
-    def unapply(tree: Tree): Option[(Tree, Seq[TypeTree])] = tree match {
-      case c.TypeApply(fun, args) => Some((fun, args))
-      case _ => None
-    }
-  }
-  */
 
 }
