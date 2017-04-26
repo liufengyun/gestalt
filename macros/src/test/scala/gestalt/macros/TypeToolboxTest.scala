@@ -104,9 +104,9 @@ class TypeToolboxTest extends TestSuite {
       def g = 3
     }
 
-    assert(fieldIn[Base]("x").nonEmpty)
-    assert(fieldIn[Derived]("x").isEmpty)
-    assert(fieldIn[Derived]("y").nonEmpty)
+    assert(fieldIn[Base]("x") == "x")
+    assert(fieldIn[Derived]("x") == "")
+    assert(fieldIn[Derived]("y") == "y")
     assert(fieldsIn[Base].size == 1)
     assert(fieldsIn[Base].head == "x")
     assert(fieldsIn[Derived].size == 1)
@@ -126,20 +126,27 @@ class TypeToolboxTest extends TestSuite {
       def g = 3
     }
 
-    assert(method[Base]("f").nonEmpty)
-    assert(method[Base]("x").isEmpty)
-    assert(methodIn[Base]("f").nonEmpty)
-    assert(methodIn[Base]("x").isEmpty)
+    assert(method[Base]("f") == List("f"))
+    assert(method[Base]("x") == Nil)
+    assert(methodIn[Base]("f") == List("f"))
+    assert(methodIn[Base]("x") == Nil)
     assert(methodsIn[Base].size == 1)
     assert(methodsIn[Base].head == "f")
 
-    assert(method[Derived]("f").nonEmpty)
-    assert(method[Derived]("g").nonEmpty)
-    assert(method[Derived]("y").isEmpty)
-    assert(methodIn[Derived]("f").isEmpty)
-    assert(methodIn[Derived]("g").nonEmpty)
-    assert(methodIn[Derived]("x").isEmpty)
-    assert(methodsIn[Derived].size == 1)
-    assert(methodsIn[Derived].head == "g")
+    assert(method[Derived]("f") == List("f"))
+    assert(method[Derived]("g") == List("g"))
+    assert(method[Derived]("y") == Nil)
+    assert(methodIn[Derived]("f") == Nil)
+    assert(methodIn[Derived]("g") == List("g"))
+    assert(methodIn[Derived]("x") == Nil)
+    assert(methodsIn[Derived] == List("g"))
+
+    class Overloading {
+      def f(a: Int): Int = ???
+      def f(a: String): Int = ???
+    }
+
+    assert(methodsIn[Overloading] == List("f", "f"))
+    assert(methodIn[Overloading]("f") == List("f", "f"))
   }
 }
