@@ -63,8 +63,53 @@ object TypeToolbox {
     val toolbox.Lit(fd: String) = mem
     val expectedTp = toolbox.typeOf(Expected)
     val prefixTp = toolbox.typeOf(Prefix)
-    val fieldTp = toolbox.asSeenFrom(toolbox.field(prefixTp, fd).get, prefixTp)
+    val fieldTp = toolbox.asSeenFrom(toolbox.fieldIn(prefixTp, fd).get, prefixTp)
     val res = toolbox.<:<(fieldTp, expectedTp)
     toolbox.Lit(res)
+  }
+
+  def fieldIn[T](mem: String): String = meta {
+    val toolbox.Lit(fd: String) = mem
+    val tp = toolbox.typeOf(T)
+    val field = toolbox.fieldIn(tp, fd)
+    if (field.isEmpty) toolbox.Lit("")
+    else toolbox.Lit(toolbox.name(field.get))
+  }
+
+  def fieldsIn[T]: Seq[String] = meta {
+    val tp = toolbox.typeOf(T)
+    val fields = toolbox.fieldsIn(tp).map(s => toolbox.Lit(toolbox.name(s)))
+
+    q"List(..$fields)"
+  }
+
+  def methodIn[T](mem: String): Seq[String] = meta {
+    val toolbox.Lit(md: String) = mem
+    val tp = toolbox.typeOf(T)
+    val methods = toolbox.methodIn(tp, md).map(s => toolbox.Lit(toolbox.name(s)))
+
+    q"List(..$methods)"
+  }
+
+  def methodsIn[T]: Seq[String] = meta {
+    val tp = toolbox.typeOf(T)
+    val methods = toolbox.methodsIn(tp).map(s => toolbox.Lit(toolbox.name(s)))
+
+    q"List(..$methods)"
+  }
+
+  def method[T](mem: String): Seq[String] = meta {
+    val toolbox.Lit(md: String) = mem
+    val tp = toolbox.typeOf(T)
+    val methods = toolbox.method(tp, md).map(s => toolbox.Lit(toolbox.name(s)))
+
+    q"List(..$methods)"
+  }
+
+  def methods[T]: Seq[String] = meta {
+    val tp = toolbox.typeOf(T)
+    val methods = toolbox.methods(tp).map(s => toolbox.Lit(toolbox.name(s)))
+
+    q"List(..$methods)"
   }
 }

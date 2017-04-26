@@ -3,10 +3,13 @@ package scala.gestalt
 case class Location(fileName: String, line: Int, column: Int)
 
 trait Toolbox extends Trees with Symbols with Types {
-  // diagnostics - the implementation takes the position from the tree
+  /** get the location where the def macro is used */
+  def currentLocation: Location
+
+  /** diagnostics - the implementation takes the position from the tree */
   def error(message: String, tree: Tree): Unit
 
-  // generate fresh name
+  /** generate fresh unique name */
   def fresh(prefix: String = "$local"): String
 }
 
@@ -363,9 +366,6 @@ trait Trees {
 trait Types { this: Toolbox =>
   type Type
 
-  /** get the location where the def macro is used */
-  def currentLocation: Location
-
   /** are the two types equal? */
   def =:=(tp1: Type, tp2: Type): Boolean
 
@@ -384,20 +384,42 @@ trait Types { this: Toolbox =>
   /** does the type refer to a case class? */
   def isCaseClass(tp: Type): Boolean
 
-  /** val fields of a case class Type -- only the ones declared in primary constructor */
+  /** fields of a case class Type -- only the ones declared in primary constructor */
   def caseFields(tp: Type): Seq[Symbol]
 
-  /* field with the given name */
-  def field(tp: Type, name: String): Option[Symbol]
+  /** field with the given name directly declared in the class */
+  def fieldIn(tp: Type, name: String): Option[Symbol]
+
+  /** fields directly declared in the class */
+  def fieldsIn(tp: Type): Seq[Symbol]
+
+  /** get non-private named methods defined directly inside the class */
+  def methodIn(tp: Type, name: String): Seq[MethodSymbol]
+
+  /** get all non-private methods defined directly inside the class, exluding constructors */
+  def methodsIn(tp: Type): Seq[MethodSymbol]
+
+  /** get named non-private methods declared or inherited */
+  def method(tp: Type, name: String): Seq[MethodSymbol]
+
+  /** get all non-private methods declared or inherited */
+  def methods(tp: Type): Seq[MethodSymbol]
+
+  /** get members directly declared or inherited that satisfy the predicate */
+  // def members(tp: Type, pred: Symbol => Boolean = s => true): Seq[Symbol]
 }
 
 
 trait Symbols { this: Toolbox =>
   type Symbol
+  type MethodSymbol <: Symbol
 
   /** name of a member */
   def name(mem: Symbol): String
 
   /** type of a member with respect to a prefix */
   def asSeenFrom(mem: Symbol, prefix: Type): Type
+
+  // def tparams(method: MethodSymbol): Seq[String]
+  // def paramss(method: MethodSymbol): Seq[Seq[(name, Symbol)]]
 }

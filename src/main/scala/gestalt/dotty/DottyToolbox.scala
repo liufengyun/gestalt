@@ -693,8 +693,11 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       }
   }
 
+  /*------------------------------- types -------------------------------------*/
+
   type Type = Types.Type
   type Symbol = Symbols.Symbol
+  type MethodSymbol = Symbols.Symbol
 
   /** get the location where the def macro is used */
   def currentLocation: Location = Location(ctx.compilationUnit.source.file.name, enclosingPosition.line(), enclosingPosition.column())
@@ -726,19 +729,44 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   }
 
   /* field with the given name */
-  def field(tp: Type, name: String): Option[Symbol] = {
+  def fieldIn(tp: Type, name: String): Option[Symbol] = {
     val sym = tp.widen.classSymbol.asClass
-    val denot = sym.info.memberExcluding(name.toTermName, Flags.Method)
+    val denot = sym.info.findDecl(name.toTermName, Flags.Method)
 
     if (denot.exists) Some(denot.symbol)
     else None
   }
 
+  def fieldsIn(tp: Type): Seq[Symbol] = {
+    val sym = tp.widen.classSymbol.asClass
+    sym.info.decls.filter(sym => sym.isTerm && !sym.is(Flags.Method)).map(_.symbol).toSeq
+  }
+
+  def method(tp: Type, name: String): Seq[MethodSymbol] = {
+    val sym = tp.widen.classSymbol.asClass
+    sym.info.nonPrivateMember(name.toTermName).alternatives.filter(_.symbol.is(Flags.Method)).map(_.symbol)
+  }
+
+  def methods(tp: Type): Seq[MethodSymbol] = {
+    val sym = tp.widen.classSymbol.asClass
+    sym.info.membersBasedOnFlags(Flags.Method, Flags.Private).flatMap(_.alternatives).map(_.symbol).toSeq
+  }
+
+  def methodIn(tp: Type, name: String): Seq[MethodSymbol] = {
+    val sym = tp.widen.classSymbol.asClass
+    sym.info.nonPrivateDecl(name.toTermName).alternatives.filter(_.symbol.is(Flags.Method)).map(_.symbol)
+  }
+
+  def methodsIn(tp: Type): Seq[MethodSymbol] = {
+    val sym = tp.widen.classSymbol.asClass
+    sym.info.decls.filter(sym => sym.isTerm && sym.is(Flags.Method) && !sym.isConstructor).map(_.symbol).toSeq
+  }
+
+  /*------------------------------- symbols -------------------------------------*/
   /** name of a member */
   def name(mem: Symbol): String = mem.showName
 
   /** type of a member with respect to a prefix */
   def asSeenFrom(mem: Symbol, prefix: Type): Type = mem.asSeenFrom(prefix).info
-
 
 }

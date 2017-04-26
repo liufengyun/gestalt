@@ -1,7 +1,9 @@
 import scala.gestalt._
 
+
 class TypeToolboxTest extends TestSuite {
   import TypeToolbox._
+
 
   type Age = Int
 
@@ -87,5 +89,64 @@ class TypeToolboxTest extends TestSuite {
     }
     val box = new InBox
     assert(asSeenFrom[box.type, Int]("x"))
+  }
+
+  test("fields") {
+    trait Base {
+      val x = 3
+
+      def f = 4
+    }
+
+    class Derived extends Base {
+      val y = 3
+
+      def g = 3
+    }
+
+    assert(fieldIn[Base]("x") == "x")
+    assert(fieldIn[Derived]("x") == "")
+    assert(fieldIn[Derived]("y") == "y")
+    assert(fieldsIn[Base].size == 1)
+    assert(fieldsIn[Base].head == "x")
+    assert(fieldsIn[Derived].size == 1)
+    assert(fieldsIn[Derived].head == "y")
+  }
+
+  test("methods") {
+     trait Base {
+      val x = 3
+
+      def f = 4
+    }
+
+    class Derived extends Base {
+      val y = 3
+
+      def g = 3
+    }
+
+    assert(method[Base]("f") == List("f"))
+    assert(method[Base]("x") == Nil)
+    assert(methodIn[Base]("f") == List("f"))
+    assert(methodIn[Base]("x") == Nil)
+    assert(methodsIn[Base].size == 1)
+    assert(methodsIn[Base].head == "f")
+
+    assert(method[Derived]("f") == List("f"))
+    assert(method[Derived]("g") == List("g"))
+    assert(method[Derived]("y") == Nil)
+    assert(methodIn[Derived]("f") == Nil)
+    assert(methodIn[Derived]("g") == List("g"))
+    assert(methodIn[Derived]("x") == Nil)
+    assert(methodsIn[Derived] == List("g"))
+
+    class Overloading {
+      def f(a: Int): Int = ???
+      def f(a: String): Int = ???
+    }
+
+    assert(methodsIn[Overloading] == List("f", "f"))
+    assert(methodIn[Overloading]("f") == List("f", "f"))
   }
 }
