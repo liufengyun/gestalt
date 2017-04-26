@@ -1,7 +1,9 @@
 import scala.gestalt._
 
+
 class TypeToolboxTest extends TestSuite {
   import TypeToolbox._
+
 
   type Age = Int
 
@@ -87,5 +89,57 @@ class TypeToolboxTest extends TestSuite {
     }
     val box = new InBox
     assert(asSeenFrom[box.type, Int]("x"))
+  }
+
+  test("fields") {
+    trait Base {
+      val x = 3
+
+      def f = 4
+    }
+
+    class Derived extends Base {
+      val y = 3
+
+      def g = 3
+    }
+
+    assert(fieldIn[Base]("x").nonEmpty)
+    assert(fieldIn[Derived]("x").isEmpty)
+    assert(fieldIn[Derived]("y").nonEmpty)
+    assert(fieldsIn[Base].size == 1)
+    assert(fieldsIn[Base].head == "x")
+    assert(fieldsIn[Derived].size == 1)
+    assert(fieldsIn[Derived].head == "y")
+  }
+
+  test("methods") {
+     trait Base {
+      val x = 3
+
+      def f = 4
+    }
+
+    class Derived extends Base {
+      val y = 3
+
+      def g = 3
+    }
+
+    assert(method[Base]("f").nonEmpty)
+    assert(method[Base]("x").isEmpty)
+    assert(methodIn[Base]("f").nonEmpty)
+    assert(methodIn[Base]("x").isEmpty)
+    assert(methodsIn[Base].size == 1)
+    assert(methodsIn[Base].head == "f")
+
+    assert(method[Derived]("f").nonEmpty)
+    assert(method[Derived]("g").nonEmpty)
+    assert(method[Derived]("y").isEmpty)
+    assert(methodIn[Derived]("f").isEmpty)
+    assert(methodIn[Derived]("g").nonEmpty)
+    assert(methodIn[Derived]("x").isEmpty)
+    assert(methodsIn[Derived].size == 1)
+    assert(methodsIn[Derived].head == "g")
   }
 }
