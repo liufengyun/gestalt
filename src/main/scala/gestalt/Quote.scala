@@ -378,9 +378,9 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     case m.Term.Do(body, expr) =>
       selectToolbox("DoWhile").appliedTo(lift(body), lift(expr))
     case m.Term.For(enums, body) =>
-      selectToolbox("For").appliedTo(liftSeq(enums), lift(body))
+      selectToolbox("For.ForDo").appliedTo(liftSeq(enums), lift(body))
     case m.Term.ForYield(enums, body) =>
-      selectToolbox("For").appliedTo(liftSeq(enums), selectToolbox("Yield").appliedTo(lift(body)))
+      selectToolbox("For.ForYield").appliedTo(liftSeq(enums), lift(body))
     case m.Term.New(m.Template(Nil, Seq(mctor), m.Term.Param(Nil, m.Name.Anonymous(), None, None), None)) =>
       selectToolbox("New").appliedTo(liftInitCall(mctor))
     case m.Term.New(m.Template(_, parents, self, stats)) =>
@@ -577,24 +577,24 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
 
 
     case m.Enumerator.Generator(pat, rhs) =>
-      selectToolbox("GenFrom").appliedTo(lift(pat), lift(rhs))
+      selectToolbox("For.GenFrom").appliedTo(lift(pat), lift(rhs))
     case m.Enumerator.Val(pat, rhs) =>
-      selectToolbox("GenAlias").appliedTo(lift(pat), lift(rhs))
+      selectToolbox("For.GenAlias").appliedTo(lift(pat), lift(rhs))
     case m.Enumerator.Guard(cond) =>
-      selectToolbox("Guard").appliedTo(lift(cond))
+      selectToolbox("For.Guard").appliedTo(lift(cond))
 
     case m.Import(importers) =>
       selectToolbox("Import").appliedTo(liftSeq(importers))
     case m.Importer(ref, importees) =>
-      selectToolbox("ImportItem").appliedTo(lift(ref), liftSeq(importees))
+      selectToolbox("Import.Item").appliedTo(lift(ref), liftSeq(importees))
     case m.Importee.Wildcard() =>
-      selectToolbox("ImportName").appliedTo(t.Lit("_"))
+      selectToolbox("Import.Name").appliedTo(t.Lit("_"))
     case m.Importee.Name(m.Name.Indeterminate(name)) =>
-      selectToolbox("ImportName").appliedTo(t.Lit(name))
+      selectToolbox("Import.Name").appliedTo(t.Lit(name))
     case m.Importee.Rename(m.Name.Indeterminate(name), m.Name.Indeterminate(rename)) =>
-      selectToolbox("ImportRename").appliedTo(t.Lit(name), t.Lit(rename))
+      selectToolbox("Import.Rename").appliedTo(t.Lit(name), t.Lit(rename))
     case m.Importee.Unimport(m.Name.Indeterminate(name)) =>
-      selectToolbox("ImportHide").appliedTo(t.Lit(name))
+      selectToolbox("Import.Hide").appliedTo(t.Lit(name))
 
     case m.Case(pat, cond, body) =>
       selectToolbox("Case").appliedTo(lift(pat), liftOpt(cond), lift(body))
