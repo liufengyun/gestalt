@@ -149,4 +149,9 @@ class TypeToolboxTest extends TestSuite {
     assert(methodsIn[Overloading] == List("f", "f"))
     assert(methodIn[Overloading]("f") == List("f", "f"))
   }
+
+  test("typeTag") {
+    assert(typeTag(3, null) == "Int")
+    assert(typeTag[Option[Int]](None, null) == "Option[Int]")
+  }
 }

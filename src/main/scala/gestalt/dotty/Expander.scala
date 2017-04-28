@@ -4,33 +4,35 @@ import dotty.tools.dotc._
 import ast.Trees._
 import ast.{tpd, untpd}
 import ast.untpd.modsDeco
+import typer.Inferencing
 import core.StdNames._
 import core.Contexts._
 import core.Symbols._
 import core.Names._
 import core.Decorators._
 import core.Constants._
+import core.Types._
+import core.TypeApplications._
 
 import scala.gestalt._
 
 object Expander {
   private object ExtractApply {
-    def unapply(tree: untpd.Tree): Option[(untpd.Tree, List[untpd.Tree], List[List[untpd.Tree]])] = tree match {
-      case TypeApply(fun, targs) =>
-        val Some((f, _, argss)) = unapply(fun)
-        Some((f, targs, argss))
-      case Apply(fun, args) =>
-        val Some((f, targs, argss)) = unapply(fun)
-        Some((f, targs, argss :+ args))
+    def unapply(tree: tpd.Tree): Option[(tpd.Tree, List[tpd.Tree], List[List[tpd.Tree]])] = tree match {
+      case tree: tpd.TypeApply =>
+        Some((tree.fun, tree.args, Nil))
+      case tree: tpd.Apply =>
+        val Some((f, targs, argss)) = unapply(tree.fun)
+        Some((f, targs, argss :+ tree.args))
       case _ =>
         Some((tree, Nil, Nil))
     }
   }
 
   private object MethodSelect {
-    def unapply(tree: untpd.Tree): Option[(untpd.Tree, Name)] = tree match {
-      case Select(prefix, method) => Some((prefix, method))
-      case Ident(method) => Some((null, method))
+    def unapply(tree: tpd.Tree): Option[(tpd.Tree, Name)] = tree match {
+      case tree: tpd.Select => Some((tree.qualifier, tree.name))
+      case tree: tpd.Ident => Some((null, tree.name))
       case _ => None
     }
   }
@@ -81,6 +83,31 @@ object Expander {
     expansion.getOrElse(mdef)
   }
 
+  private def synthesizeTypeTag(f: tpd.Tree, targs: List[tpd.Tree], argss: List[List[tpd.Tree]])
+                               (tb: Toolbox)(implicit ctx: Context): List[List[Object]]
+  =
+  {
+    if (argss.size == 0 || (argss.size == 1 && argss.head.size == 0)) return argss
+
+    var methodType = f.tpe.widen.appliedTo(targs.map(_.tpe)).asInstanceOf[MethodType]
+    argss.foldRight(Nil : List[List[Object]]) { (args: List[tpd.Tree], acc) =>
+      val paramTypes = methodType.paramInfos
+      val args2 = paramTypes.zip(args).map {
+        case (AppliedType(tp, targs), arg) if tp.isRef(defn.WeakTypeTag) =>
+          Inferencing.isFullyDefined(targs(0), typer.ForceDegree.noBottom)
+          new tb.WeakTypeTag[Nothing](targs(0).stripTypeVar)
+        case (_, arg) => arg
+      }
+
+      methodType.instantiate(args.map(_.tpe)) match {
+        case tp: MethodType => methodType = tp
+        case _ => methodType = null             // last param section
+      }
+
+      acc :+ args2
+    }
+  }
+
   /** Expand def macros */
   def expandDefMacro(tree: tpd.Tree)(implicit ctx: Context): untpd.Tree = tree match {
     case ExtractApply(methodSelect @ MethodSelect(prefix, method), targs, argss) =>
@@ -97,7 +124,9 @@ object Expander {
       val impl = moduleClass.getDeclaredMethods().find(_.getName == method.toString).get
       impl.setAccessible(true)
 
-      val trees  = new Toolbox(tree.pos) :: prefix :: targs ++ argss.flatten
+      val tb = new Toolbox(tree.pos)
+      val argss2 = synthesizeTypeTag(methodSelect, targs, argss)(tb)
+      val trees  = tb :: prefix :: targs ++ argss2.flatten
       try {
         impl.invoke(null, trees: _*).asInstanceOf[untpd.Tree]
       }

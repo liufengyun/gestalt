@@ -866,6 +866,9 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   /** get the location where the def macro is used */
   def currentLocation: Location = Location(ctx.compilationUnit.source.file.name, enclosingPosition.line(), enclosingPosition.column())
 
+  /** pretty print type */
+  def show(tp: Type): String = tp.show
+
   /** are the two types equal? */
   def =:=(tp1: Type, tp2: Type): Boolean = tp1 =:= tp2
 
