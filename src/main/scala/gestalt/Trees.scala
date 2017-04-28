@@ -1,4 +1,4 @@
-package gestalt
+package scala.gestalt
 
 trait Trees extends Params with TypeParams with
   ValDefs with ValDecls with DefDefs with DefDecls with

@@ -46,4 +46,3 @@ trait Types { this: Toolbox =>
   // def members(tp: Type, pred: Symbol => Boolean = s => true): Seq[Symbol]
 }
 
-
