@@ -151,7 +151,7 @@ class TypeToolboxTest extends TestSuite {
   }
 
   test("typeTag") {
-    assert(typeTag(3, null) == "Int")
-    assert(typeTag[Option[Int]](None, null) == "Option[Int]")
+    assert(typeTag(3) == "Int")
+    assert(typeTag(Some(4)) == "Some[Int]")
   }
 }

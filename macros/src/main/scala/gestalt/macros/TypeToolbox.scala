@@ -113,7 +113,7 @@ object TypeToolbox {
     q"List(..$methods)"
   }
 
-  def typeTag[T](x: T, m: toolbox.WeakTypeTag[T]): String = meta {
+  def typeTag[T](x: T)(implicit m: toolbox.WeakTypeTag[T]): String = meta {
     val tp = toolbox.show(m.tpe)
     toolbox.Lit(tp)
   }
