@@ -151,3 +151,13 @@ object CaseInfo {
     }
   }
 }
+
+object MultiParamBlocks {
+  def f(a: Int)(b: Int): Int = meta {
+    q"$a + $b"
+  }
+
+  def g(a: Int)(b: Int)(implicit c: Int): Int = meta {
+    q"$a + $b - $c"
+  }
+}

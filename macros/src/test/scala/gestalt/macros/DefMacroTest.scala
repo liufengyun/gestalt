@@ -183,4 +183,12 @@ class DefMacroTest extends TestSuite {
     // class Teacher(name: String, age: Int)
     // assert(fields[Teacher] == List())
   }
+
+  test("mutiple param blocks") {
+    import MultiParamBlocks._
+    assert(f(1)(2) == 3)
+
+    implicit val x: Int = 1
+    assert(g(1)(2) == 2)
+  }
 }

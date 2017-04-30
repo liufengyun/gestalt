@@ -98,7 +98,14 @@ object Expander {
       impl.setAccessible(true)
 
       val trees  = new Toolbox(tree.pos) :: prefix :: targs ++ argss.flatten
-      impl.invoke(null, trees: _*).asInstanceOf[untpd.Tree]
+      try {
+        impl.invoke(null, trees: _*).asInstanceOf[untpd.Tree]
+      }
+      catch {
+        case e: Exception =>
+          ctx.error("error occurred while expanding macro: \n" + e.getMessage, tree.pos)
+          untpd.Literal(Constant(null)).withPos(tree.pos)
+      }
     case _ =>
       ctx.warning(s"Unknown macro expansion: $tree")
       tree
