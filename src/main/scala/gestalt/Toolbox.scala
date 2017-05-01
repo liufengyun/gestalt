@@ -2,7 +2,7 @@ package scala.gestalt
 
 case class Location(fileName: String, line: Int, column: Int)
 
-trait Toolbox extends Trees with Symbols with Types {
+trait Toolbox extends Trees with Symbols with Types with TypeTags {
   /** get the location where the def macro is used */
   def currentLocation: Location
 

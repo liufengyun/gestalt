@@ -3,6 +3,9 @@ package scala.gestalt
 trait Types { this: Toolbox =>
   type Type
 
+  /** pretty print type */
+  def show(tp: Type): String
+
   /** are the two types equal? */
   def =:=(tp1: Type, tp2: Type): Boolean
 
