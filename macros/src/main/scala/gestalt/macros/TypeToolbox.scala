@@ -3,118 +3,128 @@ import scala.gestalt._
 object TypeToolbox {
   /** are the two types equal? */
   def =:=[A, B]: Boolean = meta {
-    val tpA = toolbox.typeOf(A)
-    val tpB = toolbox.typeOf(B)
-    val res = toolbox.=:=(tpA, tpB)
-    toolbox.Lit(res)
+    import toolbox._
+    val res = A.tpe =:= B.tpe
+    Lit(res)
   }
 
   /** is `tp1` a subtype of `tp2` */
   def <:<[A, B]: Boolean = meta {
-    val tpA = toolbox.typeOf(A)
-    val tpB = toolbox.typeOf(B)
-    val res = toolbox.<:<(tpA, tpB)
-    toolbox.Lit(res)
+    import toolbox._
+    val res = A.tpe =:= B.tpe
+    Lit(A.tpe <:< B.tpe)
   }
 
   /** returning a type referring to a type definition */
   def typeRef[Expected](path: String): Boolean = meta {
+    import toolbox._
     val toolbox.Lit(p: String) = path
-    val exp = toolbox.typeOf(Expected)
-    val tp = toolbox.typeRef(p)
-    val res = toolbox.=:=(tp, exp)
+    val exp = Expected.tpe
+    val tp = Type.typeRef(p)
+    val res = tp =:= exp
     // println(s"typeRef: $exp   <->  $tp")
     toolbox.Lit(res)
   }
 
   /** returning a type referring to a value definition */
   def termRef[Expected](path: String): Boolean = meta {
-    val toolbox.Lit(p: String) = path
-    val exp = toolbox.typeOf(Expected)
-    val tp = toolbox.termRef(p)
+    import toolbox._
+    val Lit(p: String) = path
+    val exp = Expected.tpe
+    val tp = Type.termRef(p)
     // println(s"typeRef: $exp   <->  $tp")
-    val res = toolbox.=:=(tp, exp)
-    toolbox.Lit(res)
+    val res = tp =:= exp
+    Lit(res)
   }
 
   /** type associated with the tree */
   def typeOf[T, Expected](a: T): Boolean = meta {
-    val tp = toolbox.typeOf(a)
-    val res = toolbox.=:=(tp, toolbox.typeOf(Expected))
-    toolbox.Lit(res)
+    import toolbox._
+    val tp = a.tpe
+    val res = tp =:= Expected.tpe
+    Lit(res)
   }
 
   /** does the type refer to a case class? */
   def isCaseClass[A]: Boolean = meta {
-    val tp = toolbox.typeOf(A)
-    val res = toolbox.isCaseClass(tp)
-    toolbox.Lit(res)
+    import toolbox._
+    val res = A.tpe.isCaseClass
+    Lit(res)
   }
 
   /** val fields of a case class Type -- only the ones declared in primary constructor */
   def caseFields[T]: List[String] = meta {
-    val tp = toolbox.typeOf(T)
-    val fieldTrees = toolbox.caseFields(tp).map(m => toolbox.Lit(toolbox.name(m)))
+    import toolbox._
+    val tp = T.tpe
+    val fieldTrees = tp.caseFields.map(d => Lit(d.name))
     q"List(..$fieldTrees)"
   }
 
-  /** type of a member with respect to a prefix */
-  def asSeenFrom[Prefix, Expected](mem: String): Boolean = meta {
-    val toolbox.Lit(fd: String) = mem
-    val expectedTp = toolbox.typeOf(Expected)
-    val prefixTp = toolbox.typeOf(Prefix)
-    val fieldTp = toolbox.asSeenFrom(toolbox.fieldIn(prefixTp, fd).get, prefixTp)
-    val res = toolbox.<:<(fieldTp, expectedTp)
-    toolbox.Lit(res)
+  def fieldType[Pre, Expected](mem: String): Boolean = meta {
+    import toolbox._
+    val Lit(fd: String) = mem
+    val expectedTp = Expected.tpe
+    println("field:" + Pre.tpe.fieldIn(fd))
+    val fieldTp = Pre.tpe.fieldIn(fd).get.info
+    println("fieldTp: " + fieldTp)
+    println("expected: " + expectedTp)
+    val res = fieldTp <:< expectedTp
+    Lit(res)
   }
 
   def fieldIn[T](mem: String): String = meta {
-    val toolbox.Lit(fd: String) = mem
-    val tp = toolbox.typeOf(T)
-    val field = toolbox.fieldIn(tp, fd)
-    if (field.isEmpty) toolbox.Lit("")
-    else toolbox.Lit(toolbox.name(field.get))
+    import toolbox._
+    val Lit(fd: String) = mem
+    val tp = T.tpe
+    val field = tp.fieldIn(fd)
+    if (field.isEmpty) Lit("")
+    else Lit(field.get.name)
   }
 
   def fieldsIn[T]: Seq[String] = meta {
-    val tp = toolbox.typeOf(T)
-    val fields = toolbox.fieldsIn(tp).map(s => toolbox.Lit(toolbox.name(s)))
+    import toolbox._
+    val fields = T.tpe.fieldsIn.map(d => Lit(d.name))
 
     q"List(..$fields)"
   }
 
   def methodIn[T](mem: String): Seq[String] = meta {
-    val toolbox.Lit(md: String) = mem
-    val tp = toolbox.typeOf(T)
-    val methods = toolbox.methodIn(tp, md).map(s => toolbox.Lit(toolbox.name(s)))
+    import toolbox._
+    val Lit(md: String) = mem
+    val tp = T.tpe
+    val methods = tp.methodIn(md).map(d => Lit(d.name))
 
     q"List(..$methods)"
   }
 
   def methodsIn[T]: Seq[String] = meta {
-    val tp = toolbox.typeOf(T)
-    val methods = toolbox.methodsIn(tp).map(s => toolbox.Lit(toolbox.name(s)))
+    import toolbox._
+    val tp = T.tpe
+    val methods = tp.methodsIn.map(d => Lit(d.name))
 
     q"List(..$methods)"
   }
 
   def method[T](mem: String): Seq[String] = meta {
-    val toolbox.Lit(md: String) = mem
-    val tp = toolbox.typeOf(T)
-    val methods = toolbox.method(tp, md).map(s => toolbox.Lit(toolbox.name(s)))
+    import toolbox._
+    val Lit(md: String) = mem
+    val tp = T.tpe
+    val methods = tp.method(md).map(d => Lit(d.name))
 
     q"List(..$methods)"
   }
 
   def methods[T]: Seq[String] = meta {
-    val tp = toolbox.typeOf(T)
-    val methods = toolbox.methods(tp).map(s => toolbox.Lit(toolbox.name(s)))
+    import toolbox._
+    val tp = T.tpe
+    val methods = tp.methods.map(d => Lit(d.name))
 
     q"List(..$methods)"
   }
 
   def typeTag[T](x: T)(implicit m: toolbox.WeakTypeTag[T]): String = meta {
-    val tp = toolbox.show(m.tpe)
+    import toolbox._
+    val tp = m.tpe.show
     toolbox.Lit(tp)
   }
 }

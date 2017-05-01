@@ -140,13 +140,14 @@ object Locations {
 
 object CaseInfo {
   def fields[T]: List[String] = meta {
-    val tp = toolbox.typeOf(T)
-    if (!toolbox.isCaseClass(tp)) {
+    import toolbox._
+    val tp = T.tpe
+    if (!tp.isCaseClass) {
       toolbox.error("Not a case class", T)
       q"scala.Nil"
     }
     else {
-      val fieldTrees = toolbox.caseFields(tp).map(m => toolbox.Lit(toolbox.name(m)))
+      val fieldTrees = tp.caseFields.map(m => toolbox.Lit(m.name))
       q"List(..$fieldTrees)"
     }
   }
