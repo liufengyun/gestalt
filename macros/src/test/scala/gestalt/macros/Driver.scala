@@ -7,6 +7,7 @@ object Driver {
     // setup tests
     new AnnotationMacroTest
     new DefMacroTest
+    new JsonMacroTest
     new QuasiquoteTest
     new TypeToolboxTest
 
