@@ -151,4 +151,16 @@ class TypeToolboxTest extends TestSuite {
     assert(typeTag(3) == "Int")
     assert(typeTag(Some(4)) == "Some[Int]")
   }
+
+  test("companion") {
+    class A
+    object A
+    class B
+    object C
+    assert(companion[A, A.type])
+    assert(companionName[A] == "A")
+    assert(companionName[A.type] == "A")
+    assert(companionName[B] == "")
+    assert(companionName[C.type] == "")
+  }
 }

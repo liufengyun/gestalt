@@ -4,7 +4,7 @@ import scala.gestalt.{Toolbox => Tbox, Location}
 
 import dotty.tools.dotc._
 import core._
-import ast.{ untpd => d, Trees => c }
+import ast.{ untpd => d, Trees => c, tpd }
 import StdNames._
 import NameOps._
 import Contexts._
@@ -23,6 +23,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   type TypeTree = d.Tree
   type TermTree = d.Tree
   type DefTree = d.Tree
+  type Splice = d.Tree
   type Mods = DottyModifiers
 
   type Param = d.ValDef
@@ -834,6 +835,10 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def tpt(tree: DefDecl): TypeTree = tree.tpt
   }
 
+  object TypedSplice extends TypedSpliceImpl {
+    def apply(tree: Tree): Splice = d.TypedSplice(tree.asInstanceOf[tpd.Tree])
+  }
+
 
   /*------------------------------- traversers -------------------------------------*/
   def traverse(tree: Tree)(pf: PartialFunction[Tree, Unit]): Unit =
@@ -937,6 +942,17 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
           p => p.is(Flags.Method) && p.owner == tp.widenSingleton.classSymbol && !p.isConstructor
         )
       )
+    }
+
+    def companion(tp: Type): Option[Denotation] = {
+      val clazz = tp.widenSingleton.classSymbol
+      if (clazz.exists)
+        if (clazz.is(Flags.Module) && clazz.companionClass.exists)
+          Some(clazz.companionClass.namedType.denot)
+        else if (clazz.companionModule.exists)
+          Some(clazz.companionModule.namedType.denot)
+        else None
+      else None
     }
   }
 

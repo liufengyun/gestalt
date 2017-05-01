@@ -8,6 +8,7 @@ trait Trees extends Params with TypeParams with
   type TypeTree >: Null <: Tree
   type TermTree >: Null <: Tree
   type DefTree  >: Null <: Tree
+  type Splice   <: TypeTree with TermTree with DefTree
 
   type Class     <: DefTree
   type Trait     <: DefTree
@@ -66,6 +67,7 @@ trait Trees extends Params with TypeParams with
 
   // modifiers
   def emptyMods: Mods
+
 
   // definition trees
   val AnonymClass: AnonymClassImpl
@@ -389,20 +391,38 @@ trait Trees extends Params with TypeParams with
     def unapply(tree: Tree): Option[Seq[TermTree]]
   }
 
-  // helpers
+  val TypedSplice: TypedSpliceImpl
+  trait TypedSpliceImpl {
+    def apply(tree: Tree): Splice
+  }
+
+  // helper
   def ApplySeq(fun: TermTree, argss: Seq[Seq[TermTree]]): Tree = argss match {
-    case args :: rest => rest.foldLeft(Apply(fun, args)) { (acc, args) => Apply(acc, args) }
-    case _ => Apply(fun, Nil)
+   case args :: rest => rest.foldLeft(Apply(fun, args)) { (acc, args) => Apply(acc, args) }
+   case _ => Apply(fun, Nil)
   }
 
   object ApplySeq {
-    def unapply(call: TermTree):  Option[(Tree, Seq[Seq[TermTree]])] = {
-      def recur(acc: Seq[Seq[TermTree]], term: TermTree): (TermTree, Seq[Seq[TermTree]])  = term match {
+    def unapply(call: TermTree): Option[(Tree, Seq[Seq[TermTree]])] = {
+      def recur(acc: Seq[Seq[TermTree]], term: TermTree): (TermTree, Seq[Seq[TermTree]]) = term match {
         case Apply(fun, args) => recur(args +: acc, fun) // inner-most is in the front
         case fun => (fun, acc)
+
       }
 
       Some(recur(Nil, call))
+    }
+  }
+
+  object Applysss {
+    def unapply(tree: TermTree): Option[(TermTree, Seq[TypeTree], Seq[Seq[TermTree]])] = tree match {
+      case ApplyType(fun, targs) =>
+        Some((fun, targs, Nil))
+      case Apply(fun, args) =>
+        val Some((f, targs, argss)) = unapply(fun)
+        Some((f, targs, argss :+ args))
+      case _ =>
+        Some((tree, Nil, Nil))
     }
   }
 
