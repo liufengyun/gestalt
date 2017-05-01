@@ -64,10 +64,7 @@ object TypeToolbox {
     import toolbox._
     val Lit(fd: String) = mem
     val expectedTp = Expected.tpe
-    println("field:" + Pre.tpe.fieldIn(fd))
     val fieldTp = Pre.tpe.fieldIn(fd).get.info
-    println("fieldTp: " + fieldTp)
-    println("expected: " + expectedTp)
     val res = fieldTp <:< expectedTp
     Lit(res)
   }
