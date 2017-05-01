@@ -2,14 +2,18 @@ package scala.gestalt
 
 trait Symbols { this: Toolbox =>
   type Symbol
-  type MethodSymbol <: Symbol
 
-  /** name of a member */
-  def name(mem: Symbol): String
+  implicit class SymbolOps(sym: Symbol) {
+    def name: String = Symbol.name(sym)
+    def asSeenFrom(prefix: Type): Type = Symbol.asSeenFrom(sym, prefix)
+  }
 
-  /** type of a member with respect to a prefix */
-  def asSeenFrom(mem: Symbol, prefix: Type): Type
+  val Symbol: SymbolImpl
+  trait SymbolImpl {
+    /** name of a member */
+    def name(mem: Symbol): String
 
-  // def tparams(method: MethodSymbol): Seq[String]
-  // def paramss(method: MethodSymbol): Seq[Seq[(name, Symbol)]]
+    /** type of a member with respect to a prefix */
+    def asSeenFrom(mem: Symbol, prefix: Type): Type
+  }
 }

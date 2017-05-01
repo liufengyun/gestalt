@@ -860,80 +860,120 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   /*------------------------------- types -------------------------------------*/
 
   type Type = Types.Type
+  type MethodType = Types.MethodType
   type Symbol = Symbols.Symbol
-  type MethodSymbol = Symbols.Symbol
 
   /** get the location where the def macro is used */
   def currentLocation: Location = Location(ctx.compilationUnit.source.file.name, enclosingPosition.line(), enclosingPosition.column())
 
-  /** pretty print type */
-  def show(tp: Type): String = tp.show
+  object Type extends TypeImpl {
 
-  /** are the two types equal? */
-  def =:=(tp1: Type, tp2: Type): Boolean = tp1 =:= tp2
+    /** pretty print type */
+    def show(tp: Type): String = tp.show
 
-  /** is `tp1` a subtype of `tp2` */
-  def <:<(tp1: Type, tp2: Type): Boolean = tp1 <:< tp2
+    /** are the two types equal? */
+    def =:=(tp1: Type, tp2: Type): Boolean = tp1 =:= tp2
 
-  /** returning a type referring to a type definition */
-  def typeRef(path: String): Type = ctx.staticRef(path.toTypeName, false).symbol.typeRef
+    /** is `tp1` a subtype of `tp2` */
+    def <:<(tp1: Type, tp2: Type): Boolean = tp1 <:< tp2
 
-  /** returning a type referring to a term definition */
-  def termRef(path: String): Type = ctx.staticRef(path.toTermName, false).symbol.termRef
+    /** returning a type referring to a type definition */
+    def typeRef(path: String): Type = ctx.staticRef(path.toTypeName, false).symbol.typeRef
 
-  /** type associated with the tree */
-  def typeOf(tree: Tree): Type = tree.tpe
+    /** returning a type referring to a term definition */
+    def termRef(path: String): Type = ctx.staticRef(path.toTermName, false).symbol.termRef
 
-  /** does the type refer to a case class? */
-  def isCaseClass(tp: Type): Boolean = tp.classSymbol.is(Flags.Case)
+    /** type associated with the tree */
+    def typeOf(tree: Tree): Type = tree.tpe
 
-  /** val fields of a case class Type -- only the ones declared in primary constructor */
-  def caseFields(tp: Type): Seq[Symbol] = {
-    val sym = tp.classSymbol.asClass
-    if (!sym.is(Flags.Case)) return Nil
+    /** does the type refer to a case class? */
+    def isCaseClass(tp: Type): Boolean = tp.classSymbol.is(Flags.Case)
 
-    sym.info.decls.filter(fd => fd.is(Flags.ParamAccessor)).toSeq
+    /** val fields of a case class Type -- only the ones declared in primary constructor */
+    def caseFields(tp: Type): Seq[Denotation] = {
+      tp.memberDenots(
+        Types.fieldFilter,
+        (name, buf) => buf ++= tp.member(name).altsWith(_ is Flags.ParamAccessor)
+      )
+    }
+
+    /* field with the given name */
+    def fieldIn(tp: Type, name: String): Option[Denotation] = {
+      tp.memberExcluding(name.toTermName, Flags.Method).altsWith(
+        p => p.owner == tp.widenSingleton.classSymbol
+      ).headOption
+    }
+
+    def fieldsIn(tp: Type): Seq[Denotation] = {
+      tp.memberDenots(
+        Types.fieldFilter,
+        (name, buf) => buf ++= tp.member(name).altsWith(
+          p => !p.is(Flags.Method) && p.owner == tp.widenSingleton.classSymbol
+        )
+      )
+    }
+
+    def method(tp: Type, name: String): Seq[Denotation] = {
+      tp.member(name.toTermName).altsWith(p => p.is(Flags.Method))
+    }
+
+    def methods(tp: Type): Seq[Denotation] = {
+      tp.memberDenots(
+        Types.takeAllFilter,
+        (name, buf) => buf ++= tp.member(name).altsWith(p => p.is(Flags.Method) && !p.isConstructor)
+      )
+    }
+
+    def methodIn(tp: Type, name: String): Seq[Denotation] = {
+      tp.member(name.toTermName).altsWith(
+        p => p.is(Flags.Method) && p.owner == tp.widenSingleton.classSymbol
+      )
+    }
+
+    def methodsIn(tp: Type): Seq[Denotation] = {
+      tp.memberDenots(
+        Types.takeAllFilter,
+        (name, buf) => buf ++= tp.member(name).altsWith(
+          p => p.is(Flags.Method) && p.owner == tp.widenSingleton.classSymbol && !p.isConstructor
+        )
+      )
+    }
   }
 
-  /* field with the given name */
-  def fieldIn(tp: Type, name: String): Option[Symbol] = {
-    val sym = tp.widen.classSymbol.asClass
-    val denot = sym.info.findDecl(name.toTermName, Flags.Method)
-
-    if (denot.exists) Some(denot.symbol)
-    else None
+  object ByNameType extends ByNameTypeImpl {
+    def unapply(tp: Type): Option[Type] = tp match {
+      case tp: Types.ExprType => Some(tp.underlying)
+      case _ => None
+    }
   }
 
-  def fieldsIn(tp: Type): Seq[Symbol] = {
-    val sym = tp.widen.classSymbol.asClass
-    sym.info.decls.filter(sym => sym.isTerm && !sym.is(Flags.Method)).map(_.symbol).toSeq
-  }
-
-  def method(tp: Type, name: String): Seq[MethodSymbol] = {
-    val sym = tp.widen.classSymbol.asClass
-    sym.info.nonPrivateMember(name.toTermName).alternatives.filter(_.symbol.is(Flags.Method)).map(_.symbol)
-  }
-
-  def methods(tp: Type): Seq[MethodSymbol] = {
-    val sym = tp.widen.classSymbol.asClass
-    sym.info.membersBasedOnFlags(Flags.Method, Flags.Private).flatMap(_.alternatives).map(_.symbol).toSeq
-  }
-
-  def methodIn(tp: Type, name: String): Seq[MethodSymbol] = {
-    val sym = tp.widen.classSymbol.asClass
-    sym.info.nonPrivateDecl(name.toTermName).alternatives.filter(_.symbol.is(Flags.Method)).map(_.symbol)
-  }
-
-  def methodsIn(tp: Type): Seq[MethodSymbol] = {
-    val sym = tp.widen.classSymbol.asClass
-    sym.info.decls.filter(sym => sym.isTerm && sym.is(Flags.Method) && !sym.isConstructor).map(_.symbol).toSeq
+  object MethodType extends MethodTypeImpl {
+    def paramInfos(tp: MethodType): Seq[Type] = tp.paramInfos
+    def instantiate(tp: MethodType)(params: Seq[Type]): Type = tp.instantiate(params)
+    def unapply(tp: Type): Option[MethodType] = tp match {
+      case tp: Types.MethodType => Some(tp)
+      case _ => None
+    }
   }
 
   /*------------------------------- symbols -------------------------------------*/
-  /** name of a member */
-  def name(mem: Symbol): String = mem.showName
 
-  /** type of a member with respect to a prefix */
-  def asSeenFrom(mem: Symbol, prefix: Type): Type = mem.asSeenFrom(prefix).info
+  object Symbol extends SymbolImpl {
+    /** name of a member */
+    def name(mem: Symbol): String = mem.showName
 
+    /** type of a member with respect to a prefix */
+    def asSeenFrom(mem: Symbol, prefix: Type): Type = mem.asSeenFrom(prefix)
+  }
+
+  /*------------------------------- Denotations -------------------------------------*/
+  type Denotation = Denotations.Denotation
+
+  object Denotation extends DenotationImpl {
+    def name(denot: Denotation): String = denot.symbol.name.show
+
+    def info(denot: Denotation): Type = denot.info.dealias
+
+    def symbol(denot: Denotation): Symbol = denot.symbol
+  }
 }
