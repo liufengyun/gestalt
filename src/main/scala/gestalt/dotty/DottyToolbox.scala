@@ -944,13 +944,13 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       )
     }
 
-    def companion(tp: Type): Option[Denotation] = {
+    def companion(tp: Type): Option[Type] = {
       val clazz = tp.widenSingleton.classSymbol
       if (clazz.exists)
         if (clazz.is(Flags.Module) && clazz.companionClass.exists)
-          Some(clazz.companionClass.namedType.denot)
-        else if (clazz.companionModule.exists)
-          Some(clazz.companionModule.namedType.denot)
+          Some(clazz.companionClass.namedType)
+        else if (!clazz.is(Flags.Module) && clazz.companionModule.exists)
+          Some(clazz.companionModule.namedType)
         else None
       else None
     }

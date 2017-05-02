@@ -127,13 +127,13 @@ object TypeToolbox {
 
   def companion[T1, T2]: Boolean = meta {
     import toolbox._
-    Lit(T1.tpe.companion.get.info =:= T2.tpe)
+    Lit(T1.tpe.companion.get =:= T2.tpe)
   }
 
   def companionName[T1]: String = meta {
     import toolbox._
     T1.tpe.companion match {
-      case Some(tp) => Lit(tp.info.show)
+      case Some(tp) => Lit(tp.show)
       case _ => Lit("")
     }
   }

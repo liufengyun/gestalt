@@ -158,7 +158,7 @@ class TypeToolboxTest extends TestSuite {
     class B
     object C
     assert(companion[A, A.type])
-    assert(companionName[A] == "A")
+    assert(companionName[A] == "A.type")
     assert(companionName[A.type] == "A")
     assert(companionName[B] == "")
     assert(companionName[C.type] == "")

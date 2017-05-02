@@ -14,7 +14,7 @@ trait Types extends MethodTypes { self: Toolbox =>
     def methodsIn: Seq[Denotation] = Type.methodsIn(tp)
     def method(name: String): Seq[Denotation] = Type.method(tp, name)
     def methods: Seq[Denotation] = Type.methods(tp)
-    def companion: Option[Denotation] = Type.companion(tp)
+    def companion: Option[Type] = Type.companion(tp)
     def show: String = Type.show(tp)
   }
 
@@ -69,7 +69,7 @@ trait Types extends MethodTypes { self: Toolbox =>
     /** If `tp` points to a class, the module class of its companion object.
      *  If `tp` points to an object, its companion class.
      */
-    def companion(tp: Type): Option[Denotation]
+    def companion(tp: Type): Option[Type]
   }
 
 

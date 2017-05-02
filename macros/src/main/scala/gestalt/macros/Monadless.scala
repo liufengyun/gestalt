@@ -291,7 +291,7 @@ object Transformer {
 
       private def companionMethod(pos: Tree, name: String) =
         method(prefix, prefix.tpe, name)
-          .orElse(method(Ident(m.tpe.show), m.tpe.companion.get.info, name))
+          .orElse(method(Ident(m.tpe.show), m.tpe.companion.get, name))
 
       private def method(instance: TermTree, tpe: Type, name: String) =
         find(tpe, name).map(_ => Select(instance, name))
