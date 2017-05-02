@@ -107,6 +107,13 @@ object trees {
   def ident(a: Any): Any = meta {
     q"$a"
   }
+
+  def iterator(): Iterator[Nothing] = meta {
+    q"""new Iterator[Nothing]{
+         def hasNext = false
+         def next() = ???
+       }"""
+  }
 }
 
 object Inheritance {
