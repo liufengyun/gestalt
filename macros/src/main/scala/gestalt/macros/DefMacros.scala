@@ -138,6 +138,12 @@ object Locations {
   }
 }
 
+object TreeString {
+  def apply(a: Any) = meta {
+    toolbox.Lit(a.toString)
+  }
+}
+
 object CaseInfo {
   def fields[T]: List[String] = meta {
     val tp = toolbox.typeOf(T)
