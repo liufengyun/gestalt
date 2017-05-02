@@ -12,13 +12,14 @@ object JsonMacros {
   }
 
   def format[T](): Format[T] = meta {
-    val tpe = toolbox.typeOf(T)
-    if (!toolbox.isCaseClass(tpe)) {
+    import toolbox._
+    val tpe: Type = T.tpe
+    if (!tpe.isCaseClass) {
       toolbox.error("Not a case class", T)
       q"???"
     }
     else {
-      val fields = toolbox.caseFields(tpe)
+      val fields = tpe.caseFields
       q"""new Format[$T]{
             def toJson(o: $T) = JsObject(Nil)
             def fromJson(json: JsValue) = None
