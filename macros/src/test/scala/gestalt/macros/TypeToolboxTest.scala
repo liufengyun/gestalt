@@ -63,7 +63,7 @@ class TypeToolboxTest extends TestSuite {
     case class M[T](x: T)
     val a = new M(4)
 
-    assert(asSeenFrom[a.type, Int]("x"))
+    assert(fieldType[a.type, Int]("x"))
 
 
     trait Base {
@@ -77,7 +77,7 @@ class TypeToolboxTest extends TestSuite {
     }
 
     val m = new Child
-    assert(asSeenFrom[m.type, m.Inner]("x"))
+    assert(fieldType[m.type, m.Inner]("x"))
 
     trait Box {
       type T
@@ -88,7 +88,7 @@ class TypeToolboxTest extends TestSuite {
       val x = 3
     }
     val box = new InBox
-    assert(asSeenFrom[box.type, Int]("x"))
+    assert(fieldType[box.type, Int]("x"))
   }
 
   test("fields") {
@@ -107,10 +107,8 @@ class TypeToolboxTest extends TestSuite {
     assert(fieldIn[Base]("x") == "x")
     assert(fieldIn[Derived]("x") == "")
     assert(fieldIn[Derived]("y") == "y")
-    assert(fieldsIn[Base].size == 1)
-    assert(fieldsIn[Base].head == "x")
-    assert(fieldsIn[Derived].size == 1)
-    assert(fieldsIn[Derived].head == "y")
+    assert(fieldsIn[Base] == List("x"))
+    assert(fieldsIn[Derived] == List("y"))
   }
 
   test("methods") {
@@ -130,8 +128,7 @@ class TypeToolboxTest extends TestSuite {
     assert(method[Base]("x") == Nil)
     assert(methodIn[Base]("f") == List("f"))
     assert(methodIn[Base]("x") == Nil)
-    assert(methodsIn[Base].size == 1)
-    assert(methodsIn[Base].head == "f")
+    assert(methodsIn[Base] == List("f"))
 
     assert(method[Derived]("f") == List("f"))
     assert(method[Derived]("g") == List("g"))
@@ -148,5 +145,10 @@ class TypeToolboxTest extends TestSuite {
 
     assert(methodsIn[Overloading] == List("f", "f"))
     assert(methodIn[Overloading]("f") == List("f", "f"))
+  }
+
+  test("typeTag") {
+    assert(typeTag(3) == "Int")
+    assert(typeTag(Some(4)) == "Some[Int]")
   }
 }
