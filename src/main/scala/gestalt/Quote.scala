@@ -396,7 +396,6 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
       val parentCalls = liftSeqTrees(parents.map(liftInitCall))
       // anonym: t.Tree[t.Tree[C]]
       val anonym = selectToolbox("AnonymClass").appliedTo(parentCalls, liftSelf(self), liftOptSeq(stats))
-      println(s">>> $anonym")
       selectToolbox("New").appliedTo(anonym)
     case m.Term.Placeholder() =>
       selectToolbox("Wildcard").appliedTo() // FIXME Wildcard is not defined in toolbox
