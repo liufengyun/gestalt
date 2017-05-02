@@ -167,8 +167,13 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
 
   /** {{{(trees: Seq[t.Tree[t.Tree[A]]]) => t.Tree[Seq[t.Tree[A]]]}}} */
   def liftSeqTrees(trees: Seq[t.TermTree]): t.TermTree = trees match {
-    case head :: rest => t.Infix(head, "::", liftSeqTrees(rest))
-    case _ => scalaNil
+    case head :: rest =>
+      // Infix is sugar-less
+      // the List is constructed as Nil.::(c).::(b).::(a)
+      // Not a :: b :: c :: Nil
+      t.Infix(liftSeqTrees(rest), "::", head)
+    case _ =>
+      scalaNil
   }
 
   /**
