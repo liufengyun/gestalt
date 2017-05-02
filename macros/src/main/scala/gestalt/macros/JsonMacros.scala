@@ -4,7 +4,10 @@ object JsonMacros {
 
   sealed trait JsValue
   final case class JsString(value: String) extends JsValue
-  final case class JsObject(items: Seq[(String, JsValue)]) extends JsValue
+
+  final case class JsObject(items: Seq[(String, JsValue)]) extends JsValue {
+    def firstValue(key: String) = items.find(_._1 == key).map(_._2)
+  }
 
   trait Format[A] {
     def toJson(o: A): JsValue
@@ -15,16 +18,23 @@ object JsonMacros {
     import toolbox._
     val tpe: Type = T.tpe
     if (!tpe.isCaseClass) {
-      toolbox.error("Not a case class", T)
+      error("Not a case class", T)
       q"???"
     }
     else {
       val fields = tpe.caseFields
-      q"""new Format[$T]{
-            def toJson(o: $T) = JsObject(Nil)
-            def fromJson(json: JsValue) = None
+      val namesAndTypes = fields.map {
+        f => f.name -> f.info
+      }
+
+      val jsonItems = namesAndTypes.map {
+        case (name,stringType) if stringType.show == "String" => println(">>> String field "+name)
+        case (name,otherType) => println(">>>x "+otherType)
+      }
+      q"""new JsonMacros.Format[$T]{
+            def toJson(o: $T) = JsonMacros.JsObject(Nil)
+            def fromJson(json: JsonMacros.JsValue) = None
          }"""
     }
-    q"null"
   }
 }
