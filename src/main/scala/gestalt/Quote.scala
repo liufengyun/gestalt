@@ -131,8 +131,11 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     if (quasi.rank > 0) return liftQuasi(quasi.tree.asInstanceOf[Quasi], quasi.rank, optional)
 
     def arg(i: Int) =
-      if (!isTerm && optional) scalaSome.appliedTo(args(i).asInstanceOf[t.TermTree])
-      else args(i).asInstanceOf[t.TermTree]
+      if (optional) {
+        scalaSome.appliedTo(args(i).asInstanceOf[t.TermTree])
+      } else {
+        args(i).asInstanceOf[t.TermTree]
+      }
 
     quasi.tree match {
       case m.Term.Name(Hole(i)) => arg(i)
