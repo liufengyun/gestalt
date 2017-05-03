@@ -894,6 +894,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     /** type associated with the tree */
     def typeOf(tree: Tree): Type = tree.tpe
 
+    def hasType(tree: Tree): Boolean = tree.hasType
+
     /** does the type refer to a case class? */
     def isCaseClass(tp: Type): Boolean = tp.classSymbol.is(Flags.Case)
 

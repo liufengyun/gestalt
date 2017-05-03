@@ -22,6 +22,7 @@ trait Types extends MethodTypes { self: Toolbox =>
 
   implicit class TreeTypeOps(tree: Tree) {
     def tpe: Type = Type.typeOf(tree)
+    def hasType: Boolean = Type.hasType(tree)
   }
 
   val Type: TypeImpl
@@ -43,6 +44,13 @@ trait Types extends MethodTypes { self: Toolbox =>
 
     /** type associated with the tree */
     def typeOf(tree: Tree): Type
+
+    /** whether the tree is typed or not
+     *
+     *  @note this is temporary, once we separate typed trees from untped
+     *        trees, this should be removed.
+     */
+    def hasType(tree: Tree): Boolean
 
     /** does the type refer to a case class? */
     def isCaseClass(tp: Type): Boolean

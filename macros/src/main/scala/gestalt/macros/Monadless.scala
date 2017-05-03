@@ -14,13 +14,19 @@ trait Monadless[Monad[_]] {
   */
 
   def lift[T](body: T)(implicit m: toolbox.WeakTypeTag[Monad[_]]): Monad[T] = meta {
+    import toolbox._
+
     val tree = Transformer(toolbox)(this, body)
+
+    val unliftSym = m.tpe.methodIn("unlift").headOption.map(_.symbol)
+    def isUnlift(tp: Type) = tp.denot.map(_.symbol) == unliftSym
+
+
     toolbox.traverse(tree) {
-      case tree @ q"$pack.unlift[$t]($v)" =>
-        toolbox.error("Unsupported unlift position", tree)
-      case tree @ q"unlift[$t]($v)" =>
+      case tree @ Apply(fun, args) if fun.hasType && isUnlift(fun.tpe) =>
         toolbox.error("Unsupported unlift position", tree)
     }
+
     tree
   }
 
@@ -37,6 +43,9 @@ object Transformer {
 
   def apply(toolbox: Toolbox)(prefix: toolbox.TermTree, tree: toolbox.TermTree)(implicit m: toolbox.WeakTypeTag[_]): toolbox.Tree = {
     import toolbox._
+
+    val unliftSym = m.tpe.methodIn("unlift").headOption.map(_.symbol)
+    def isUnlift(tp: Type) = tp.denot.map(_.symbol) == unliftSym
 
     def toParam(name: String) = Param(emptyMods, name, None, None)
     def wrap(tree: Tree): Splice = TypedSplice(tree)
@@ -83,8 +92,7 @@ object Transformer {
     object PureTree {
       def unapply(tree: Tree): Option[Tree] =
         exists(tree) {
-          case q"$pack.unlift[$t]($v)" => true
-          case q"unlift[$t]($v)" => true
+          case Apply(fun, _) if isUnlift(fun.tpe) => true
         } match {
           case true  => None
           case false => Some(tree)
@@ -154,8 +162,7 @@ object Transformer {
           }
 
 
-        case q"unlift[$t]($v)" => Some(v)
-        case q"$pack.unlift[$t]($v)" => Some(v)
+        case Apply(fun, List(v)) if isUnlift(fun.tpe) => Some(v)
 
         case tree: Tree =>
           val unlifts = collection.mutable.ListBuffer.empty[(TermTree, String, TypeTree)]
