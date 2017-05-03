@@ -23,7 +23,7 @@ trait Monadless[Monad[_]] {
 
 
     toolbox.traverse(tree) {
-      case tree @ Applysss(fun, _, _) if fun.hasType && isUnlift(fun.tpe) =>
+      case q"$fun[$tp]($v)" if fun.hasType && isUnlift(fun.tpe) =>
         toolbox.error("Unsupported unlift position", tree)
     }
 
@@ -93,7 +93,7 @@ object Transformer {
     object PureTree {
       def unapply(tree: Tree): Option[Tree] =
         exists(tree) {
-          case Applysss(fun, _, _) if fun.hasType && isUnlift(fun.tpe) => true
+          case q"$fun[$tp]($v)" if fun.hasType && isUnlift(fun.tpe) => true
         } match {
           case true  => None
           case false => Some(tree)
@@ -163,13 +163,13 @@ object Transformer {
           }
 
 
-        case Applysss(fun, _, (v :: Nil) :: Nil) if isUnlift(fun.tpe) => Some(v)
+        case q"$fun[$tp]($v)" if isUnlift(fun.tpe) => Some(v)
 
         case tree: Tree =>
           val unlifts = collection.mutable.ListBuffer.empty[(TermTree, String, TypeTree)]
           val newTree: TermTree =
             transform(tree) {
-              case tree @ Applysss(fun, tp :: Nil, (v :: Nil) :: Nil) if isUnlift(fun.tpe)  =>
+              case q"$fun[$tp]($v)" if isUnlift(fun.tpe) =>
                 val name = fresh()
                 val splice = wrap(tp)
                 unlifts += ((v, name, splice))
