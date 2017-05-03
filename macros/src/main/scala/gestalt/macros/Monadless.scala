@@ -18,12 +18,12 @@ trait Monadless[Monad[_]] {
 
     val tree = Transformer(toolbox)(this, body)
 
-    val unliftSym = m.tpe.methodIn("unlift").headOption.map(_.symbol)
+    val unliftSym = this.tpe.method("unlift").headOption.map(_.symbol)
     def isUnlift(tp: Type) = tp.denot.map(_.symbol) == unliftSym
 
 
     toolbox.traverse(tree) {
-      case tree @ Apply(fun, args) if fun.hasType && isUnlift(fun.tpe) =>
+      case tree @ Applysss(fun, _, _) if fun.hasType && isUnlift(fun.tpe) =>
         toolbox.error("Unsupported unlift position", tree)
     }
 
@@ -44,8 +44,9 @@ object Transformer {
   def apply(toolbox: Toolbox)(prefix: toolbox.TermTree, tree: toolbox.TermTree)(implicit m: toolbox.WeakTypeTag[_]): toolbox.Tree = {
     import toolbox._
 
-    val unliftSym = m.tpe.methodIn("unlift").headOption.map(_.symbol)
+    val unliftSym = prefix.tpe.method("unlift").headOption.map(_.symbol)
     def isUnlift(tp: Type) = tp.denot.map(_.symbol) == unliftSym
+
 
     def toParam(name: String) = Param(emptyMods, name, None, None)
     def wrap(tree: Tree): Splice = TypedSplice(tree)
@@ -92,7 +93,7 @@ object Transformer {
     object PureTree {
       def unapply(tree: Tree): Option[Tree] =
         exists(tree) {
-          case Apply(fun, _) if isUnlift(fun.tpe) => true
+          case Applysss(fun, _, _) if fun.hasType && isUnlift(fun.tpe) => true
         } match {
           case true  => None
           case false => Some(tree)
@@ -162,19 +163,13 @@ object Transformer {
           }
 
 
-        case Apply(fun, List(v)) if isUnlift(fun.tpe) => Some(v)
+        case Applysss(fun, _, (v :: Nil) :: Nil) if isUnlift(fun.tpe) => Some(v)
 
         case tree: Tree =>
           val unlifts = collection.mutable.ListBuffer.empty[(TermTree, String, TypeTree)]
           val newTree: TermTree =
             transform(tree) {
-              case q"unlift[$tp]($v)" =>
-                val name = fresh()
-                val splice = wrap(tp)
-                unlifts += ((v, name, splice))
-                Ident(name)
-
-              case q"$pack.unlift[$tp]($v)" =>
+              case tree @ Applysss(fun, tp :: Nil, (v :: Nil) :: Nil) if isUnlift(fun.tpe)  =>
                 val name = fresh()
                 val splice = wrap(tp)
                 unlifts += ((v, name, splice))
