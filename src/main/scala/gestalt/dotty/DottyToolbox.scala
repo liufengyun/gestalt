@@ -843,10 +843,12 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   /*------------------------------- traversers -------------------------------------*/
   def traverse(tree: Tree)(pf: PartialFunction[Tree, Unit]): Unit =
-    new d.TreeTraverser {
-      def traverse(tree: Tree)(implicit ctx: Context) =
-        pf.lift(tree).getOrElse(super.traverseChildren(tree))
-    }.traverse(tree)
+     new d.UntypedTreeMap() {
+      override def transform(tree: Tree)(implicit ctx: Context) = {
+        pf.lift(tree).getOrElse(super.transform(tree))
+        tree
+      }
+    }.transform(tree)
 
   def exists(tree: Tree)(pf: PartialFunction[Tree, Boolean]): Boolean = {
     var r = false

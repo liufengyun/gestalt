@@ -84,6 +84,7 @@ object Transformer {
       def unapply(tree: Tree): Option[Tree] =
         exists(tree) {
           case q"$pack.unlift[$t]($v)" => true
+          case q"unlift[$t]($v)" => true
         } match {
           case true  => None
           case false => Some(tree)
@@ -164,13 +165,13 @@ object Transformer {
                 val name = fresh()
                 val splice = wrap(tp)
                 unlifts += ((v, name, splice))
-                Lit(name)
+                Ident(name)
 
               case q"$pack.unlift[$tp]($v)" =>
                 val name = fresh()
                 val splice = wrap(tp)
                 unlifts += ((v, name, splice))
-                Lit(name)
+                Ident(name)
             }.asInstanceOf[TermTree]
 
           unlifts.toList match {
@@ -189,12 +190,9 @@ object Transformer {
                   q"val $name = ${Ident(iterator)}.next().asInstanceOf[$tpe]"
               }
 
-              val body =
-                q"""
-                 val $iterator = ${Ident(list)}.iterator
-                 ..$elements
-                 $newTree
-                 """
+              val iteratorDef = q"val $iterator = ${Ident(list)}.iterator"
+              val body = Block(iteratorDef +: elements :+ newTree)
+
               val fun = Function(toParam(list) :: Nil, body)
               Some(q"${Resolve.map(tree, collect)}($fun)")
           }

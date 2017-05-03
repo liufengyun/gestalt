@@ -15,11 +15,11 @@ class MonadlessOptionTest extends TestSuite {
     assert(lift {  1 } === Some(1))
   }
 
-  /*
   test("collect") {
     assert(lift { unlift(one) + unlift(two) } === Some(3))
   }
 
+  /*
   test("map") {
     assert(lift { unlift(one) + 1 } === Some(3))
   }
