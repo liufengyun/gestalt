@@ -506,6 +506,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
     def unapply(tree: Tree): Option[(TermTree, Seq[Tree])] = tree match {
       case c.Match(expr, cases) => Some((expr, cases))
+      case _ => None
     }
   }
 
@@ -954,6 +955,14 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
         else None
       else None
     }
+
+    def widen(tp: Type): Type = tp.widen
+
+    def denot(tp: Type): Option[Denotation] = tp match {
+      case tp: Types.NamedType => Some(tp.denot)
+      case tp: Types.TypeProxy => denot(tp.underlying)
+      case _ => None
+    }
   }
 
   object ByNameType extends ByNameTypeImpl {
@@ -965,7 +974,9 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   object MethodType extends MethodTypeImpl {
     def paramInfos(tp: MethodType): Seq[Type] = tp.paramInfos
-    def instantiate(tp: MethodType)(params: Seq[Type]): Type = tp.instantiate(params)
+    def instantiate(tp: MethodType)(params: Seq[Type]): Type = {
+      tp.instantiate(params.toList)
+    }
     def unapply(tp: Type): Option[MethodType] = tp match {
       case tp: Types.MethodType => Some(tp)
       case _ => None

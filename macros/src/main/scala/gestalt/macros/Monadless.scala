@@ -14,9 +14,11 @@ trait Monadless[Monad[_]] {
   */
 
   def lift[T](body: T)(implicit m: toolbox.WeakTypeTag[Monad[_]]): Monad[T] = meta {
-    val tree = Transformer(toolbox)(this, body)
+    val tree = Transformer(toolbox)(this, body)(m)
     toolbox.traverse(tree) {
       case tree @ q"$pack.unlift[$t]($v)" =>
+        toolbox.error("Unsupported unlift position", tree)
+      case tree @ q"unlift[$t]($v)" =>
         toolbox.error("Unsupported unlift position", tree)
     }
     tree
@@ -33,7 +35,7 @@ object Monadless {
 
 object Transformer {
 
-  def apply(toolbox: Toolbox)(prefix: toolbox.TermTree, tree: toolbox.Tree)(implicit m: toolbox.WeakTypeTag[_]): toolbox.Tree = {
+  def apply(toolbox: Toolbox)(prefix: toolbox.TermTree, tree: toolbox.TermTree)(m: toolbox.WeakTypeTag[_]): toolbox.Tree = {
     import toolbox._
 
     def toParam(name: String) = Param(emptyMods, name, None, None)
@@ -56,7 +58,7 @@ object Transformer {
           abort("Unlift can't be used as a lazy val initializer.", t)
 
         case t @ ApplySeq(method, argss) if argss.size > 0 =>
-          var methodTp: MethodType = method.tpe.asInstanceOf[MethodType]
+          var methodTp: MethodType = method.tpe.widen.asInstanceOf[MethodType]
           argss.map { args =>
             val paramTypes = methodTp.paramInfos
             paramTypes.zip(args).map {
@@ -111,9 +113,11 @@ object Transformer {
       def apply(monad: TermTree, name: String, body: TermTree): TermTree =
         body match {
           case Transform(body) =>
-            ??? // q"${Resolve.flatMap(monad, monad)}(${toParam(name)} => $body)"
-          case body            =>
-            ??? // q"${Resolve.map(monad, monad)}(${toParam(name)} => $body)"
+            val fun = Function(toParam(name) :: Nil, body)
+            q"${Resolve.flatMap(monad, monad)}($fun)"
+          case body: TermTree =>
+            val fun = Function(toParam(name) :: Nil, body)
+            q"${Resolve.map(monad, monad)}($fun)"
         }
     }
 
@@ -154,7 +158,7 @@ object Transformer {
 
         case tree: Tree =>
           val unlifts = collection.mutable.ListBuffer.empty[(TermTree, String, TypeTree)]
-          val newTree =
+          val newTree: TermTree =
             transform(tree) {
               case q"unlift[$tp]($v)" =>
                 val name = fresh()
@@ -167,12 +171,13 @@ object Transformer {
                 val splice = wrap(tp)
                 unlifts += ((v, name, splice))
                 Lit(name)
-            }
+            }.asInstanceOf[TermTree]
 
           unlifts.toList match {
             case List() => None
             case List((tree, name, _)) =>
-              ??? // Some(q"${Resolve.map(tree, tree)}(${toParam(name)} => $newTree)")
+              val fun = Function(toParam(name) :: Nil, newTree)
+              Some(q"${Resolve.map(tree, tree)}($fun)")
             case unlifts =>
               val (trees, names, types) = unlifts.unzip3
               val list = fresh("list")
@@ -184,15 +189,14 @@ object Transformer {
                   q"val $name = ${Ident(iterator)}.next().asInstanceOf[$tpe]"
               }
 
-              Some(
+              val body =
                 q"""
-                    ${Resolve.map(tree, collect)} { ${toParam(list)} =>
-                      val $iterator = ${Ident(list)}.iterator
-                      ..$elements
-                      $newTree
-                    }
-                  """
-              )
+                 val $iterator = ${Ident(list)}.iterator
+                 ..$elements
+                 $newTree
+                 """
+              val fun = Function(toParam(list) :: Nil, body)
+              Some(q"${Resolve.map(tree, collect)}($fun)")
           }
       }
     }
@@ -242,7 +246,7 @@ object Transformer {
           abort(msg, pos)
         }
 
-      def flatMap(pos: Tree, instance: TermTree): Tree =
+      def flatMap(pos: Tree, instance: TermTree): TermTree =
         instanceMethod(pos, instance, "flatMap").getOrElse {
           val msg =
             s"""Transformation requires the method `flatMap` to transform the result of a monad instance.
@@ -251,7 +255,7 @@ object Transformer {
           abort(msg, pos)
         }
 
-      def rescue(pos: Tree, instance: TermTree): Tree =
+      def rescue(pos: Tree, instance: TermTree): TermTree =
         instanceMethod(pos, instance, "rescue").getOrElse {
           val msg =
             s"""Transformation requires the method `rescue` to recover from a failure (translate a `catch` clause).
@@ -261,7 +265,7 @@ object Transformer {
           abort(msg, pos)
         }
 
-      def ensure(pos: Tree, instance: TermTree): Tree =
+      def ensure(pos: Tree, instance: TermTree): TermTree =
         instanceMethod(pos, instance, "ensure").getOrElse {
           val msg =
             s"""Transformation requires the method `ensure` to execute code regardless of the outcome of the
@@ -291,7 +295,7 @@ object Transformer {
 
       private def companionMethod(pos: Tree, name: String) =
         method(prefix, prefix.tpe, name)
-          .orElse(method(Ident(m.tpe.show), m.tpe.companion.get, name))
+          .orElse(method(Ident(m.tpe.denot.get.name), m.tpe.companion.get, name))
 
       private def method(instance: TermTree, tpe: Type, name: String) =
         find(tpe, name).map(_ => Select(instance, name))
@@ -303,7 +307,10 @@ object Transformer {
         }
     }
 
-    tree
+    validate(tree) match {
+      case PureTree(tree: TermTree) => Apply(Resolve.apply(tree), List(tree))
+      case tree: Tree     => Transform(tree)
+    }
   }
 }
 

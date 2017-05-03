@@ -16,6 +16,8 @@ trait Types extends MethodTypes { self: Toolbox =>
     def methods: Seq[Denotation] = Type.methods(tp)
     def companion: Option[Type] = Type.companion(tp)
     def show: String = Type.show(tp)
+    def widen: Type = Type.widen(tp)
+    def denot: Option[Denotation] = Type.denot(tp)
   }
 
   implicit class TreeTypeOps(tree: Tree) {
@@ -70,6 +72,12 @@ trait Types extends MethodTypes { self: Toolbox =>
      *  If `tp` points to an object, its companion class.
      */
     def companion(tp: Type): Option[Type]
+
+    /** widen singleton types */
+    def widen(tp: Type): Type
+
+    /** denotation associated with the type */
+    def denot(tp: Type): Option[Denotation]
   }
 
 

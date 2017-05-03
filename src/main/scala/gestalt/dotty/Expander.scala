@@ -90,7 +90,7 @@ object Expander {
     if (argss.size == 0 || (argss.size == 1 && argss.head.size == 0)) return argss
 
     var methodType = f.tpe.widen.appliedTo(targs.map(_.tpe)).asInstanceOf[MethodType]
-    argss.foldRight(Nil : List[List[Object]]) { (args: List[tpd.Tree], acc) =>
+    argss.foldLeft(Nil : List[List[Object]]) { (acc, args: List[tpd.Tree]) =>
       val paramTypes = methodType.paramInfos
       val args2 = paramTypes.zip(args).map {
         case (AppliedType(tp, targs), arg) if tp.isRef(defn.WeakTypeTag) =>
@@ -111,6 +111,7 @@ object Expander {
   /** Expand def macros */
   def expandDefMacro(tree: tpd.Tree)(implicit ctx: Context): untpd.Tree = tree match {
     case ExtractApply(methodSelect @ MethodSelect(prefix, method), targs, argss) =>
+      println("expanding {" + tree.show + "}")
       val methodOwner = methodSelect.symbol.owner
       val className = if (methodOwner.isPackageObject) {
         // if macro is defined in a package object
@@ -126,14 +127,20 @@ object Expander {
 
       val tb = new Toolbox(tree.pos)
       val argss2 = synthesizeTypeTag(methodSelect, targs, argss)(tb)
-      val trees  = tb :: prefix :: targs ++ argss2.flatten
+      val prefix2 =
+        if (prefix == null) tpd.ref(methodSelect.tpe.asInstanceOf[TermRef].prefix.asInstanceOf[NamedType])
+        else prefix
+      val trees  = tb :: prefix2 :: targs ++ argss2.flatten
       try {
-        impl.invoke(null, trees: _*).asInstanceOf[untpd.Tree]
+        val res = impl.invoke(null, trees: _*).asInstanceOf[untpd.Tree]
+        println(" => {" + res.show + "}")
+        res
       }
       catch {
         case e: Exception =>
           ctx.error("error occurred while expanding macro: \n" + e.getMessage, tree.pos)
-          untpd.Literal(Constant(null)).withPos(tree.pos)
+          e.printStackTrace()
+          tree
       }
     case _ =>
       ctx.warning(s"Unknown macro expansion: $tree")
