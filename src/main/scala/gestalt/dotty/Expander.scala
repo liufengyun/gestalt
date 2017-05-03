@@ -140,7 +140,7 @@ object Expander {
         case e: Exception =>
           ctx.error("error occurred while expanding macro: \n" + e.getMessage, tree.pos)
           e.printStackTrace()
-          tree
+          untpd.Literal(Constant(null)).withPos(tree.pos)
       }
     case _ =>
       ctx.warning(s"Unknown macro expansion: $tree")

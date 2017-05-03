@@ -14,7 +14,7 @@ trait Monadless[Monad[_]] {
   */
 
   def lift[T](body: T)(implicit m: toolbox.WeakTypeTag[Monad[_]]): Monad[T] = meta {
-    val tree = Transformer(toolbox)(this, body)(m)
+    val tree = Transformer(toolbox)(this, body)
     toolbox.traverse(tree) {
       case tree @ q"$pack.unlift[$t]($v)" =>
         toolbox.error("Unsupported unlift position", tree)
@@ -35,7 +35,7 @@ object Monadless {
 
 object Transformer {
 
-  def apply(toolbox: Toolbox)(prefix: toolbox.TermTree, tree: toolbox.TermTree)(m: toolbox.WeakTypeTag[_]): toolbox.Tree = {
+  def apply(toolbox: Toolbox)(prefix: toolbox.TermTree, tree: toolbox.TermTree)(implicit m: toolbox.WeakTypeTag[_]): toolbox.Tree = {
     import toolbox._
 
     def toParam(name: String) = Param(emptyMods, name, None, None)
