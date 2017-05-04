@@ -7,9 +7,6 @@ trait Toolbox extends Trees with Types with Denotations with Symbols with TypeTa
   val symbols = this
   val types = this
 
-  val tpd: typed.Trees
-  val tpdTrees: typed.Trees = tpd
-
   /** get the location where the def macro is used */
   def currentLocation: Location
 

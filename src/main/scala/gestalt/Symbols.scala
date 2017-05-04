@@ -1,10 +1,7 @@
 package scala.gestalt
 
-trait Symbols {
+trait Symbols { this: Toolbox =>
   type Symbol
-
-  val types: Types
-  import types._
 
   implicit class SymbolOps(sym: Symbol) {
     def name: String = Symbol.name(sym)

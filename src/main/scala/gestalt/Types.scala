@@ -1,13 +1,7 @@
 package scala.gestalt
 
-trait Types extends MethodTypes {
+trait Types extends MethodTypes { this: Toolbox =>
   type Type >: Null <: AnyRef
-
-  val denotations: Denotations
-  val tpdTrees: typed.Trees // typed trees
-
-  import denotations._
-  import tpdTrees._
 
   implicit class TypeOps(tp: Type) {
     def =:=(tp2: Type) = Type.=:=(tp, tp2)
@@ -26,7 +20,7 @@ trait Types extends MethodTypes {
     def denot: Option[Denotation] = Type.denot(tp)
   }
 
-  implicit class TreeTypeOps(tree: Tree) {
+  implicit class TreeTypeOps(tree: tpd.Tree) {
     def tpe: Type = Type.typeOf(tree)
     def hasType: Boolean = Type.hasType(tree)
   }
@@ -49,14 +43,14 @@ trait Types extends MethodTypes {
     def termRef(path: String): Type
 
     /** type associated with the tree */
-    def typeOf(tree: Tree): Type
+    def typeOf(tree: tpd.Tree): Type
 
     /** whether the tree is typed or not
      *
      *  @note this is temporary, once we separate typed trees from untped
      *        trees, this should be removed.
      */
-    def hasType(tree: Tree): Boolean
+    def hasType(tree: tpd.Tree): Boolean
 
     /** does the type refer to a case class? */
     def isCaseClass(tp: Type): Boolean
