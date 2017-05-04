@@ -1,7 +1,13 @@
 package scala.gestalt
 
-trait Denotations { self: Toolbox =>
+trait Denotations {
   type Denotation
+
+  val types: Types
+  val symbols: Symbols
+
+  import types._
+  import symbols._
 
   implicit class DenotationOps(denot: Denotation) {
     def name: String = Denotation.name(denot)

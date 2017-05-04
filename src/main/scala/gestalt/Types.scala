@@ -1,7 +1,13 @@
 package scala.gestalt
 
-trait Types extends MethodTypes { self: Toolbox =>
+trait Types extends MethodTypes {
   type Type >: Null <: AnyRef
+
+  val denotations: Denotations
+  val tpdTrees: typed.Trees // typed trees
+
+  import denotations._
+  import tpdTrees._
 
   implicit class TypeOps(tp: Type) {
     def =:=(tp2: Type) = Type.=:=(tp, tp2)

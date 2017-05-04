@@ -1,4 +1,5 @@
-package scala.gestalt.dotty
+package scala.gestalt
+package dotty
 
 import scala.gestalt.{Toolbox => Tbox, Location}
 
