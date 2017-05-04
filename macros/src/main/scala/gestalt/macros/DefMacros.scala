@@ -114,6 +114,13 @@ object trees {
          def next() = ???
        }"""
   }
+
+  def typedIterator[T](): Iterator[T] = meta {
+    q"""new Iterator[$T]{
+         def hasNext = false
+         def next(): $T = ???
+       }"""
+  }
 }
 
 object Inheritance {
