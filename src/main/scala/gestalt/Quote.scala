@@ -7,6 +7,7 @@ import scala.compat.Platform.EOL
 /** Lift scala.meta trees as t.trees */
 abstract class Quote(val t: Toolbox, val toolboxName: String) {
   import Quasiquote.Hole
+  import t._
 
   type Quasi = m.internal.ast.Quasi
 
@@ -66,7 +67,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
           require(prefix.isEmpty)
           if (isTerm) loop(rest, Some(t.Infix(acc.get, "++", liftQuasi(quasi))), Nil)
           else {
-            t.error(m.internal.parsers.Messages.QuasiquoteAdjacentEllipsesInPattern(quasi.rank), enclosingTree)
+            t.error(m.internal.parsers.Messages.QuasiquoteAdjacentEllipsesInPattern(quasi.rank), enclosingTree.pos)
             t.Lit(null)
           }
         }
@@ -97,11 +98,11 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
       if (treess.flatten.length == 1) liftQuasi(tripleDotQuasis(0))
       else {
         t.error("implementation restriction: can't mix ...$ with anything else in parameter lists." +
-          EOL + "See https://github.com/scalameta/scalameta/issues/406 for details.", enclosingTree)
+          EOL + "See https://github.com/scalameta/scalameta/issues/406 for details.", enclosingTree.pos)
         t.Lit(null)
       }
     } else {
-      t.error(m.internal.parsers.Messages.QuasiquoteAdjacentEllipsesInPattern(2), enclosingTree)
+      t.error(m.internal.parsers.Messages.QuasiquoteAdjacentEllipsesInPattern(2), enclosingTree.pos)
       t.Lit(null)
     }
   }
@@ -231,7 +232,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
       case Seq(quasi: Quasi) => return liftQuasi(quasi)
       case _ =>
         if (!isTerm) {
-          t.error("Match modifiers in syntax is problematic and not supported. Match the modifiers with a variable instead or $_ to ignore them.", enclosingTree)
+          t.error("Match modifiers in syntax is problematic and not supported. Match the modifiers with a variable instead or $_ to ignore them.", enclosingTree.pos)
           return t.Ident("_")
         }
     }

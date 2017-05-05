@@ -11,8 +11,7 @@ import Contexts._
 import Decorators._
 import Constants._
 import d.modsDeco
-import util.Positions
-import Positions.Position
+import util.Positions.Position
 
 import scala.collection.mutable.ListBuffer
 
@@ -38,6 +37,15 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   type Self = d.ValDef
   type InitCall = d.Tree
 
+  /*------------------------------ positions ------------------------------*/
+  type Pos = Position
+
+  object Pos extends PositionImpl {
+    def pos(tree: Tree): Pos = tree.pos
+  }
+
+
+  /*------------------------------ modifiers ------------------------------*/
   case class DottyModifiers(dottyMods: d.Modifiers) extends Modifiers {
     def isPrivate: Boolean = dottyMods.is(Flags.Private)
     def isProtected: Boolean = dottyMods.is(Flags.Protected)
@@ -102,31 +110,32 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   // modifiers
   def emptyMods: Mods = DottyModifiers(d.EmptyModifiers)
 
+  implicit  def toDotty(tbMods: Mods): d.Modifiers = tbMods.dottyMods
+
+  implicit def fromDotty(dottyMods: d.Modifiers): Mods = DottyModifiers(dottyMods)
+
+  /*------------------------------ diagnostics ------------------------------*/
   def fresh(prefix: String = "$local"): String = ctx.freshName(prefix)
 
+  // diagnostics - the implementation takes the position from the tree
+  def error(message: String, pos: Pos): Unit = {
+    ctx.error(message, pos)
+  }
+
+  /** stop macro transform - the implementation takes the position from the tree */
+  def abort(message: String, pos: Pos): Nothing = {
+    ctx.error(message, pos)
+    throw new Exception(message)
+  }
+
+  /*------------------------------ helpers ------------------------------*/
   def getOrEmpty(treeOpt: Option[Tree]): Tree = treeOpt.getOrElse(d.EmptyTree)
 
   implicit class TreeHelper(tree: d.Tree) {
     def withPosition[T <: Tree] = tree.withPos(enclosingPosition).asInstanceOf[T]
   }
 
-  // diagnostics - the implementation takes the position from the tree
-  def error(message: String, tree: Tree): Unit = {
-    ctx.error(message, tree.pos)
-  }
-
-  /** stop macro transform - the implementation takes the position from the tree */
-  def abort(message: String, tree: Tree): Nothing = {
-    ctx.error(message, tree.pos)
-    throw new Exception(message)
-  }
-
-  implicit  def toDotty(tbMods: Mods): d.Modifiers = tbMods.dottyMods
-
-  implicit def fromDotty(dottyMods: d.Modifiers): Mods = DottyModifiers(dottyMods)
-
-  //----------------------------------------
-
+  /*------------------------------ trees ------------------------------*/
 
   object AnonymClass extends AnonymClassImpl {
     def apply(parents: Seq[InitCall], selfOpt: Option[Self], stats: Seq[Tree]): Tree = {
