@@ -24,7 +24,7 @@ trait Monadless[Monad[_]] {
 
     toolbox.traverse(tree) {
       case q"$fun[$tp]($v)" if fun.hasType && isUnlift(fun.tpe) =>
-        toolbox.error("Unsupported unlift position", tree)
+        error("Unsupported unlift position", tree.pos)
     }
 
     tree
@@ -56,16 +56,16 @@ object Transformer {
         case t @ Match(_, cases) =>
           cases.foreach {
             case Case(_, Some(t @ Transform(_)), _) =>
-              abort("Unlift can't be used as a case guard.", t)
+              abort("Unlift can't be used as a case guard.", t.pos)
             case Case(_, _, body) =>
               validate(body)
           }
 
         case t @ Return(_) =>
-          abort("Lifted expression can't contain `return` statements.", t)
+          abort("Lifted expression can't contain `return` statements.", t.pos)
 
         case t @ ValDef(mods, _, _, Transform(_)) if mods.isLazy =>
-          abort("Unlift can't be used as a lazy val initializer.", t)
+          abort("Unlift can't be used as a lazy val initializer.", t.pos)
 
         case t @ ApplySeq(method, argss) if argss.size > 0 =>
           var methodTp: MethodType = method.tpe.widen.asInstanceOf[MethodType]
@@ -73,7 +73,7 @@ object Transformer {
             val paramTypes = methodTp.paramInfos
             paramTypes.zip(args).map {
               case (ByNameType(_), Transform(_)) =>
-                abort("Unlift can't be used as by-name param.", t)
+                abort("Unlift can't be used as by-name param.", t.pos)
               case other =>
                 ()
             }
@@ -124,10 +124,10 @@ object Transformer {
         body match {
           case Transform(body) =>
             val fun = Function(toParam(name) :: Nil, body)
-            q"${Resolve.flatMap(monad, monad)}($fun)"
+            q"${Resolve.flatMap(monad.pos, monad)}($fun)"
           case body: TermTree =>
             val fun = Function(toParam(name) :: Nil, body)
-            q"${Resolve.map(monad, monad)}($fun)"
+            q"${Resolve.map(monad.pos, monad)}($fun)"
         }
     }
 
@@ -153,10 +153,10 @@ object Transformer {
             case (Transform(ifTrue), Transform(ifFalse)) =>
               Some(If(cond, ifTrue, Some(ifFalse)))
             case (Transform(ifTrue), ifFalse) =>
-              val elsep = Apply(Resolve.apply(tree), List(ifFalse))
+              val elsep = Apply(Resolve.apply(tree.pos), List(ifFalse))
               Some(If(cond, ifTrue, Some(elsep)))
             case (ifTrue, Some(Transform(ifFalse))) =>
-              val ifp = Apply(Resolve.apply(tree), List(ifTrue))
+              val ifp = Apply(Resolve.apply(tree.pos), List(ifTrue))
               Some(If(cond, ifp, Some(ifFalse)))
             case (ifTrue, ifFalse) =>
               None
@@ -180,12 +180,12 @@ object Transformer {
             case List() => None
             case List((tree, name, _)) =>
               val fun = Function(toParam(name) :: Nil, newTree)
-              Some(q"${Resolve.map(tree, tree)}($fun)")
+              Some(q"${Resolve.map(tree.pos, tree)}($fun)")
             case unlifts =>
               val (trees, names, types) = unlifts.unzip3
               val list = fresh("list")
               val iterator = fresh("iterator")
-              val collect = q"${Resolve.collect(tree)}(scala.List(..${trees.toSeq}))"
+              val collect = q"${Resolve.collect(tree.pos)}(scala.List(..${trees.toSeq}))"
 
               val elements = unlifts.map {
                 case (tree, name, tpe) =>
@@ -196,7 +196,7 @@ object Transformer {
               val body = Block(iteratorDef +: elements :+ newTree)
 
               val fun = Function(toParam(list) :: Nil, body)
-              Some(q"${Resolve.map(tree, collect)}($fun)")
+              Some(q"${Resolve.map(tree.pos, collect)}($fun)")
           }
       }
     }
@@ -211,7 +211,7 @@ object Transformer {
            |defined by the monad instance and its companion object.
         """.stripMargin
 
-      def apply(pos: Tree): TermTree =
+      def apply(pos: Pos): TermTree =
         companionMethod(pos, "apply").getOrElse {
           val msg =
             s"""Transformation requires the method `apply` to create a monad instance for a value.
@@ -220,7 +220,7 @@ object Transformer {
           abort(msg, pos)
         }
 
-      def collect(pos: Tree): TermTree =
+      def collect(pos: Pos): TermTree =
         companionMethod(pos, "collect").getOrElse {
           val msg =
             s"""Transformation requires the method `collect` to transform List[M[T]] into M[List[T]]. The implementation
@@ -237,7 +237,7 @@ object Transformer {
            |$sourceCompatibilityMessage
         """.stripMargin
 
-      def map(pos: Tree, instance: TermTree): TermTree =
+      def map(pos: Pos, instance: TermTree): TermTree =
         instanceMethod(pos, instance, "map").getOrElse {
           val msg =
             s"""Transformation requires the method `map` to transform the result of a monad instance.
@@ -246,7 +246,7 @@ object Transformer {
           abort(msg, pos)
         }
 
-      def flatMap(pos: Tree, instance: TermTree): TermTree =
+      def flatMap(pos: Pos, instance: TermTree): TermTree =
         instanceMethod(pos, instance, "flatMap").getOrElse {
           val msg =
             s"""Transformation requires the method `flatMap` to transform the result of a monad instance.
@@ -255,7 +255,7 @@ object Transformer {
           abort(msg, pos)
         }
 
-      def rescue(pos: Tree, instance: TermTree): TermTree =
+      def rescue(pos: Pos, instance: TermTree): TermTree =
         instanceMethod(pos, instance, "rescue").getOrElse {
           val msg =
             s"""Transformation requires the method `rescue` to recover from a failure (translate a `catch` clause).
@@ -265,7 +265,7 @@ object Transformer {
           abort(msg, pos)
         }
 
-      def ensure(pos: Tree, instance: TermTree): TermTree =
+      def ensure(pos: Pos, instance: TermTree): TermTree =
         instanceMethod(pos, instance, "ensure").getOrElse {
           val msg =
             s"""Transformation requires the method `ensure` to execute code regardless of the outcome of the
@@ -289,11 +289,11 @@ object Transformer {
           |that don't represent a computation and/or don't handle exceptions (e.g. `Option`)
         """.stripMargin
 
-      private def instanceMethod(pos: Tree, instance: TermTree, name: String) =
+      private def instanceMethod(pos: Pos, instance: TermTree, name: String) =
         this.method(prefix, prefix.tpe, name).map(t => q"$t($instance)")
           .orElse(this.method(instance, m.tpe, name))
 
-      private def companionMethod(pos: Tree, name: String) =
+      private def companionMethod(pos: Pos, name: String) =
         method(prefix, prefix.tpe, name)
           .orElse(method(Ident(m.tpe.denot.get.name), m.tpe.companion.get, name))
 
@@ -308,7 +308,7 @@ object Transformer {
     }
 
     validate(tree) match {
-      case PureTree(tree: TermTree) => Apply(Resolve.apply(tree), List(tree))
+      case PureTree(tree: TermTree) => Apply(Resolve.apply(tree.pos), List(tree))
       case tree: Tree     => Transform(tree)
     }
   }
