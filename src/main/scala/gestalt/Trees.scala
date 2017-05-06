@@ -413,8 +413,8 @@ trait Trees extends Params with TypeParams with
 
   // helper
   def ApplySeq(fun: TermTree, argss: Seq[Seq[TermTree]]): Tree = argss match {
-    case args :: rest => rest.foldLeft(Apply(fun, args)) { (acc, args) => Apply(acc, args) }
-    case _ => fun
+   case args :: rest => rest.foldLeft(Apply(fun, args)) { (acc, args) => Apply(acc, args) }
+   case _ => fun
   }
 
   object ApplySeq {
