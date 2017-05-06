@@ -149,6 +149,8 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     def extractFun(tree: m.Tree): (t.TermTree, t.TermTree, t.TermTree) = tree match {
       case m.Term.ApplyType(m.Ctor.Ref.Select(qual, m.Ctor.Ref.Name(name)), targs) =>
         (scalaSome.appliedTo(lift(qual)), t.Lit(name), liftSeq(targs))
+      case m.Ctor.Ref.Select(qual, m.Ctor.Ref.Name(name)) =>
+        (scalaSome.appliedTo(lift(qual)), t.Lit(name), liftSeq(Nil))
       case m.Term.ApplyType(m.Ctor.Ref.Name(name), targs) =>
         (scalaNone, t.Lit(name), liftSeq(targs))
       case m.Ctor.Ref.Name(name) =>
