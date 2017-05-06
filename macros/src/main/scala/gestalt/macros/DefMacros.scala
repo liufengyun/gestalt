@@ -121,6 +121,13 @@ object trees {
          def next(): $T = ???
        }"""
   }
+  def abcdObject(): AnyRef = meta {
+    val tree =
+      q"""new Object {
+        override def toString = "abcd"
+      }"""
+    tree
+  }
 }
 
 object Inheritance {
