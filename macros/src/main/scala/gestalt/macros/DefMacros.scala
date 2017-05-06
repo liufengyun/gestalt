@@ -12,12 +12,13 @@ object plusObject {
     q"$a + $b"
   }
   def poly(a: Any, b: Int): Int = meta {
+    import toolbox._
     a match {
-      case toolbox.Lit(i:Int) => q"$a + $b"
-      case toolbox.Lit(s:String) => q"$a.toInt + $b"
+      case Lit(i:Int) => q"$a + $b"
+      case Lit(s:String) => q"$a.toInt + $b"
       case other =>
-        toolbox.error(s"expected String or Interger constants",a)
-        toolbox.Lit(null)
+        error(s"expected String or Interger constants", a.pos)
+        Lit(null)
     }
   }
 
@@ -31,12 +32,14 @@ object plusObject {
   }
 
   def deconstructApply(items: Any): Int = meta {
+    import toolbox._
+
     items match {
-      case toolbox.Apply(prefix: toolbox.Tree, items: Seq[toolbox.TermTree]) =>
-        items.reduceLeft[toolbox.TermTree]((a, b) => q"$a + $b")
+      case Apply(prefix: Tree, items: Seq[TermTree]) =>
+        items.reduceLeft[TermTree]((a, b) => q"$a + $b")
       case _ =>
-        toolbox.error("expected application of Ints",items)
-        toolbox.Lit(null)
+        error("expected application of Ints", items.pos)
+        Lit(null)
     }
   }
 }
@@ -143,7 +146,7 @@ object CaseInfo {
     import toolbox._
     val tp = T.tpe
     if (!tp.isCaseClass) {
-      toolbox.error("Not a case class", T)
+      error("Not a case class", T.pos)
       q"scala.Nil"
     }
     else {

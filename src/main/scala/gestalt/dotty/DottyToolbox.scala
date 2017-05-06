@@ -4,15 +4,14 @@ import scala.gestalt.{Toolbox => Tbox, Location}
 
 import dotty.tools.dotc._
 import core._
-import ast.{ untpd => d, Trees => c }
+import ast.{ untpd => d, Trees => c, tpd }
 import StdNames._
 import NameOps._
 import Contexts._
 import Decorators._
 import Constants._
 import d.modsDeco
-import util.Positions
-import Positions.Position
+import util.Positions.Position
 
 import scala.collection.mutable.ListBuffer
 
@@ -23,6 +22,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   type TypeTree = d.Tree
   type TermTree = d.Tree
   type DefTree = d.Tree
+  type Splice = d.Tree
   type Mods = DottyModifiers
 
   type Param = d.ValDef
@@ -37,6 +37,15 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   type Self = d.ValDef
   type InitCall = d.Tree
 
+  /*------------------------------ positions ------------------------------*/
+  type Pos = Position
+
+  object Pos extends PositionImpl {
+    def pos(tree: Tree): Pos = tree.pos
+  }
+
+
+  /*------------------------------ modifiers ------------------------------*/
   case class DottyModifiers(dottyMods: d.Modifiers) extends Modifiers {
     def isPrivate: Boolean = dottyMods.is(Flags.Private)
     def isProtected: Boolean = dottyMods.is(Flags.Protected)
@@ -101,31 +110,32 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   // modifiers
   def emptyMods: Mods = DottyModifiers(d.EmptyModifiers)
 
+  implicit  def toDotty(tbMods: Mods): d.Modifiers = tbMods.dottyMods
+
+  implicit def fromDotty(dottyMods: d.Modifiers): Mods = DottyModifiers(dottyMods)
+
+  /*------------------------------ diagnostics ------------------------------*/
   def fresh(prefix: String = "$local"): String = ctx.freshName(prefix)
 
+  // diagnostics - the implementation takes the position from the tree
+  def error(message: String, pos: Pos): Unit = {
+    ctx.error(message, pos)
+  }
+
+  /** stop macro transform - the implementation takes the position from the tree */
+  def abort(message: String, pos: Pos): Nothing = {
+    ctx.error(message, pos)
+    throw new Exception(message)
+  }
+
+  /*------------------------------ helpers ------------------------------*/
   def getOrEmpty(treeOpt: Option[Tree]): Tree = treeOpt.getOrElse(d.EmptyTree)
 
   implicit class TreeHelper(tree: d.Tree) {
     def withPosition[T <: Tree] = tree.withPos(enclosingPosition).asInstanceOf[T]
   }
 
-  // diagnostics - the implementation takes the position from the tree
-  def error(message: String, tree: Tree): Unit = {
-    ctx.error(message, tree.pos)
-  }
-
-  /** stop macro transform - the implementation takes the position from the tree */
-  def abort(message: String, tree: Tree): Nothing = {
-    ctx.error(message, tree.pos)
-    throw new Exception(message)
-  }
-
-  implicit  def toDotty(tbMods: Mods): d.Modifiers = tbMods.dottyMods
-
-  implicit def fromDotty(dottyMods: d.Modifiers): Mods = DottyModifiers(dottyMods)
-
-  //----------------------------------------
-
+  /*------------------------------ trees ------------------------------*/
 
   object AnonymClass extends AnonymClassImpl {
     def apply(parents: Seq[InitCall], selfOpt: Option[Self], stats: Seq[Tree]): Tree = {
@@ -505,6 +515,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
     def unapply(tree: Tree): Option[(TermTree, Seq[Tree])] = tree match {
       case c.Match(expr, cases) => Some((expr, cases))
+      case _ => None
     }
   }
 
@@ -834,13 +845,19 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def tpt(tree: DefDecl): TypeTree = tree.tpt
   }
 
+  object TypedSplice extends TypedSpliceImpl {
+    def apply(tree: Tree): Splice = d.TypedSplice(tree.asInstanceOf[tpd.Tree])
+  }
+
 
   /*------------------------------- traversers -------------------------------------*/
   def traverse(tree: Tree)(pf: PartialFunction[Tree, Unit]): Unit =
-    new d.TreeTraverser {
-      def traverse(tree: Tree)(implicit ctx: Context) =
-        pf.lift(tree).getOrElse(super.traverseChildren(tree))
-    }.traverse(tree)
+     new d.UntypedTreeMap() {
+      override def transform(tree: Tree)(implicit ctx: Context) = {
+        pf.lift(tree).getOrElse(super.transform(tree))
+        tree
+      }
+    }.transform(tree)
 
   def exists(tree: Tree)(pf: PartialFunction[Tree, Boolean]): Boolean = {
     var r = false
@@ -885,6 +902,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
     /** type associated with the tree */
     def typeOf(tree: Tree): Type = tree.tpe
+
+    def hasType(tree: Tree): Boolean = tree.hasType
 
     /** does the type refer to a case class? */
     def isCaseClass(tp: Type): Boolean = tp.classSymbol.is(Flags.Case)
@@ -938,6 +957,25 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
         )
       )
     }
+
+    def companion(tp: Type): Option[Type] = {
+      val clazz = tp.widenSingleton.classSymbol
+      if (clazz.exists)
+        if (clazz.is(Flags.Module) && clazz.companionClass.exists)
+          Some(clazz.companionClass.namedType)
+        else if (!clazz.is(Flags.Module) && clazz.companionModule.exists)
+          Some(clazz.companionModule.namedType)
+        else None
+      else None
+    }
+
+    def widen(tp: Type): Type = tp.widen
+
+    def denot(tp: Type): Option[Denotation] = tp match {
+      case tp: Types.NamedType => Some(tp.denot)
+      case tp: Types.TypeProxy => denot(tp.underlying)
+      case _ => None
+    }
   }
 
   object ByNameType extends ByNameTypeImpl {
@@ -949,7 +987,9 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   object MethodType extends MethodTypeImpl {
     def paramInfos(tp: MethodType): Seq[Type] = tp.paramInfos
-    def instantiate(tp: MethodType)(params: Seq[Type]): Type = tp.instantiate(params)
+    def instantiate(tp: MethodType)(params: Seq[Type]): Type = {
+      tp.instantiate(params.toList)
+    }
     def unapply(tp: Type): Option[MethodType] = tp match {
       case tp: Types.MethodType => Some(tp)
       case _ => None

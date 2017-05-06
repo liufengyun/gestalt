@@ -7,6 +7,7 @@ import scala.compat.Platform.EOL
 /** Lift scala.meta trees as t.trees */
 abstract class Quote(val t: Toolbox, val toolboxName: String) {
   import Quasiquote.Hole
+  import t._
 
   type Quasi = m.internal.ast.Quasi
 
@@ -60,13 +61,13 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
           if (prefix.isEmpty) loop(rest, Some(liftQuasi(quasi)), Nil)
           else loop(rest, Some(prefix.foldRight(liftQuasi(quasi))((curr, acc) => {
             val currElement = lift(curr)
-            t.Infix(currElement, "+:", acc)
+            t.Infix(acc, "+:", currElement)
           })), Nil)
         } else {
           require(prefix.isEmpty)
           if (isTerm) loop(rest, Some(t.Infix(acc.get, "++", liftQuasi(quasi))), Nil)
           else {
-            t.error(m.internal.parsers.Messages.QuasiquoteAdjacentEllipsesInPattern(quasi.rank), enclosingTree)
+            t.error(m.internal.parsers.Messages.QuasiquoteAdjacentEllipsesInPattern(quasi.rank), enclosingTree.pos)
             t.Lit(null)
           }
         }
@@ -97,11 +98,11 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
       if (treess.flatten.length == 1) liftQuasi(tripleDotQuasis(0))
       else {
         t.error("implementation restriction: can't mix ...$ with anything else in parameter lists." +
-          EOL + "See https://github.com/scalameta/scalameta/issues/406 for details.", enclosingTree)
+          EOL + "See https://github.com/scalameta/scalameta/issues/406 for details.", enclosingTree.pos)
         t.Lit(null)
       }
     } else {
-      t.error(m.internal.parsers.Messages.QuasiquoteAdjacentEllipsesInPattern(2), enclosingTree)
+      t.error(m.internal.parsers.Messages.QuasiquoteAdjacentEllipsesInPattern(2), enclosingTree.pos)
       t.Lit(null)
     }
   }
@@ -180,9 +181,8 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     *  name: String) => t.Tree[t.Tree[?]]
     * }}}
     *
-    * @param name "ValDecl", "VarDecl", "ValDef" or "VarDef"
     * */
-  def liftValDef(mods: t.TermTree, pats: Seq[m.Pat], tpe: t.TermTree, rhs: t.TermTree, name: String): t.TermTree = {
+  def liftValDef(mods: t.TermTree, pats: Seq[m.Pat], tpe: t.TermTree, rhs: t.TermTree, isDecl: Boolean): t.TermTree = {
     if (pats.size == 1) {
       // AnyTree = t.Tree | t.TypeTree
       //left: t.Tree[AnyTree[?]] | t.Tree[String]
@@ -195,18 +195,17 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
           lift(pat)
       }
 
-      // FIXME does not match to any of ${name}.apply signatures
-      // For *Decl does not have a last argument,
-      //  tpe: expected: TypeTree, actual: Option[TypeTree],
-      // For *Def argument rhs: expected: Tree, actual: Option[Nothing]
-      selectToolbox(name).appliedTo(mods, left, tpe, scalaNone)
+      if (isDecl)
+        selectToolbox("ValDecl").appliedTo(mods, left, tpe)
+      else
+        selectToolbox("ValDef").appliedTo(mods, left, tpe, rhs)
     }
-    else
-      // FIXME does not match to any of ${name}.apply signatures
-      // For *Decl does not have a last argument,
-      //  tpe: expected: TypeTree, actual: Option[TypeTree],
-      // For *Def argument rhs: expected: Tree, actual: Option[Tree]
-      selectToolbox(name).appliedTo(mods, liftSeq(pats), tpe, rhs)
+    else {
+      if (isDecl)
+        selectToolbox("SeqDecl").appliedTo(mods, liftSeq(pats), tpe)
+      else
+        selectToolbox("SeqDef").appliedTo(mods, liftSeq(pats), tpe, rhs)
+    }
   }
 
   /** Lift self annotation in class definition
@@ -233,7 +232,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
       case Seq(quasi: Quasi) => return liftQuasi(quasi)
       case _ =>
         if (!isTerm) {
-          t.error("Match modifiers in syntax is problematic and not supported. Match the modifiers with a variable instead or $_ to ignore them.", enclosingTree)
+          t.error("Match modifiers in syntax is problematic and not supported. Match the modifiers with a variable instead or $_ to ignore them.", enclosingTree.pos)
           return t.Ident("_")
         }
     }
@@ -501,11 +500,11 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     case m.Decl.Val(mods, pats, tpe) =>
       require(pats.size > 0)
       val modifiers = liftMods(mods)
-      liftValDef(modifiers, pats, scalaSome.appliedTo(lift(tpe)), scalaNone, "ValDecl")
+      liftValDef(modifiers, pats, lift(tpe), null, isDecl = true)
     case m.Decl.Var(mods, pats, tpe) =>
       require(pats.size > 0)
-      val modifiers = liftMods(mods)
-      liftValDef(modifiers, pats, scalaSome.appliedTo(lift(tpe)), scalaNone, "VarDecl")
+      val modifiers = t.Select(liftMods(mods), "setMutable")
+      liftValDef(modifiers, pats, lift(tpe), null, isDecl = true)
     case m.Decl.Def(mods, name, tparams, paramss, tpe) =>
       selectToolbox("DefDecl").appliedTo(liftMods(mods), liftName(name), liftSeq(tparams), liftSeqSeq(paramss), lift(tpe))
     case m.Decl.Type(mods, name, tparams, bounds) =>
@@ -514,11 +513,11 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     case m.Defn.Val(mods, pats, tpe, rhs) =>
       require(pats.size > 0)
       val modifiers = liftMods(mods)
-      liftValDef(modifiers, pats, liftOpt(tpe), lift(rhs), "ValDef")
+      liftValDef(modifiers, pats, liftOpt(tpe), lift(rhs), isDecl = false)
     case m.Defn.Var(mods, pats, tpe, rhs) =>
       require(pats.size > 0)
-      val modifiers = liftMods(mods)
-      liftValDef(modifiers, pats, liftOpt(tpe), liftOpt(rhs), "VarDef")
+      val modifiers = t.Select(liftMods(mods), "setMutable")
+      liftValDef(modifiers, pats, liftOpt(tpe), liftOpt(rhs), isDecl = false)
     case m.Defn.Def(mods, name, tparams, paramss, tpe, body) =>
       selectToolbox("DefDef").appliedTo(liftMods(mods), liftName(name), liftSeq(tparams), liftSeqSeq(paramss), liftOpt(tpe), lift(body))
     // case m.Defn.Macro(mods, name, tparams, paramss, tpe, body) =>

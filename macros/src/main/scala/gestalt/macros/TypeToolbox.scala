@@ -122,6 +122,19 @@ object TypeToolbox {
   def typeTag[T](x: T)(implicit m: toolbox.WeakTypeTag[T]): String = meta {
     import toolbox._
     val tp = m.tpe.show
-    toolbox.Lit(tp)
+    Lit(tp)
+  }
+
+  def companion[T1, T2]: Boolean = meta {
+    import toolbox._
+    Lit(T1.tpe.companion.get =:= T2.tpe)
+  }
+
+  def companionName[T1]: String = meta {
+    import toolbox._
+    T1.tpe.companion match {
+      case Some(tp) => Lit(tp.show)
+      case _ => Lit("")
+    }
   }
 }
