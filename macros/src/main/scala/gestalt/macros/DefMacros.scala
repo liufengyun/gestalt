@@ -121,12 +121,16 @@ object trees {
          def next(): $T = ???
        }"""
   }
+
   def abcdObject(): AnyRef = meta {
-    val tree =
-      q"""new Object {
+    q"""new Object {
         override def toString = "abcd"
       }"""
-    tree
+  }
+  def abcdObject2(): AnyRef = meta {
+    q"""new java.lang.Object {
+        override def toString = "abcd"
+      }"""
   }
 }
 

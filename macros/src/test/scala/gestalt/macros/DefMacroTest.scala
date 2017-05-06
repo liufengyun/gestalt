@@ -196,5 +196,6 @@ class DefMacroTest extends TestSuite {
     assert(trees.iterator().hasNext == false)
     assert(trees.typedIterator[String]().hasNext == false)
     assert(trees.abcdObject().toString == "abcd")
+    assert(trees.abcdObject2().toString == "abcd")
   }
 }
