@@ -1,7 +1,7 @@
 package scala.gestalt
 
 trait Types extends MethodTypes { self: Toolbox =>
-  type Type
+  type Type >: Null <: AnyRef
 
   implicit class TypeOps(tp: Type) {
     def =:=(tp2: Type) = Type.=:=(tp, tp2)
@@ -14,11 +14,15 @@ trait Types extends MethodTypes { self: Toolbox =>
     def methodsIn: Seq[Denotation] = Type.methodsIn(tp)
     def method(name: String): Seq[Denotation] = Type.method(tp, name)
     def methods: Seq[Denotation] = Type.methods(tp)
+    def companion: Option[Type] = Type.companion(tp)
     def show: String = Type.show(tp)
+    def widen: Type = Type.widen(tp)
+    def denot: Option[Denotation] = Type.denot(tp)
   }
 
   implicit class TreeTypeOps(tree: Tree) {
     def tpe: Type = Type.typeOf(tree)
+    def hasType: Boolean = Type.hasType(tree)
   }
 
   val Type: TypeImpl
@@ -40,6 +44,13 @@ trait Types extends MethodTypes { self: Toolbox =>
 
     /** type associated with the tree */
     def typeOf(tree: Tree): Type
+
+    /** whether the tree is typed or not
+     *
+     *  @note this is temporary, once we separate typed trees from untped
+     *        trees, this should be removed.
+     */
+    def hasType(tree: Tree): Boolean
 
     /** does the type refer to a case class? */
     def isCaseClass(tp: Type): Boolean
@@ -64,6 +75,17 @@ trait Types extends MethodTypes { self: Toolbox =>
 
     /** get all non-private methods declared or inherited */
     def methods(tp: Type): Seq[Denotation]
+
+    /** If `tp` points to a class, the module class of its companion object.
+     *  If `tp` points to an object, its companion class.
+     */
+    def companion(tp: Type): Option[Type]
+
+    /** widen singleton types */
+    def widen(tp: Type): Type
+
+    /** denotation associated with the type */
+    def denot(tp: Type): Option[Denotation]
   }
 
 
@@ -76,7 +98,7 @@ trait Types extends MethodTypes { self: Toolbox =>
 }
 
 trait MethodTypes { this: Types =>
-  type MethodType
+  type MethodType >: Null <: Type
 
   implicit class MethodTypeOps(tp: MethodType) {
     def paramInfos: Seq[Type] = MethodType.paramInfos(tp)

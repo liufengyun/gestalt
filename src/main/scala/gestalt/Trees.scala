@@ -1,13 +1,28 @@
 package scala.gestalt
 
+trait Positions { this: Trees =>
+  // it's safe to assume type trees and untyped trees use the same modelling of position
+  type Pos
+
+  implicit class TreePos(tree: Tree) {
+    def pos: Pos = Pos.pos(tree)
+  }
+
+  val Pos: PositionImpl
+  trait PositionImpl {
+    def pos(tree: Tree): Pos
+  }
+}
+
 trait Trees extends Params with TypeParams with
   ValDefs with ValDecls with DefDefs with DefDecls with
-  Classes with Traits with Objects {
+  Classes with Traits with Objects with Positions with TreeOps {
   // safety by construction -- implementation can have TypeTree = Tree
   type Tree     >: Null <: AnyRef
   type TypeTree >: Null <: Tree
   type TermTree >: Null <: Tree
   type DefTree  >: Null <: Tree
+  type Splice   <: TypeTree with TermTree with DefTree
 
   type Class     <: DefTree
   type Trait     <: DefTree
@@ -20,6 +35,7 @@ trait Trees extends Params with TypeParams with
   type DefDecl   <: DefTree
   type Self      <: DefTree
   type InitCall  <: Tree
+
 
   type Mods >: Null <: Modifiers
 
@@ -66,6 +82,7 @@ trait Trees extends Params with TypeParams with
 
   // modifiers
   def emptyMods: Mods
+
 
   // definition trees
   val AnonymClass: AnonymClassImpl
@@ -389,15 +406,20 @@ trait Trees extends Params with TypeParams with
     def unapply(tree: Tree): Option[Seq[TermTree]]
   }
 
-  // helpers
+  val TypedSplice: TypedSpliceImpl
+  trait TypedSpliceImpl {
+    def apply(tree: Tree): Splice
+  }
+
+  // helper
   def ApplySeq(fun: TermTree, argss: Seq[Seq[TermTree]]): Tree = argss match {
     case args :: rest => rest.foldLeft(Apply(fun, args)) { (acc, args) => Apply(acc, args) }
     case _ => fun
   }
 
   object ApplySeq {
-    def unapply(call: TermTree):  Option[(Tree, Seq[Seq[TermTree]])] = {
-      def recur(acc: Seq[Seq[TermTree]], term: TermTree): (TermTree, Seq[Seq[TermTree]])  = term match {
+    def unapply(call: TermTree): Option[(Tree, Seq[Seq[TermTree]])] = {
+      def recur(acc: Seq[Seq[TermTree]], term: TermTree): (TermTree, Seq[Seq[TermTree]]) = term match {
         case Apply(fun, args) => recur(args +: acc, fun) // inner-most is in the front
         case fun => (fun, acc)
       }
@@ -405,7 +427,9 @@ trait Trees extends Params with TypeParams with
       Some(recur(Nil, call))
     }
   }
+}
 
+trait TreeOps { this: Trees =>
   // traverser
   def traverse(tre: Tree)(pf: PartialFunction[Tree, Unit]): Unit
   def exists(tree: Tree)(pf: PartialFunction[Tree, Boolean]): Boolean
@@ -467,8 +491,8 @@ trait DefDefs { this: Trees =>
     def paramss: Seq[Seq[Param]] = DefDef.paramss(tree)
     def name: String = DefDef.name(tree)
     def tptOpt: Option[TypeTree] = DefDef.tptOpt(tree)
-    def rhs: Tree = DefDef.rhs(tree)
-    def copy(rhs: Tree = this.rhs): DefDef = DefDef.copyRhs(tree)(rhs)
+    def rhs: TermTree = DefDef.rhs(tree)
+    def copy(rhs: TermTree = this.rhs): DefDef = DefDef.copyRhs(tree)(rhs)
   }
 
   val DefDef: DefDefImpl
@@ -480,7 +504,7 @@ trait DefDefs { this: Trees =>
     def name(tree: DefDef): String
     def tptOpt(tree: DefDef): Option[TypeTree]
     def rhs(tree: DefDef): TermTree
-    def copyRhs(tree: DefDef)(rhs: Tree): DefDef
+    def copyRhs(tree: DefDef)(rhs: TermTree): DefDef
     def get(tree: Tree): Option[DefDef]
     def unapply(tree: Tree): Option[(Mods, String, Seq[TypeParam], Seq[Seq[Param]], Option[TypeTree], TermTree)]
   }
@@ -656,4 +680,3 @@ trait Objects { this: Trees =>
     def unapply(tree: Tree): Option[Object] = Object.get(tree)
   }
 }
-
