@@ -191,4 +191,11 @@ class DefMacroTest extends TestSuite {
     implicit val x: Int = 1
     assert(g(1)(2) == 2)
   }
+
+  test("create anonymous class") {
+    assert(trees.iterator().hasNext == false)
+    assert(trees.typedIterator[String]().hasNext == false)
+    assert(trees.abcdObject().toString == "abcd")
+    assert(trees.abcdObject2().toString == "abcd")
+  }
 }

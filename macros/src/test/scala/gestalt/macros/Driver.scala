@@ -10,6 +10,7 @@ object Driver {
     new JsonMacroTest
     new QuasiquoteTest
     new TypeToolboxTest
+    new MonadlessOptionTest
 
     var success = false
     var total = 0
