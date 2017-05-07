@@ -50,7 +50,6 @@ object JsonMacros {
                }}
               case other => None
             }"""
-      println(">>> " + fromJson)
       q"""
           import JsonMacros._
           new Format[$T]{
