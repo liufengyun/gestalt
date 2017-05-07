@@ -27,12 +27,12 @@ object JsonMacros {
         f => f.name -> f.info
       }
 
-      /*val jsonItems = namesAndTypes.map {
-        case (name,stringType) if stringType.show == "String" => q"${Lit(name)} -> JsonMacros.JsString(o.${Ident(name)})"
-        case (name,otherType) => q"${Lit(name)} -> JsonMacros.JsString(\"No Idea\")" // q"${Lit(name)} -> implicitly[Format[$otherType]].toJson(o.${Ident(name)})"
-      }*/
+      val jsonItems = namesAndTypes.map {
+        case (name,stringType) if stringType.show == "String" => q"${Lit(name)} -> JsonMacros.JsString(${Select(Ident("o"),name)})"
+        case (name,otherType) => q"${Lit(name)} -> JsonMacros.JsString(${Lit("No Idea")})" // q"${Lit(name)} -> implicitly[Format[$otherType]].toJson(o.${Ident(name)})"
+      }
       q"""new JsonMacros.Format[$T]{
-            def toJson(o: $T) = JsonMacros.JsObject(Nil)
+            def toJson(o: $T) = JsonMacros.JsObject(Seq(..$jsonItems))
             def fromJson(json: JsonMacros.JsValue) = None
          }"""
     }
