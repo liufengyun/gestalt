@@ -50,7 +50,7 @@ object JsonMacros {
              jsonItems.map(_.readOption) :+
                 q"if($allDefined) Some(null) else None"
              }}
-            case _ => None
+            case other => None
             }
          }"""
     }
