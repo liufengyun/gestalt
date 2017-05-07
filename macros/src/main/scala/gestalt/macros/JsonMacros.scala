@@ -50,12 +50,13 @@ object JsonMacros {
                }}
               case other => None
             }"""
-      q"""
+      q"""{
           import JsonMacros._
           new Format[$T]{
             def toJson(o: $T) = JsObject(Seq(..${jsonItems.map(_.pairOut)}))
             def fromJson(json: JsValue) = $fromJson
-         }"""
+         }
+        }"""
     }
   }
 }
