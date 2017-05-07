@@ -110,6 +110,31 @@ object trees {
   def ident(a: Any): Any = meta {
     q"$a"
   }
+
+  def iterator(): Iterator[Nothing] = meta {
+    q"""new Iterator[Nothing]{
+         def hasNext = false
+         def next() = ???
+       }"""
+  }
+
+  def typedIterator[T](): Iterator[T] = meta {
+    q"""new Iterator[$T]{
+         def hasNext = false
+         def next(): $T = ???
+       }"""
+  }
+
+  def abcdObject(): AnyRef = meta {
+    q"""new Object {
+        override def toString = "abcd"
+      }"""
+  }
+  def abcdObject2(): AnyRef = meta {
+    q"""new java.lang.Object {
+        override def toString = "abcd"
+      }"""
+  }
 }
 
 object Inheritance {

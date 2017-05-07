@@ -132,8 +132,11 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     if (quasi.rank > 0) return liftQuasi(quasi.tree.asInstanceOf[Quasi], quasi.rank, optional)
 
     def arg(i: Int) =
-      if (!isTerm && optional) scalaSome.appliedTo(args(i).asInstanceOf[t.TermTree])
-      else args(i).asInstanceOf[t.TermTree]
+      if (optional) {
+        scalaSome.appliedTo(args(i).asInstanceOf[t.TermTree])
+      } else {
+        args(i).asInstanceOf[t.TermTree]
+      }
 
     quasi.tree match {
       case m.Term.Name(Hole(i)) => arg(i)
@@ -145,9 +148,11 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     * {{{(tree: m.Tree[A]) => t.Tree[t.Tree[A]]}}} */
   def liftInitCall(tree: m.Tree): t.TermTree = {
     def extractFun(tree: m.Tree): (t.TermTree, t.TermTree, t.TermTree) = tree match {
-      case m.Type.Apply(m.Ctor.Ref.Select(qual, m.Ctor.Ref.Name(name)), targs) =>
+      case m.Term.ApplyType(m.Ctor.Ref.Select(qual, m.Ctor.Ref.Name(name)), targs) =>
         (scalaSome.appliedTo(lift(qual)), t.Lit(name), liftSeq(targs))
-      case m.Type.Apply(m.Ctor.Ref.Name(name), targs) =>
+      case m.Ctor.Ref.Select(qual, m.Ctor.Ref.Name(name)) =>
+        (scalaSome.appliedTo(lift(qual)), t.Lit(name), liftSeq(Nil))
+      case m.Term.ApplyType(m.Ctor.Ref.Name(name), targs) =>
         (scalaNone, t.Lit(name), liftSeq(targs))
       case m.Ctor.Ref.Name(name) =>
         (scalaNone, t.Lit(name), liftSeq(Nil))
@@ -168,8 +173,13 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
 
   /** {{{(trees: Seq[t.Tree[t.Tree[A]]]) => t.Tree[Seq[t.Tree[A]]]}}} */
   def liftSeqTrees(trees: Seq[t.TermTree]): t.TermTree = trees match {
-    case head :: rest => t.Infix(head, "::", liftSeqTrees(rest))
-    case _ => scalaNil
+    case head :: rest =>
+      // Infix is sugar-less
+      // the List is constructed as Nil.::(c).::(b).::(a)
+      // Not a :: b :: c :: Nil
+      t.Infix(liftSeqTrees(rest), "::", head)
+    case _ =>
+      scalaNil
   }
 
   /**
