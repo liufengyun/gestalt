@@ -6,5 +6,9 @@ class JsonMacroTest extends TestSuite {
     assert(format.toJson(Name("John","Smith")) == JsObject(Seq(
       "first" -> JsString("John"),
       "last" -> JsString("Smith"))))
+
+    val tom = Name("Tom","Sawyer")
+    assert(format.fromJson(format.toJson(tom)) == Some(tom))
+    assert(format.fromJson(JsObject(Nil)) == None)
   }
 }
