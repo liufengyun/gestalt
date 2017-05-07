@@ -32,18 +32,18 @@ object JsonMacros {
       val jsonItems = namesAndTypes.map {
         case (name, stringType) if stringType.show == "String" =>
           JsonItem(name,
-            pairOut = q"${Lit(name)} -> JsonMacros.JsString(${Select(Ident("o"), name)})",
-            readOption = q"val $name = obj.firstValue(${Lit(name)}).collect{case JsonMacros.JsString(value) => value}"
+            pairOut = q"${Lit(name)} -> JsString(${Select(Ident("o"), name)})",
+            readOption = q"val $name = obj.firstValue(${Lit(name)}).collect{case JsString(value) => value}"
           )
         case (name, otherType) =>
           JsonItem(name,
-            pairOut = q"${Lit(name)} -> JsonMacros.JsString(${Lit("No Idea")})", //TODO q"${Lit(name)} -> implicitly[Format[$otherType]].toJson(o.${Ident(name)})"
+            pairOut = q"${Lit(name)} -> JsString(${Lit("No Idea")})", //TODO q"${Lit(name)} -> implicitly[Format[$otherType]].toJson(o.${Ident(name)})"
             readOption = q"val $name = None" // TODO
           )
       }
       val allDefined = q"${jsonItems.map(i => q"${Ident(i.name)}.isDefined").reduceLeft((a, b) => q"$a && $b")}"
       val fromJson = q"""json match{
-              case obj: JsonMacros.JsObject =>
+              case obj: JsObject =>
                {..${
                 jsonItems.map(_.readOption) :+
                 q"if($allDefined) Some(null) else None"
@@ -51,9 +51,11 @@ object JsonMacros {
               case other => None
             }"""
       println(">>> " + fromJson)
-      q"""new JsonMacros.Format[$T]{
-            def toJson(o: $T) = JsonMacros.JsObject(Seq(..${jsonItems.map(_.pairOut)}))
-            def fromJson(json: JsonMacros.JsValue) = $fromJson
+      q"""
+          import JsonMacros._
+          new Format[$T]{
+            def toJson(o: $T) = JsObject(Seq(..${jsonItems.map(_.pairOut)}))
+            def fromJson(json: JsValue) = $fromJson
          }"""
     }
   }
