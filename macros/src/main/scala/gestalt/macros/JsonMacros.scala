@@ -18,7 +18,7 @@ object JsonMacros {
     import toolbox._
     val tpe: Type = T.tpe
     if (!tpe.isCaseClass) {
-      error("Not a case class", T)
+      error("Not a case class", T.pos)
       q"???"
     }
     else {
@@ -27,10 +27,10 @@ object JsonMacros {
         f => f.name -> f.info
       }
 
-      val jsonItems = namesAndTypes.map {
+      /*val jsonItems = namesAndTypes.map {
         case (name,stringType) if stringType.show == "String" => q"${Lit(name)} -> JsonMacros.JsString(o.${Ident(name)})"
         case (name,otherType) => q"${Lit(name)} -> JsonMacros.JsString(\"No Idea\")" // q"${Lit(name)} -> implicitly[Format[$otherType]].toJson(o.${Ident(name)})"
-      }
+      }*/
       q"""new JsonMacros.Format[$T]{
             def toJson(o: $T) = JsonMacros.JsObject(Nil)
             def fromJson(json: JsonMacros.JsValue) = None
