@@ -27,12 +27,20 @@ object JsonMacros {
         f => f.name -> f.info
       }
 
+      case class JsonItem(name: String, pairOut: TermTree)
+
       val jsonItems = namesAndTypes.map {
-        case (name,stringType) if stringType.show == "String" => q"${Lit(name)} -> JsonMacros.JsString(${Select(Ident("o"),name)})"
-        case (name,otherType) => q"${Lit(name)} -> JsonMacros.JsString(${Lit("No Idea")})" // q"${Lit(name)} -> implicitly[Format[$otherType]].toJson(o.${Ident(name)})"
+        case (name, stringType) if stringType.show == "String" =>
+          JsonItem(name,
+            pairOut = q"${Lit(name)} -> JsonMacros.JsString(${Select(Ident("o"), name)})"
+          )
+        case (name, otherType) =>
+          JsonItem(name,
+            pairOut = q"${Lit(name)} -> JsonMacros.JsString(${Lit("No Idea")})" // q"${Lit(name)} -> implicitly[Format[$otherType]].toJson(o.${Ident(name)})"
+          )
       }
       q"""new JsonMacros.Format[$T]{
-            def toJson(o: $T) = JsonMacros.JsObject(Seq(..$jsonItems))
+            def toJson(o: $T) = JsonMacros.JsObject(Seq(..${jsonItems.map(_.pairOut)}))
             def fromJson(json: JsonMacros.JsValue) = None
          }"""
     }
