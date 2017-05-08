@@ -1,5 +1,5 @@
 lazy val metaVersion = "1.6.0"
-lazy val dottyVersion = "0.2.2-SNAPSHOT"
+lazy val dottyVersion = "0.3.0-SNAPSHOT"
 
 lazy val common = Seq(
   resolvers ++= Seq(
@@ -41,9 +41,9 @@ lazy val gestaltSetting = Seq(
   pomIncludeRepository := { _ => false },
 
   pomExtra := (
-    <url>https://github.com/liufengyun/eden</url>
+    <url>https://github.com/liufengyun/gestalt</url>
     <scm>
-      <url>http://github.com/liufengyun/eden</url>
+      <url>http://github.com/liufengyun/gestalt</url>
       <connection>scm:git:git@github.com:liufengyun/eden.git</connection>
     </scm>
     <developers>

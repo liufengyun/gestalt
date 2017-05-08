@@ -21,7 +21,7 @@ trait Positions { this: Trees =>
 
 trait Trees extends Params with TypeParams with
   ValDefs with ValDecls with DefDefs with DefDecls with
-  Classes with Traits with Objects with Positions with TreeOps {
+  Classes with Traits with Objects with Positions with TreeOps { this: Toolbox =>
   // safety by construction -- implementation can have TypeTree = Tree
   type Tree     >: Null <: AnyRef
   type TypeTree >: Null <: Tree
@@ -87,9 +87,6 @@ trait Trees extends Params with TypeParams with
 
   // modifiers
   def emptyMods: Mods
-
-  // symbols definitions
-  val symbols: Symbols
 
   // typed trees
   val tpd: TypedTrees
@@ -458,6 +455,8 @@ trait Trees extends Params with TypeParams with
 }
 
 trait TreeOps { this: Trees =>
+  implicit def tpd2untpd(tree: tpd.Tree): Splice = TypedSplice(tree)
+
   // traverser
   def traverse(tre: Tree)(pf: PartialFunction[Tree, Unit]): Unit
   def exists(tree: Tree)(pf: PartialFunction[Tree, Boolean]): Boolean
@@ -468,7 +467,7 @@ trait TreeOps { this: Trees =>
   def transform(tree: tpd.Tree)(pf: PartialFunction[tpd.Tree, tpd.Tree])(implicit c: Cap): tpd.Tree
 }
 
-trait ValDefs { this: Trees =>
+trait ValDefs { this: Toolbox =>
   implicit class ValDefOps(tree: ValDef) {
     def mods: Mods = ValDef.mods(tree)
     def name: String = ValDef.name(tree)
@@ -478,7 +477,7 @@ trait ValDefs { this: Trees =>
   }
 
   implicit class ValDefTypedOps(tree: tpd.ValDef) {
-    def symbol: symbols.Symbol = ValDef.symbol(tree)
+    def symbol: Symbol = ValDef.symbol(tree)
     def name: String = ValDef.name(tree)
     def tptOpt: Option[TypeTree] = ValDef.tptOpt(tree)
     def rhs: TermTree = ValDef.rhs(tree)
@@ -494,9 +493,9 @@ trait ValDefs { this: Trees =>
     def tptOpt(tree: ValDef): Option[TypeTree]
     def copyRhs(tree: ValDef)(rhs: TermTree): ValDef
     def get(tree: Tree): Option[ValDef]
-    def unapply(tree: Tree): Option[(Mods, String, Option[TypeTree], TermTree)]
+    def unapply(tree: Tree): Option[(String, Option[TypeTree], TermTree)]
 
-    def symbol(tree: tpd.ValDef)(implicit c: Cap): symbols.Symbol
+    def symbol(tree: tpd.ValDef)(implicit c: Cap): Symbol
     def name(tree: tpd.ValDef)(implicit c: Cap): String
     def rhs(tree: tpd.ValDef)(implicit c: Cap): TermTree
     def tptOpt(tree: tpd.ValDef)(implicit c: Cap): Option[TypeTree]

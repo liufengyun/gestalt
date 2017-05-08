@@ -330,7 +330,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case c.Return(expr, _) => Some(if (expr.isEmpty) None else Some(expr))
       case _ => None
     }
-    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[tpd.Tree] = ???
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[tpd.Tree] =
+      unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[tpd.Tree]]
   }
 
   object Throw extends ThrowImpl {
@@ -347,7 +348,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case _ => None
     }
 
-    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, tpd.Tree, tpd.Tree)] = ???
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, tpd.Tree, tpd.Tree)] =
+      unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[(tpd.Tree, tpd.Tree, tpd.Tree)]]
   }
 
   object Try extends TryImpl {
@@ -433,7 +435,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case _ => None
     }
 
-    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[Any] = ???
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[Any] =
+      unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[Any]]
   }
 
   object Ident extends IdentImpl {
@@ -443,7 +446,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case _ => None
     }
 
-    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[String] = ???
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[String] =
+      unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[String]]
   }
 
   object This extends ThisImpl {
@@ -453,7 +457,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case _ => None
     }
 
-    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[String] = ???
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[String] =
+      unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[String]]
   }
 
   object Select extends SelectImpl {
@@ -463,7 +468,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case _ => None
     }
 
-    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, String)] = ???
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, String)] =
+      unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[(tpd.Tree, String)]]
   }
 
   object Apply extends ApplyImpl {
@@ -475,7 +481,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case _ => None
     }
 
-    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, Seq[tpd.Tree])] = ???
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, Seq[tpd.Tree])] =
+      unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[(tpd.Tree, Seq[tpd.Tree])]]
   }
 
   object Ascribe extends AscribeImpl {
@@ -486,7 +493,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case _ => None
     }
 
-    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, tpd.Tree)] = ???
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, tpd.Tree)] =
+      unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[(tpd.Tree, tpd.Tree)]]
   }
 
   object Assign extends AssignImpl {
@@ -497,7 +505,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case _ => None
     }
 
-    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, tpd.Tree)] = ???
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, tpd.Tree)] =
+      unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[(tpd.Tree, tpd.Tree)]]
   }
 
   object Annotated extends AnnotatedImpl {
@@ -532,7 +541,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case _ => None
     }
 
-    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[Seq[tpd.Tree]] = ???
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[Seq[tpd.Tree]] =
+      unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[Seq[tpd.Tree]]]
   }
 
   object Match extends MatchImpl {
@@ -544,7 +554,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case _ => None
     }
 
-    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, Seq[tpd.Tree])] = ???
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, Seq[tpd.Tree])] =
+      unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[(tpd.Tree, Seq[tpd.Tree])]]
   }
 
   object Case extends CaseImpl {
@@ -558,7 +569,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case _ => None
     }
 
-    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, Option[tpd.Tree], tpd.Tree)] = ???
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, Option[tpd.Tree], tpd.Tree)] =
+      unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[(tpd.Tree, Option[tpd.Tree], tpd.Tree)]]
   }
 
   object PartialFunction extends PartialFunctionImpl {
@@ -578,7 +590,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case _ => None
     }
 
-    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[Seq[tpd.Tree]] = ???
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[Seq[tpd.Tree]] =
+      unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[Seq[tpd.Tree]]]
   }
 
 
@@ -596,7 +609,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case _ => None
     }
 
-    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, Seq[tpd.Tree])] = ???
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, Seq[tpd.Tree])] =
+      unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[(tpd.Tree, Seq[tpd.Tree])]]
   }
 
 
@@ -800,20 +814,22 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case _ => None
     }
 
-    def unapply(tree: Tree): Option[(Mods, String, Option[TypeTree], TermTree)] = tree match {
+    def unapply(tree: Tree): Option[(String, Option[TypeTree], TermTree)] = tree match {
       case vdef : d.ValDef if !vdef.forceIfLazy.isEmpty =>
-        Some((mods(vdef), name(vdef), tptOpt(vdef), rhs(vdef)))
+        Some((name(vdef), tptOpt(vdef), rhs(vdef)))
       case _ => None
     }
 
 
-    def symbol(tree: tpd.ValDef)(implicit c: Cap): symbols.Symbol = ???
-    def name(tree: tpd.ValDef)(implicit c: Cap): String = ???
-    def rhs(tree: tpd.ValDef)(implicit c: Cap): TermTree = ???
-    def tptOpt(tree: tpd.ValDef)(implicit c: Cap): Option[TypeTree] = ???
-    def copyRhs(tree: tpd.ValDef)(rhs: tpd.Tree)(implicit c: Cap): tpd.ValDef = ???
-    def get(tree: tpd.Tree)(implicit c: Cap): Option[tpd.ValDef] = ???
-    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(String, Option[TypeTree], TermTree)] = ???
+    def symbol(tree: tpd.ValDef)(implicit c: Cap): Symbol = tree.symbol
+    def name(tree: tpd.ValDef)(implicit c: Cap): String = tree.name.show
+    def rhs(tree: tpd.ValDef)(implicit c: Cap): TermTree = tree.forceIfLazy
+    def tptOpt(tree: tpd.ValDef)(implicit c: Cap): Option[TypeTree] = Some(tree.tpt)
+    def copyRhs(tree: tpd.ValDef)(rhs: tpd.Tree)(implicit c: Cap): tpd.ValDef = t.cpy.ValDef(tree)(rhs = rhs)
+    def get(tree: tpd.Tree)(implicit c: Cap): Option[tpd.ValDef] =
+      get(tree.asInstanceOf[Tree]).asInstanceOf[Option[tpd.ValDef]]
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(String, Option[TypeTree], TermTree)] =
+      unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[(String, Option[TypeTree], TermTree)]]
   }
 
   object ValDecl extends ValDeclImpl {
@@ -917,9 +933,27 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     }.transform(tree)
   }
 
-  def traverse(tre: tpd.Tree)(pf: PartialFunction[tpd.Tree, Unit])(implicit c: Cap): Unit = ???
-  def exists(tree: tpd.Tree)(pf: PartialFunction[tpd.Tree, Boolean])(implicit c: Cap): Boolean = ???
-  def transform(tree: tpd.Tree)(pf: PartialFunction[tpd.Tree, tpd.Tree])(implicit c: Cap): tpd.Tree = ???
+  def traverse(tre: tpd.Tree)(pf: PartialFunction[tpd.Tree, Unit])(implicit c: Cap): Unit =
+    new t.TreeTraverser {
+      override def traverse(tree: tpd.Tree)(implicit ctx: Context) =
+        pf.lift(tree).getOrElse(super.traverseChildren(tree))
+    }
+
+  def exists(tree: tpd.Tree)(pf: PartialFunction[tpd.Tree, Boolean])(implicit c: Cap): Boolean = {
+    var r = false
+    traverse(tree) {
+      case t if pf.isDefinedAt(t) && !r => r = pf(t)
+    } (null)
+    r
+  }
+
+  def transform(tree: tpd.Tree)(pf: PartialFunction[tpd.Tree, tpd.Tree])(implicit c: Cap): tpd.Tree = {
+    new t.TreeMap() {
+      override def transform(tree: tpd.Tree)(implicit ctx: Context) =
+        pf.lift(tree).getOrElse(super.transform(tree))
+    }.transform(tree)
+  }
+
   /*------------------------------- types -------------------------------------*/
 
   type Type = Types.Type

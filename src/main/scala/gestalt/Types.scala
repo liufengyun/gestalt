@@ -22,7 +22,7 @@ trait Types extends MethodTypes { this: Toolbox =>
 
   implicit class TreeTypeOps(tree: tpd.Tree) {
     def tpe: Type = Type.typeOf(tree)
-    def hasType: Boolean = Type.hasType(tree)
+    def wrap: Splice = TypedSplice(tree)
   }
 
   val Type: TypeImpl
