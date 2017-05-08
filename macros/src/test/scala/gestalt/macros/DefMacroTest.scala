@@ -198,4 +198,8 @@ class DefMacroTest extends TestSuite {
     assert(trees.abcdObject().toString == "abcd")
     assert(trees.abcdObject2().toString == "abcd")
   }
+
+  test("create partial function") {
+    assert(trees.pfCollect() == Some("three"))
+  }
 }
