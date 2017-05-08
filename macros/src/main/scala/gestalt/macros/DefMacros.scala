@@ -135,6 +135,13 @@ object trees {
         override def toString = "abcd"
       }"""
   }
+
+  def pfCollect(): Option[String] = meta {
+    q"""Some(3).collect{
+         case 2 => "two"
+         case 3 => "three"
+         }"""
+  }
 }
 
 object Inheritance {
