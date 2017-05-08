@@ -202,4 +202,9 @@ class DefMacroTest extends TestSuite {
   test("create partial function") {
     assert(trees.pfCollect() == Some("three"))
   }
+
+  test("create class instance") {
+    assert(trees.some3Explicit() == Some(3))
+    assert(trees.some3ExplicitTyped() == Some(3))
+  }
 }
