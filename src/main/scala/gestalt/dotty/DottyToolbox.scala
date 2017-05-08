@@ -115,7 +115,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   implicit def fromDotty(dottyMods: d.Modifiers): Mods = DottyModifiers(dottyMods)
 
   /*------------------------------ diagnostics ------------------------------*/
-  def fresh(prefix: String = "$local"): String = ctx.freshName(prefix)
+  def fresh(prefix: String = "$local"): String = NameKinds.UniqueName.fresh(prefix.toTermName).toString
 
   // diagnostics - the implementation takes the position from the tree
   def error(message: String, pos: Pos): Unit = {
