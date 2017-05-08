@@ -533,10 +533,10 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   object PartialFunction extends PartialFunctionImpl {
     def apply(cases: Seq[Tree]): TermTree =
-      d.Match(d.Thicket(Nil), cases.toList.asInstanceOf[List[d.CaseDef]]).withPosition
+      d.Match(d.EmptyTree, cases.toList.asInstanceOf[List[d.CaseDef]]).withPosition
 
     def unapply(tree: Tree): Option[Seq[Tree]] = tree match {
-      case c.Match(c.Thicket(Nil), cases) => Some(cases)
+      case c.Match(d.EmptyTree, cases) => Some(cases)
       case _ => None
     }
   }
