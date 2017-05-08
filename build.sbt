@@ -89,7 +89,7 @@ lazy val macrosSetting = Seq(
   ),
 
   // Bridge which allows REPL and compilation via dotty
-  scalaCompilerBridgeSource := ("me.fengy" % "dotty-sbt-bridge" % dottyVersion % "component").sources(),
+  scalaCompilerBridgeSource := ("ch.epfl.lamp" % "dotty-sbt-bridge" % "0.1.1-bin-20170507-1014af3-NIGHTLY" % "component").sources(),
 
   testOptions += Tests.Argument(TestFrameworks.JUnit, "-q", "-v")
 
