@@ -188,8 +188,17 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   object InitCall extends InitCallImpl {
     def apply(qual: Option[Tree], name: String, targs: Seq[TypeTree], argss: Seq[Seq[TermTree]]): InitCall = {
       val select = if (qual.isEmpty) d.Ident(name.toTypeName) else d.Select(qual.get, name.toTypeName)
-      val fun = if (targs.size == 0) select else TypeApply(select, targs.toList)
+      val fun = if (targs.empty) select else TypeApply(select, targs.toList)
       ApplySeq(fun, argss).withPosition
+    }
+  }
+
+  // new qual.T[A, B](x, y)(z)
+  object NewInstance extends NewInstanceImpl {
+    def apply(qual: Option[Tree], name: String, targs: Seq[TypeTree], argss: Seq[Seq[TermTree]]): TermTree = {
+      val select = if (qual.isEmpty) d.Ident(name.toTypeName) else d.Select(qual.get, name.toTypeName)
+      val fun = if (targs.empty) select else TypeApply(select, targs.toList)
+      ApplySeq(d.Select(d.New(fun), nme.CONSTRUCTOR), argss).withPosition
     }
   }
 
