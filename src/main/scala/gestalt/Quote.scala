@@ -147,20 +147,24 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
   /** Lift initcall : {{{qual.T[A, B](x, y)(z)}}}
     * {{{(tree: m.Tree[A]) => t.Tree[t.Tree[A]]}}} */
   def liftInitCall(tree: m.Tree): t.TermTree = {
-    def extractFun(tree: m.Tree): (t.TermTree, t.TermTree, t.TermTree) = tree match {
-      case m.Term.ApplyType(m.Ctor.Ref.Select(qual, m.Ctor.Ref.Name(name)), targs) =>
-        (scalaSome.appliedTo(lift(qual)), t.Lit(name), liftSeq(targs))
-      case m.Ctor.Ref.Select(qual, m.Ctor.Ref.Name(name)) =>
-        (scalaSome.appliedTo(lift(qual)), t.Lit(name), liftSeq(Nil))
-      case m.Term.ApplyType(m.Ctor.Ref.Name(name), targs) =>
-        (scalaNone, t.Lit(name), liftSeq(targs))
-      case m.Ctor.Ref.Name(name) =>
-        (scalaNone, t.Lit(name), liftSeq(Nil))
+
+    object TypeArguments {
+      def unapply(tree: m.Tree) = tree match {
+        case m.Term.ApplyType(inner, targs) => Some(inner -> liftSeq(targs))
+        case inner => Some(inner -> liftSeq(Nil))
+      }
+    }
+
+    object Qualifier {
+      def unapply(tree: m.Tree) = tree match {
+        case m.Ctor.Ref.Select(qual, inner) => Some(inner -> scalaSome.appliedTo(lift(qual)))
+        case inner => Some(inner -> scalaNone)
+      }
     }
 
     def initCall(ctor: m.Tree, argss: Seq[Seq[m.Tree]]): t.TermTree = {
-      val (qualOpt, name, targs) = extractFun(ctor)
-      selectToolbox("InitCall").appliedTo(qualOpt, name, targs, liftSeqSeq(argss))
+      val TypeArguments(Qualifier(m.Ctor.Ref.Name(name), qualOpt), targs) = ctor
+      selectToolbox("InitCall").appliedTo(qualOpt, t.Lit(name), targs, liftSeqSeq(argss))
     }
 
     tree match {
