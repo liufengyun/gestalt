@@ -120,9 +120,10 @@ object Expander {
       } else {
         javaClassName(methodOwner) + "$inline"
       }
+
       // reflect macros definition
       val moduleClass = ctx.classloader.loadClass(className)
-      val impl = moduleClass.getDeclaredMethods().find(_.getName == method.toString).get
+      val impl = moduleClass.getDeclaredMethods().find(_.getName == method.encode.show).get
       impl.setAccessible(true)
 
       val tb = new Toolbox(tree.pos)
