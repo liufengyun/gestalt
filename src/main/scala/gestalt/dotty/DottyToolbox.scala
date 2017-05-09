@@ -50,6 +50,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   object tpd extends TypedTrees {
     type Tree    = t.Tree
     type ValDef  = t.ValDef
+    type Param   = t.ValDef
   }
 
   /*------------------------------ modifiers ------------------------------*/
@@ -348,6 +349,9 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case _ => None
     }
 
+    def apply(cond: tpd.Tree, thenp: tpd.Tree, elsep: tpd.Tree): tpd.Tree =
+      t.If(cond, thenp, elsep)
+
     def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, tpd.Tree, tpd.Tree)] =
       unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[(tpd.Tree, tpd.Tree, tpd.Tree)]]
   }
@@ -363,6 +367,20 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   object Function extends FunctionImpl {
     def apply(params: Seq[Param], body: TermTree): TermTree =
       d.Function(params.toList, body).withPosition
+
+    def apply(params: Seq[(String, Type)], resTp: Type)(bodyFn: Seq[tpd.Tree] => tpd.Tree): tpd.Tree = {
+      val meth = ctx.newSymbol(
+        owner, nme.ANON_FUN,
+        Flags.Synthetic | Flags.Method,
+        Types.MethodType(params.map(_._1.toTermName).toList, params.map(_._2).toList, resTp)
+      )
+      t.Closure(meth, paramss => {
+        ownerStack.push(meth)
+        val res = bodyFn(paramss.head)
+        ownerStack.pop()
+        res
+      }) // possible to change owner here, why Dotty doesn't do that?
+    }
   }
 
   object While extends WhileImpl {
@@ -446,6 +464,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case _ => None
     }
 
+    def apply(symbol: Symbol): tpd.Tree = t.ref(symbol)
     def unapply(tree: tpd.Tree)(implicit c: Cap): Option[String] =
       unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[String]]
   }
@@ -468,6 +487,9 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case _ => None
     }
 
+    def apply(qual: tpd.Tree, name: String)(implicit c: Cap): tpd.Tree =
+      t.Select(qual, name.toTermName)
+
     def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, String)] =
       unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[(tpd.Tree, String)]]
   }
@@ -480,6 +502,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case c.Apply(fun, args) => Some((fun, args))
       case _ => None
     }
+
+    def apply(fun: tpd.Tree, args: Seq[tpd.Tree])(implicit c: Cap): tpd.Tree = t.Apply(fun, args.toList)
 
     def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, Seq[tpd.Tree])] =
       unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[(tpd.Tree, Seq[tpd.Tree])]]
@@ -541,8 +565,13 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case _ => None
     }
 
-    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[Seq[tpd.Tree]] =
-      unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[Seq[tpd.Tree]]]
+    def apply(stats: Seq[tpd.Tree], expr: tpd.Tree)(implicit c: Cap): tpd.Tree =
+      t.Block(stats.toList, expr)
+
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(Seq[tpd.Tree], tpd.Tree)] = tree match {
+      case block: t.Block => Some((block.stats, block.expr))
+      case _ => None
+    }
   }
 
   object Match extends MatchImpl {
@@ -608,6 +637,9 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case c.TypeApply(fun, args) => Some((fun, args))
       case _ => None
     }
+
+    def apply(fun: tpd.Tree, args: Seq[tpd.Tree])(implicit c: Cap): tpd.Tree =
+      t.TypeApply(fun, args.toList)
 
     def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, Seq[tpd.Tree])] =
       unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[(tpd.Tree, Seq[tpd.Tree])]]
@@ -775,6 +807,10 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def tptOpt(tree: Param): Option[TypeTree] = if (tree.tpt.isInstanceOf[d.TypeTree]) None else Some(tree.tpt)
     def defaultOpt(tree: Param): Option[TermTree] = if (tree.forceIfLazy == d.EmptyTree) None else Some(tree.forceIfLazy)
     def copyMods(tree: Param)(mods: Mods): Param = tree.withMods(mods)
+
+    def symbol(tree: tpd.Param)(implicit c: Cap): Symbol = tree.symbol
+    def name(tree: tpd.Param)(implicit c: Cap): String = tree.name.show
+    def tpt(tree: tpd.Param)(implicit c: Cap): t.Tree = tree.tpt
   }
 
   object TypeParam extends TypeParamImpl {
@@ -820,6 +856,10 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case _ => None
     }
 
+    def apply(name: String, rhs: tpd.Tree): tpd.ValDef = {
+      val vsym = ctx.newSymbol(owner, name.toTermName, Flags.EmptyFlags, rhs.tpe)
+      t.ValDef(vsym, rhs)
+    }
 
     def symbol(tree: tpd.ValDef)(implicit c: Cap): Symbol = tree.symbol
     def name(tree: tpd.ValDef)(implicit c: Cap): String = tree.name.show
@@ -906,6 +946,10 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   object TypedSplice extends TypedSpliceImpl {
     def apply(tree: tpd.Tree): Splice = d.TypedSplice(tree)
+    def unapply(tree: Tree): Option[tpd.Tree] = tree match {
+      case d.TypedSplice(tree) => Some(tree)
+      case _ => None
+    }
   }
 
 
@@ -1056,6 +1100,9 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case tp: Types.TypeProxy => denot(tp.underlying)
       case _ => None
     }
+
+    /** The type representing  T[U1, ..., Un] */
+    def appliedTo(tp: Type, args: Seq[Type]): Type = new TypeApplications(tp).appliedTo(args.toList)(ctx)
   }
 
   object ByNameType extends ByNameTypeImpl {
@@ -1077,6 +1124,11 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   }
 
   /*------------------------------- symbols -------------------------------------*/
+  def owner: Symbol = ownerStack.top
+  private val ownerStack = collection.mutable.Stack(ctx.owner)
+
+  def newValSymbol(name: String, info: Type): Symbol =
+    ctx.newSymbol(owner, name.toTermName, Flags.EmptyFlags, info)
 
   object Symbol extends SymbolImpl {
     /** name of a member */
@@ -1084,6 +1136,9 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
     /** type of a member with respect to a prefix */
     def asSeenFrom(mem: Symbol, prefix: Type): Type = mem.asSeenFrom(prefix)
+
+    /** subst symbols in tree */
+    def subst(tree: tpd.Tree)(from: List[Symbol], to: List[Symbol]): tpd.Tree = tree.subst(from, to)
   }
 
   /*------------------------------- Denotations -------------------------------------*/

@@ -18,7 +18,7 @@ object plusObject {
     import toolbox._
     a match {
       case Lit(i:Int) => q"$a + $b"
-      case Lit(s:String) => q"$a.toInt + $b"
+      case Lit(s:String) => q"${a.wrap}.toInt + $b"
       case other =>
         error(s"expected String or Interger constants", a.pos)
         Lit(null)
@@ -180,7 +180,7 @@ object Materializer {
   implicit def defaultOpt[T]: Option[T] = meta { q"None" }
   implicit def defaultSome[T](implicit x: T): Some[T] = meta {
     import toolbox._
-    q"Some($x)"
+    q"Some(${x.wrap})"
   }
 }
 

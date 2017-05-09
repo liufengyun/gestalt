@@ -18,11 +18,15 @@ trait Types extends MethodTypes { this: Toolbox =>
     def show: String = Type.show(tp)
     def widen: Type = Type.widen(tp)
     def denot: Option[Denotation] = Type.denot(tp)
+    def symbol: Option[Symbol] = denot.map(_.symbol)
+    def appliedTo(args: Type*): Type = Type.appliedTo(tp, args)
   }
 
   implicit class TreeTypeOps(tree: tpd.Tree) {
     def tpe: Type = Type.typeOf(tree)
     def wrap: Splice = TypedSplice(tree)
+    def subst(from: List[Symbol], to: List[Symbol]): tpd.Tree = Symbol.subst(tree)(from, to)
+    def symbol: Option[Symbol] = tree.tpe.denot.map(_.symbol)
   }
 
   val Type: TypeImpl
@@ -86,6 +90,9 @@ trait Types extends MethodTypes { this: Toolbox =>
 
     /** denotation associated with the type */
     def denot(tp: Type): Option[Denotation]
+
+    /** The type representing  T[U1, ..., Un] */
+    def appliedTo(tp: Type, args: Seq[Type]): Type
   }
 
 
