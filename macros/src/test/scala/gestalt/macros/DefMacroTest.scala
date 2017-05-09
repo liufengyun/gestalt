@@ -68,6 +68,11 @@ class DefMacroTest extends TestSuite {
     } == 8)
   }
 
+  test("plus2 on sequence literals") {
+    assert(new plus2(Seq(2, 1).sum)(5) == 8)
+    assert(new plus2(5)(Seq(2, 1).sum) == 8)
+  }
+
   test("plus from class inside class") {
     import packaged.macros.InnerClassMacro
     val outer = new InnerClassMacro()
@@ -171,7 +176,7 @@ class DefMacroTest extends TestSuite {
     import Locations._
     val pos = currentLocation()
     assert(pos.fileName == "DefMacroTest.scala")
-    assert(pos.line == 171) // starts from 0
+    assert(pos.line == 176) // starts from 0
   }
 
   test("case info") {

@@ -162,6 +162,7 @@ object Inheritance {
   trait PlusOne {
     def a: Int
     def plus1() = meta {
+      import toolbox._
       q"$this.a + 1"
     }
   }
