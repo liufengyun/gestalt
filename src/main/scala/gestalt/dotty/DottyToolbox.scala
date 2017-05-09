@@ -137,11 +137,11 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   /*------------------------------ trees ------------------------------*/
 
-  object AnonymClass extends AnonymClassImpl {
+  object NewAnonymClass extends NewAnonymClassImpl {
     def apply(parents: Seq[InitCall], selfOpt: Option[Self], stats: Seq[Tree]): Tree = {
       val init = d.DefDef(nme.CONSTRUCTOR, List(), List(), d.TypeTree(), d.EmptyTree)
       val self = if (selfOpt.isEmpty) d.EmptyValDef else selfOpt.get.asInstanceOf[d.ValDef]
-      d.Template(init, parents.toList, self, stats).withPosition
+      d.New(d.Template(init, parents.toList, self, stats).withPosition)
     }
   }
 
@@ -188,7 +188,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   object InitCall extends InitCallImpl {
     def apply(qual: Option[Tree], name: String, targs: Seq[TypeTree], argss: Seq[Seq[TermTree]]): InitCall = {
       val select = if (qual.isEmpty) d.Ident(name.toTypeName) else d.Select(qual.get, name.toTypeName)
-      val fun = if (targs.empty) select else TypeApply(select, targs.toList)
+      val fun = if (targs.isEmpty) select else TypeApply(select, targs.toList)
       ApplySeq(fun, argss).withPosition
     }
   }
@@ -197,7 +197,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   object NewInstance extends NewInstanceImpl {
     def apply(qual: Option[Tree], name: String, targs: Seq[TypeTree], argss: Seq[Seq[TermTree]]): TermTree = {
       val select = if (qual.isEmpty) d.Ident(name.toTypeName) else d.Select(qual.get, name.toTypeName)
-      val fun = if (targs.empty) select else TypeApply(select, targs.toList)
+      val fun = if (targs.isEmpty) select else TypeApply(select, targs.toList)
       ApplySeq(d.Select(d.New(fun), nme.CONSTRUCTOR), argss).withPosition
     }
   }
@@ -376,11 +376,6 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def GenFrom(pat: TermTree, rhs: TermTree): Tree = d.GenFrom(pat, rhs)
     def GenAlias(pat: TermTree, rhs: TermTree): Tree = d.GenAlias(pat, rhs)
     def Guard(cond: TermTree): Tree = cond
-  }
-
-  object New extends NewImpl {
-    // can be InitCall or AnonymClass
-    def apply(tpe: Tree): TermTree = d.New(tpe).withPosition
   }
 
   object Named extends NamedImpl {

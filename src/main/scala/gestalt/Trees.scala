@@ -85,8 +85,8 @@ trait Trees extends Params with TypeParams with
 
 
   // definition trees
-  val AnonymClass: AnonymClassImpl
-  trait AnonymClassImpl {
+  val NewAnonymClass: NewAnonymClassImpl
+  trait NewAnonymClassImpl {
     def apply(parents: Seq[InitCall], self: Option[Self], stats: Seq[Tree]): DefTree
   }
 
@@ -123,7 +123,7 @@ trait Trees extends Params with TypeParams with
 
   val NewInstance: NewInstanceImpl
   trait NewInstanceImpl {
-    def apply(qual: Option[Tree], name: String, targs: Seq[TypeTree]): TermTree
+    def apply(qual: Option[Tree], name: String, targs: Seq[TypeTree], argss: Seq[Seq[TermTree]]): TermTree
   }
 
   val SecondaryCtor: SecondaryCtorImpl
@@ -270,12 +270,6 @@ trait Trees extends Params with TypeParams with
     def GenFrom(pat: TermTree, rhs: TermTree): Tree
     def GenAlias(pat: TermTree, rhs: TermTree): Tree
     def Guard(cond: TermTree): Tree
-  }
-
-  val New: NewImpl
-  trait NewImpl {
-    // can be InitCall or AnonymClass
-    def apply(tpe: Tree): TermTree
   }
 
   val Named: NamedImpl
