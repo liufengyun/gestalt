@@ -29,7 +29,7 @@ object JsonMacros {
 
       case class JsonItem(name: String, pairOut: TermTree, readOption: ValDef)
 
-      val jsonItems = namesAndTypes.map {
+      val jsonItems: Seq[JsonItem] = namesAndTypes.map {
         case (name, stringType) if stringType.show == "String" =>
           JsonItem(name,
             pairOut = q"${Lit(name)} -> JsString(${Select(Ident("o"), name)})",
@@ -42,11 +42,12 @@ object JsonMacros {
           )
       }
       val allDefined = q"${jsonItems.map(i => q"${Ident(i.name)}.isDefined").reduceLeft((a, b) => q"$a && $b")}"
+      val construction = q"new R(..${jsonItems.map(i => q"${Ident(i.name)}.get")})"
       val fromJson = q"""json match{
               case obj: JsObject =>
                {..${
                 jsonItems.map(_.readOption) :+
-                q"if($allDefined) Some(null) else None"
+                q"if($allDefined){ type R = $T; Some($construction) }else None"
                }}
               case other => None
             }"""
