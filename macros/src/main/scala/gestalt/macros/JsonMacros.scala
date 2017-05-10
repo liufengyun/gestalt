@@ -55,14 +55,14 @@ object JsonMacros {
                }}
               case other => None
             }"""
-      q"""{
+      q"""
           import JsonMacros._
           new Format[$T]{..${
              jsonItems.flatMap(_.implicitFormat).toList :+
              q"def toJson(o: $T) = JsObject(Seq(..${jsonItems.map(_.pairOut)}))" :+
              q"def fromJson(json: JsValue) = $fromJson"
         }}
-        }"""
+        """
     }
   }
 }
