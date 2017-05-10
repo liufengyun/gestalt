@@ -27,18 +27,21 @@ object JsonMacros {
         f => f.name -> f.info
       }
 
-      case class JsonItem(name: String, pairOut: TermTree, readOption: ValDef)
+      case class JsonItem(name: String, pairOut: TermTree, readOption: ValDef, implicitFormat: Option[TermTree])
 
       val jsonItems: Seq[JsonItem] = namesAndTypes.map {
         case (name, stringType) if stringType.show == "String" =>
           JsonItem(name,
             pairOut = q"${Lit(name)} -> JsString(${Select(Ident("o"), name)})",
-            readOption = q"val $name = obj.firstValue(${Lit(name)}).collect{case JsString(value) => value}"
+            readOption = q"val $name = obj.firstValue(${Lit(name)}).collect{case JsString(value) => value}",
+            implicitFormat = None
           )
         case (name, otherType) =>
+          val implFormaterName = name+"_formatter"
           JsonItem(name,
-            pairOut = q"${Lit(name)} -> JsString(${Lit("No Idea")})", //TODO q"${Lit(name)} -> implicitly[Format[$otherType]].toJson(o.${Ident(name)})"
-            readOption = q"val $name = None" // TODO
+            pairOut = q"${Lit(name)} -> ${Ident(implFormaterName)}.toJson(${Select(Ident("o"), name)})",
+            readOption = q"val $name = obj.firstValue(${Lit(name)}).flatMap(x =>${Ident(implFormaterName)}.fromJson(x))",
+            implicitFormat = Some(q"val $implFormaterName=implicitly[Format[${otherType}]]")
           )
       }
       val allDefined = q"${jsonItems.map(i => q"${Ident(i.name)}.isDefined").reduceLeft((a, b) => q"$a && $b")}"
@@ -46,6 +49,7 @@ object JsonMacros {
       val fromJson = q"""json match{
               case obj: JsObject =>
                {..${
+                 jsonItems.flatMap(_.implicitFormat)  ++
                 jsonItems.map(_.readOption) :+
                 q"if($allDefined){ type R = $T; Some($construction) }else None"
                }}
