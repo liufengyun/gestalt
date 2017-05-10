@@ -101,6 +101,12 @@ object trees {
   def some3(): Option[Int] = meta {
     q"Some(3)"
   }
+  def some3Explicit(): Option[Int] = meta {
+    q"new Some(3)"
+  }
+  def some3ExplicitTyped(): Option[Int] = meta {
+    q"new Some[Int](3)"
+  }
   def five(): Int = meta {
     q"5"
   }
@@ -134,6 +140,13 @@ object trees {
     q"""new java.lang.Object {
         override def toString = "abcd"
       }"""
+  }
+
+  def pfCollect(): Option[String] = meta {
+    q"""Some(3).collect{
+         case 2 => "two"
+         case 3 => "three"
+         }"""
   }
 }
 

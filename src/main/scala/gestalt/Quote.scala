@@ -144,31 +144,37 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     }
   }
 
+  private object TypeArguments {
+    def unapply(tree: m.Tree) = tree match {
+      case m.Term.ApplyType(inner, targs) => Some(inner -> liftSeq(targs))
+      case inner => Some(inner -> liftSeq(Nil))
+    }
+  }
+
+  private object Qualifier {
+    def unapply(tree: m.Tree) = tree match {
+      case m.Ctor.Ref.Select(qual, inner) => Some(inner -> scalaSome.appliedTo(lift(qual)))
+      case inner => Some(inner -> scalaNone)
+    }
+  }
+
+  private object Argss {
+    def unapply(tree: m.Tree) = tree match {
+      case m.internal.ast.Helpers.TermApply(inner, argss) => Some(inner -> argss)
+      case inner => Some(inner -> Nil)
+    }
+  }
+
   /** Lift initcall : {{{qual.T[A, B](x, y)(z)}}}
     * {{{(tree: m.Tree[A]) => t.Tree[t.Tree[A]]}}} */
   def liftInitCall(tree: m.Tree): t.TermTree = {
-    def extractFun(tree: m.Tree): (t.TermTree, t.TermTree, t.TermTree) = tree match {
-      case m.Term.ApplyType(m.Ctor.Ref.Select(qual, m.Ctor.Ref.Name(name)), targs) =>
-        (scalaSome.appliedTo(lift(qual)), t.Lit(name), liftSeq(targs))
-      case m.Ctor.Ref.Select(qual, m.Ctor.Ref.Name(name)) =>
-        (scalaSome.appliedTo(lift(qual)), t.Lit(name), liftSeq(Nil))
-      case m.Term.ApplyType(m.Ctor.Ref.Name(name), targs) =>
-        (scalaNone, t.Lit(name), liftSeq(targs))
-      case m.Ctor.Ref.Name(name) =>
-        (scalaNone, t.Lit(name), liftSeq(Nil))
-    }
+    val Argss(TypeArguments(Qualifier(m.Ctor.Ref.Name(name), qualOpt), targs), argss) = tree
+    selectToolbox("InitCall").appliedTo(qualOpt, t.Lit(name), targs, liftSeqSeq(argss))
+  }
 
-    def initCall(ctor: m.Tree, argss: Seq[Seq[m.Tree]]): t.TermTree = {
-      val (qualOpt, name, targs) = extractFun(ctor)
-      selectToolbox("InitCall").appliedTo(qualOpt, name, targs, liftSeqSeq(argss))
-    }
-
-    tree match {
-      case m.internal.ast.Helpers.TermApply(ctor, argss) =>
-        initCall(ctor, argss)
-      case _ =>
-        initCall(tree, Nil)
-    }
+  def liftNewInstance(tree: m.Tree): t.TermTree = {
+    val Argss(TypeArguments(Qualifier(m.Ctor.Ref.Name(name), qualOpt), targs), argss) = tree
+    selectToolbox("NewInstance").appliedTo(qualOpt, t.Lit(name), targs, liftSeqSeq(argss))
   }
 
   /** {{{(trees: Seq[t.Tree[t.Tree[A]]]) => t.Tree[Seq[t.Tree[A]]]}}} */
@@ -391,13 +397,12 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     case m.Term.ForYield(enums, body) =>
       selectToolbox("For.ForYield").appliedTo(liftSeq(enums), lift(body))
     case m.Term.New(m.Template(Nil, Seq(mctor), m.Term.Param(Nil, m.Name.Anonymous(), None, None), None)) =>
-      selectToolbox("New").appliedTo(liftInitCall(mctor))
+      liftNewInstance(mctor)
     case m.Term.New(m.Template(_, parents, self, stats)) =>
       // parentCalls: t.Tree[Seq[t.Tree[B]]]
       val parentCalls = liftSeqTrees(parents.map(liftInitCall))
       // anonym: t.Tree[t.Tree[C]]
-      val anonym = selectToolbox("AnonymClass").appliedTo(parentCalls, liftSelf(self), liftOptSeq(stats))
-      selectToolbox("New").appliedTo(anonym)
+      selectToolbox("NewAnonymClass").appliedTo(parentCalls, liftSelf(self), liftOptSeq(stats))
     case m.Term.Placeholder() =>
       selectToolbox("Wildcard").appliedTo() // FIXME Wildcard is not defined in toolbox
     case m.Term.Eta(expr) =>
