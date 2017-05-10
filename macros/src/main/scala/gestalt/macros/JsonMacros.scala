@@ -27,7 +27,7 @@ object JsonMacros {
         f => f.name -> f.info
       }
 
-      case class JsonItem(name: String, pairOut: TermTree, readOption: ValDef, implicitFormat: Option[TermTree])
+      case class JsonItem(name: String, pairOut: TermTree, readOption: ValDef, implicitFormat: Option[ValDef])
 
       val jsonItems: Seq[JsonItem] = namesAndTypes.map {
         case (name, stringType) if stringType.show == "String" =>
@@ -38,10 +38,11 @@ object JsonMacros {
           )
         case (name, otherType) =>
           val implFormaterName = name+"_formatter"
+          val formatTypeTree = TypeApply(TypeSelect(TypeIdent("JsonMacros"), "Format"), Seq(TypeIdent(otherType.show)))
           JsonItem(name,
             pairOut = q"${Lit(name)} -> ${Ident(implFormaterName)}.toJson(${Select(Ident("o"), name)})",
             readOption = q"val $name = obj.firstValue(${Lit(name)}).flatMap(x =>${Ident(implFormaterName)}.fromJson(x))",
-            implicitFormat = Some(q"val $implFormaterName=implicitly[Format[${otherType}]]")
+            implicitFormat = Some(q"val $implFormaterName=implicitly[$formatTypeTree]")
           )
       }
       val allDefined = q"${jsonItems.map(i => q"${Ident(i.name)}.isDefined").reduceLeft((a, b) => q"$a && $b")}"
@@ -49,7 +50,6 @@ object JsonMacros {
       val fromJson = q"""json match{
               case obj: JsObject =>
                {..${
-                 jsonItems.flatMap(_.implicitFormat)  ++
                 jsonItems.map(_.readOption) :+
                 q"if($allDefined){ type R = $T; Some($construction) }else None"
                }}
@@ -57,10 +57,11 @@ object JsonMacros {
             }"""
       q"""{
           import JsonMacros._
-          new Format[$T]{
-            def toJson(o: $T) = JsObject(Seq(..${jsonItems.map(_.pairOut)}))
-            def fromJson(json: JsValue) = $fromJson
-         }
+          new Format[$T]{..${
+             jsonItems.flatMap(_.implicitFormat).toList :+
+             q"def toJson(o: $T) = JsObject(Seq(..${jsonItems.map(_.pairOut)}))" :+
+             q"def fromJson(json: JsValue) = $fromJson"
+        }}
         }"""
     }
   }
