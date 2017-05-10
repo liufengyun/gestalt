@@ -32,7 +32,7 @@ object JsonMacros {
       val jsonItems: Seq[JsonItem] = namesAndTypes.map {
         case (name, stringType) if stringType.show == "String" =>
           JsonItem(name,
-            pairOut = q"${Lit(name)} -> JsString(${Select(Ident("o"), name)})",
+            pairOut = q"${(Lit(name)},JsString(${Select(Ident("o"), name)}))",
             readOption = q"val $name = obj.firstValue(${Lit(name)}).collect{case JsString(value) => value}",
             implicitFormat = None
           )
@@ -40,7 +40,7 @@ object JsonMacros {
           val implFormaterName = name+"_formatter"
           val formatTypeTree = TypeApply(TypeIdent("Format"), Seq(TypeIdent(otherType.show)))
           JsonItem(name,
-            pairOut = q"${Lit(name)} -> ${Ident(implFormaterName)}.toJson(${Select(Ident("o"), name)})",
+            pairOut = q"(${Lit(name)},${Ident(implFormaterName)}.toJson(${Select(Ident("o"), name)}))",
             readOption = q"val $name = obj.firstValue(${Lit(name)}).flatMap(x =>${Ident(implFormaterName)}.fromJson(x))",
             implicitFormat = Some(q"val $implFormaterName=implicitly[$formatTypeTree]")
           )
