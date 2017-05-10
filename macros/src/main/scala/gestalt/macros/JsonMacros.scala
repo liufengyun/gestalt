@@ -38,7 +38,7 @@ object JsonMacros {
           )
         case (name, otherType) =>
           val implFormaterName = name+"_formatter"
-          val formatTypeTree = TypeApply(TypeSelect(TypeIdent("JsonMacros"), "Format"), Seq(TypeIdent(otherType.show)))
+          val formatTypeTree = TypeApply(TypeIdent("Format"), Seq(TypeIdent(otherType.show)))
           JsonItem(name,
             pairOut = q"${Lit(name)} -> ${Ident(implFormaterName)}.toJson(${Select(Ident("o"), name)})",
             readOption = q"val $name = obj.firstValue(${Lit(name)}).flatMap(x =>${Ident(implFormaterName)}.fromJson(x))",
