@@ -14,14 +14,22 @@ object JsonMacros {
     def fromJson(json: JsValue): Option[A]
   }
 
+  /**
+    * Creates a {{{Format}}} for the case class.
+    * Limitations:
+    * 1. does not handle cyclic references, i.e. {{{case class A(field: A, ...)}}}
+    * 2. does not handle optional arguments
+    * 3. only handles field types that are in scope, not fully qualified ones, i.e.{{{case class A(field: pack.B, ...)}}} .
+    * @tparam T type of the case class
+    * @return new anonymous Format class
+    */
   def format[T](): Format[T] = meta {
     import toolbox._
     val tpe: Type = T.tpe
     if (!tpe.isCaseClass) {
       error("Not a case class", T.pos)
       q"???"
-    }
-    else {
+    } else {
       val fields = tpe.caseFields
       val namesAndTypes = fields.map {
         f => f.name -> f.info
@@ -47,21 +55,22 @@ object JsonMacros {
       }
       val allDefined = q"${jsonItems.map(i => q"${Ident(i.name)}.isDefined").reduceLeft((a, b) => q"$a && $b")}"
       val construction = q"new R(..${jsonItems.map(i => q"${Ident(i.name)}.get")})"
-      val fromJson = q"""json match{
+      val fromJson =
+        q"""json match{
               case obj: JsObject =>
                {..${
-                jsonItems.map(_.readOption) :+
-                q"if($allDefined){ type R = $T; Some($construction) }else None"
-               }}
+          jsonItems.map(_.readOption) :+
+            q"if($allDefined){ type R = $T; Some($construction) }else None"
+        }}
               case other => None
             }"""
       q"""
           import JsonMacros._
           new Format[$T]{..${
-             jsonItems.flatMap(_.implicitFormat).toList :+
-             q"def toJson(o: $T) = JsObject(Seq(..${jsonItems.map(_.pairOut)}))" :+
-             q"def fromJson(json: JsValue) = $fromJson"
-        }}
+        jsonItems.flatMap(_.implicitFormat).toList :+
+          q"def toJson(o: $T) = JsObject(Seq(..${jsonItems.map(_.pairOut)}))" :+
+          q"def fromJson(json: JsValue) = $fromJson"
+      }}
         """
     }
   }
