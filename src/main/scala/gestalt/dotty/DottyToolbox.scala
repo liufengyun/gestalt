@@ -352,8 +352,10 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def apply(cond: tpd.Tree, thenp: tpd.Tree, elsep: tpd.Tree): tpd.Tree =
       t.If(cond, thenp, elsep)
 
-    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, tpd.Tree, tpd.Tree)] =
-      unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[(tpd.Tree, tpd.Tree, tpd.Tree)]]
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, tpd.Tree, tpd.Tree)] = tree match {
+      case tree: t.If => Some(tree.cond, tree.thenp, tree.elsep)
+      case _          => None
+    }
   }
 
   object Try extends TryImpl {
