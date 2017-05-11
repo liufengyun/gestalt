@@ -50,12 +50,14 @@ object Transformer {
     val unliftSym = prefix.tpe.method("unlift").headOption.map(_.symbol)
     def isUnlift(tp: Type) = tp.denot.map(_.symbol) == unliftSym
 
-
-    def toParam(name: String) = Param(emptyMods, name, None, None)
-
-    def createMap(monad: tpd.Tree, name: String, tp: Type, resTp: Type)(bodyFn: Seq[tpd.Tree] => tpd.Tree): tpd.Tree = {
+    def rewrite(monad: tpd.Tree, name: String, tp: Type, resTp: Type, flat: Boolean, flatTp: Type = null)
+               (bodyFn: Seq[tpd.Tree] => tpd.Tree): tpd.Tree =
+    {
       val fun = Function((name, tp) :: Nil, resTp)(bodyFn)
-      q"${Resolve.map(monad.pos, monad)}($fun)"
+      if (flat)
+        q"${Resolve.flatMap(monad.pos, monad).appliedToTypes(flatTp.toTree)}($fun)"
+      else
+        q"${Resolve.map(monad.pos, monad).appliedToTypes(resTp.toTree)}($fun)"
     }
 
     def validate(tree: tpd.Tree): tpd.Tree = {
@@ -95,26 +97,27 @@ object Transformer {
     }
 
     object PureTree {
-      def unapply(tree: tpd.Tree): Option[tpd.Tree] =
+      def unapply(tree: tpd.Tree): Option[tpd.Tree] = {
         exists(tree) {
           case q"$fun[$tp]($v)" if isUnlift(fun.tpe) => true
         } match {
-          case true  => None
+          case true => None
           case false => Some(tree)
         }
+      }
     }
 
     object TransformBlock {
       def unapply(trees: List[tpd.Tree])(implicit blockTp: Type): Option[tpd.Tree] =
         trees match {
           case (tree @ ValDef(name, _, Transform(monad))) :: TransformBlock(body) =>
-            val res = createMap(monad, name, tree.tpe.widen, blockTp) { refs =>
+            val res = rewrite(monad, name, tree.tpe.widen, body.tpe, flat = true, flatTp = blockTp) { refs =>
               body.subst(tree.symbol.get :: Nil, refs.head.symbol.get :: Nil)
             }
             Some(res)
 
           case (tree @ ValDef(name, _, Transform(monad))) :: tail =>       // tail cannot be empty
-            Some(createMap(monad, name, tree.tpe.widen, blockTp) { refs =>
+            Some(rewrite(monad, name, tree.tpe.widen, blockTp, flat = false) { refs =>
               Block(tail.init, tail.last).subst(tree.symbol.get :: Nil, refs.head.symbol.get :: Nil)
             })
 
@@ -122,10 +125,10 @@ object Transformer {
             Some(head)
 
           case (tree @ Transform(monad)) :: TransformBlock(body) =>
-            Some(createMap(monad, fresh(), tree.tpe, blockTp) { refs => body })
+            Some(rewrite(monad, fresh(), tree.tpe, body.tpe, flat = true, flatTp = blockTp) { refs => body })
 
           case (tree @ Transform(monad)) :: tail =>
-            Some(createMap(monad, fresh(), tree.tpe, blockTp) { refs => Block(tail.init, tail.last) })
+            Some(rewrite(monad, fresh(), tree.tpe, blockTp, flat = false) { refs => Block(tail.init, tail.last) })
 
           case head :: TransformBlock(Block(stats, expr)) =>
             Some(Block(head +: stats, expr))
@@ -137,16 +140,21 @@ object Transformer {
     object TransformIf {
       def unapply(tree: tpd.Tree): Option[tpd.Tree] = tree match {
         case tree @ If(Transform(monad), ifTrue, ifFalse) =>
-          val res = createMap(monad, fresh(), Type.typeRef("scala.Boolean"), tree.tpe) { refs =>
-            val ident = refs.head
-            unapply(ifTrue, ifFalse) match {
-              case Some(ifTree, ifFalse) =>
+          unapply(ifTrue, ifFalse) match {
+            case Some(ifTrue, ifFalse) =>
+              val resTp = Type.lub(ifTrue.tpe, ifFalse.tpe)
+              val res = rewrite(monad, fresh(), Type.typeRef("scala.Boolean"), resTp, flat = true, flatTp = tree.tpe) { refs =>
+                val ident = refs.head
                 If(ident, ifTrue, ifFalse)
-              case None =>
+              }
+              Some(res)
+            case None =>
+              val res = rewrite(monad, fresh(), Type.typeRef("scala.Boolean"), tree.tpe, flat = false) { refs =>
+                val ident = refs.head
                 If(ident, ifTrue, ifFalse)
-            }
+              }
+              Some(res)
           }
-          Some(res)
 
         case If(cond, ifTrue, ifFalse) =>
           unapply(ifTrue, ifFalse) match {
@@ -203,8 +211,8 @@ object Transformer {
 
           unlifts.toList match {
             case List() => None
-            case List((tree, dummy, _)) =>
-              val res = createMap(tree, dummy.name, tree.tpe, newTree.tpe) { refs =>
+            case List((tree, dummy, tpt)) =>
+              val res = rewrite(tree, dummy.name, tpt.tpe, newTree.tpe, flat = false) { refs =>
                 newTree.subst(dummy :: Nil, refs.head.symbol.get :: Nil)
               }
 
@@ -212,11 +220,13 @@ object Transformer {
             case unlifts =>
               val (trees, dummies, types) = unlifts.unzip3
               val list = fresh("list")
-              val scalaList = Ident(Type.termRef("scala.List").symbol.get)
-              val collect = q"${Resolve.collect(tree.pos)}($scalaList(..${trees.toSeq}))"
+              val scalaList = Ident(Type.termRef("scala.collection.immutable.List").symbol.get).select("apply")
+              val seqLiteral = SeqLiteral(trees, trees.head.tpe.widen)
+              val arg = scalaList.appliedToTypes(trees.head.tpe.widen.toTree).appliedTo(seqLiteral)
+              val collect = q"${Resolve.collect(tree.pos).appliedToTypes(types.head.tpe.toTree)}($arg)"
 
 
-              val tp = Type.typeRef("scala.List").appliedTo(unlifts.head._3.tpe)
+              val tp = Type.typeRef("scala.List").appliedTo(types.head.tpe)
               val fun = Function((list, tp) :: Nil, newTree.tpe) { refs =>
                 val iter = ValDef(fresh("iter"), refs.head.select("iterator"))
                 val elements = unlifts.map { case (tree, dummy, tpe) =>
@@ -224,13 +234,13 @@ object Transformer {
                   ValDef(dummy.name, rhs)
                 }
 
-                val froms   = unlifts.map(_._2)
+                val froms   = dummies
                 val tos     = elements.map(_.symbol)
                 val content = newTree.subst(froms, tos)
 
                 Block(iter +: elements, content)
               }
-              Some(q"${Resolve.map(tree.pos, collect)}($fun)")
+              Some(q"${Resolve.map(tree.pos, collect).appliedToTypes(types.head.tpe.toTree)}($fun)")
           }
       }
     }

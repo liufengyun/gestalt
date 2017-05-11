@@ -20,6 +20,7 @@ trait Types extends MethodTypes { this: Toolbox =>
     def denot: Option[Denotation] = Type.denot(tp)
     def symbol: Option[Symbol] = denot.map(_.symbol)
     def appliedTo(args: Type*): Type = Type.appliedTo(tp, args)
+    def toTree: tpd.Tree = Type.toTree(tp)
   }
 
   implicit class TreeTypeOps(tree: tpd.Tree) {
@@ -39,6 +40,9 @@ trait Types extends MethodTypes { this: Toolbox =>
 
     /** is `tp1` a subtype of `tp2` */
     def <:<(tp1: Type, tp2: Type): Boolean
+
+    /** least upper bound of two types */
+    def lub(tp1: Type, tp2: Type): Type
 
     /** returning a type referring to a global type definition */
     def typeRef(path: String): Type
@@ -93,6 +97,9 @@ trait Types extends MethodTypes { this: Toolbox =>
 
     /** The type representing  T[U1, ..., Un] */
     def appliedTo(tp: Type, args: Seq[Type]): Type
+
+    /** Turn a type into a typed tree */
+    def toTree(tp: Type): tpd.Tree
   }
 
 

@@ -9,7 +9,7 @@ object Driver {
     new DefMacroTest
     new QuasiquoteTest
     new TypeToolboxTest
-    // new MonadlessOptionTest
+    new MonadlessOptionTest
 
     var success = false
     var total = 0

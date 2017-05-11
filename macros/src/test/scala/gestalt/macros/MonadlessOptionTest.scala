@@ -23,7 +23,7 @@ class MonadlessOptionTest extends TestSuite {
   test("map") {
     assert(lift { unlift(one) + 1 } === Some(2))
   }
-
+  /*
   test("flatMap") {
     assert(
       lift {
@@ -31,5 +31,5 @@ class MonadlessOptionTest extends TestSuite {
         a + unlift(two)
       } === Some(3)
     )
-  }
+  } */
 }

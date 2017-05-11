@@ -489,6 +489,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
     def apply(qual: tpd.Tree, name: String)(implicit c: Cap): tpd.Tree =
       t.Select(qual, name.toTermName)
+      // t.Select(qual.withTypeUnchecked(qual.tpe.widen), name.toTermName)
 
     def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, String)] =
       unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[(tpd.Tree, String)]]
@@ -516,6 +517,9 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case c.Typed(expr, tpe) => Some((expr, tpe))
       case _ => None
     }
+
+    def apply(expr: tpd.Tree, tpe: tpd.Tree)(implicit c: Cap): tpd.Tree =
+      t.Typed(expr, tpe)
 
     def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, tpd.Tree)] =
       unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[(tpd.Tree, tpd.Tree)]]
@@ -625,6 +629,11 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
 
   object SeqLiteral extends SeqLiteralImpl {
+    def apply(trees: Seq[tpd.Tree], tp: Type): tpd.Tree = {
+      val tpSeq = ctx.definitions.RepeatedParamType.appliedTo(tp)
+      t.Typed(t.SeqLiteral(trees.toList, tp.toTree), t.TypeTree(tpSeq))
+    }
+
     def unapply(tree: tpd.Tree): Option[Seq[tpd.Tree]] = tree match {
       case c.Typed(c.SeqLiteral(elems,_), _) => Some(elems)
       case _ => None
@@ -977,17 +986,17 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     }.transform(tree)
   }
 
-  def traverse(tre: tpd.Tree)(pf: PartialFunction[tpd.Tree, Unit])(implicit c: Cap): Unit =
+  def traverse(tree: tpd.Tree)(pf: PartialFunction[tpd.Tree, Unit])(implicit c: Cap): Unit =
     new t.TreeTraverser {
       override def traverse(tree: tpd.Tree)(implicit ctx: Context) =
         pf.lift(tree).getOrElse(super.traverseChildren(tree))
-    }
+    }.traverse(tree)
 
   def exists(tree: tpd.Tree)(pf: PartialFunction[tpd.Tree, Boolean])(implicit c: Cap): Boolean = {
     var r = false
     traverse(tree) {
       case t if pf.isDefinedAt(t) && !r => r = pf(t)
-    } (null)
+    } (cap)
     r
   }
 
@@ -1017,6 +1026,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
     /** is `tp1` a subtype of `tp2` */
     def <:<(tp1: Type, tp2: Type): Boolean = tp1 <:< tp2
+
+    def lub(tp1: Type, tp2: Type): Type = ctx.typeComparer.lub(tp1, tp2, false)
 
     /** returning a type referring to a type definition */
     def typeRef(path: String): Type = ctx.staticRef(path.toTypeName, false).symbol.typeRef
@@ -1103,6 +1114,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
     /** The type representing  T[U1, ..., Un] */
     def appliedTo(tp: Type, args: Seq[Type]): Type = new TypeApplications(tp).appliedTo(args.toList)(ctx)
+
+    def toTree(tp: Type): tpd.Tree = t.TypeTree(tp)
   }
 
   object ByNameType extends ByNameTypeImpl {
@@ -1138,7 +1151,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def asSeenFrom(mem: Symbol, prefix: Type): Type = mem.asSeenFrom(prefix)
 
     /** subst symbols in tree */
-    def subst(tree: tpd.Tree)(from: List[Symbol], to: List[Symbol]): tpd.Tree = tree.subst(from, to)
+    def subst(tree: tpd.Tree)(from: List[Symbol], to: List[Symbol]): tpd.Tree = new t.TreeOps(tree).subst(from, to)
   }
 
   /*------------------------------- Denotations -------------------------------------*/

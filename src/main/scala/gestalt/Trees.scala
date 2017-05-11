@@ -379,6 +379,8 @@ trait Trees extends Params with TypeParams with
   trait AscribeImpl {
     def apply(expr: TermTree, tpe: TypeTree): TermTree
     def unapply(tree: Tree): Option[(TermTree, TypeTree)]
+
+    def apply(expr: tpd.Tree, tpe: tpd.Tree)(implicit c: Cap): tpd.Tree
     def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, tpd.Tree)]
   }
 
@@ -441,6 +443,7 @@ trait Trees extends Params with TypeParams with
 
   val SeqLiteral: SeqLiteralImpl
   trait SeqLiteralImpl {
+    def apply(trees: Seq[tpd.Tree], tp: Type): tpd.Tree
     def unapply(tree: tpd.Tree): Option[Seq[tpd.Tree]]
   }
 
