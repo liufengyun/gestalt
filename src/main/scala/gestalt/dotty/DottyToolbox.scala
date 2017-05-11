@@ -370,15 +370,15 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def apply(params: Seq[Param], body: TermTree): TermTree =
       d.Function(params.toList, body).withPosition
 
-    def apply(params: Seq[(String, Type)], resTp: Type)(bodyFn: (Seq[tpd.Tree], Symbol) => tpd.Tree): tpd.Tree = {
+    def apply(params: Seq[(String, Type)], resTp: Type)(bodyFn: Seq[tpd.Tree] => tpd.Tree): tpd.Tree = {
       val meth = ctx.newSymbol(
         owner, nme.ANON_FUN,
         Flags.Synthetic | Flags.Method,
         Types.MethodType(params.map(_._1.toTermName).toList, params.map(_._2).toList, resTp)
       )
       t.Closure(meth, paramss => {
-        bodyFn(paramss.head, meth)
-      }) // possible to change owner here, why Dotty doesn't do that?
+        bodyFn(paramss.head).changeOwner(owner, meth)
+      })
     }
   }
 

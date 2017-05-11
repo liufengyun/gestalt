@@ -262,7 +262,7 @@ trait Trees extends Params with TypeParams with
   val Function: FunctionImpl
   trait FunctionImpl {
     def apply(params: Seq[Param], body: TermTree): TermTree
-    def apply(params: Seq[(String, Type)], resTp: Type)(bodyFn: (Seq[tpd.Tree], Symbol) => tpd.Tree): tpd.Tree
+    def apply(params: Seq[(String, Type)], resTp: Type)(bodyFn: Seq[tpd.Tree] => tpd.Tree): tpd.Tree
   }
 
   val While: WhileImpl
