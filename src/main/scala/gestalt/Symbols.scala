@@ -4,7 +4,7 @@ trait Symbols { this: Toolbox =>
   type Symbol
 
   /** owner of current macro expansion */
-  // def owner: Symbol
+  def owner: Symbol
 
   /** create a new symbol with current owner */
   def newValSymbol(name: String, info: Type): Symbol
@@ -24,5 +24,8 @@ trait Symbols { this: Toolbox =>
 
     /** subst symbols in tree */
     def subst(tree: tpd.Tree)(from: List[Symbol], to: List[Symbol]): tpd.Tree
+
+    /** change owner of the tree */
+    def changeOwner(tree: tpd.Tree)(from: Symbol, to: Symbol): tpd.Tree
   }
 }

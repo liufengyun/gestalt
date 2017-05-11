@@ -51,7 +51,7 @@ object Transformer {
     def isUnlift(tp: Type) = tp.denot.map(_.symbol) == unliftSym
 
     def rewrite(monad: tpd.Tree, name: String, tp: Type, resTp: Type, flat: Boolean, flatTp: Type = null)
-               (bodyFn: Seq[tpd.Tree] => tpd.Tree): tpd.Tree =
+               (bodyFn: (Seq[tpd.Tree], Symbol) => tpd.Tree): tpd.Tree =
     {
       val fun = Function((name, tp) :: Nil, resTp)(bodyFn)
       if (flat)
@@ -111,24 +111,30 @@ object Transformer {
       def unapply(trees: List[tpd.Tree])(implicit blockTp: Type): Option[tpd.Tree] =
         trees match {
           case (tree @ ValDef(name, _, Transform(monad))) :: TransformBlock(body) =>
-            val res = rewrite(monad, name, tree.tpe.widen, body.tpe, flat = true, flatTp = blockTp) { refs =>
-              body.subst(tree.symbol.get :: Nil, refs.head.symbol.get :: Nil)
+            val res = rewrite(monad, name, tree.tpe.widen, body.tpe, flat = true, flatTp = blockTp) { (refs, meth) =>
+              body.subst(tree.symbol.get :: Nil, refs.head.symbol.get :: Nil).changeOwner(owner, meth)
             }
             Some(res)
 
           case (tree @ ValDef(name, _, Transform(monad))) :: tail =>       // tail cannot be empty
-            Some(rewrite(monad, name, tree.tpe.widen, blockTp, flat = false) { refs =>
-              Block(tail.init, tail.last).subst(tree.symbol.get :: Nil, refs.head.symbol.get :: Nil)
+            Some(rewrite(monad, name, tree.tpe.widen, blockTp, flat = false) { (refs, meth) =>
+              Block(tail.init, tail.last)
+                .subst(tree.symbol.get :: Nil, refs.head.symbol.get :: Nil)
+                .changeOwner(owner, meth)
             })
 
           case Transform(head) :: Nil =>
             Some(head)
 
           case (tree @ Transform(monad)) :: TransformBlock(body) =>
-            Some(rewrite(monad, fresh(), tree.tpe, body.tpe, flat = true, flatTp = blockTp) { refs => body })
+            Some(rewrite(monad, fresh(), tree.tpe, body.tpe, flat = true, flatTp = blockTp) { (refs, meth) =>
+              body.changeOwner(owner, meth)
+            })
 
           case (tree @ Transform(monad)) :: tail =>
-            Some(rewrite(monad, fresh(), tree.tpe, blockTp, flat = false) { refs => Block(tail.init, tail.last) })
+            Some(rewrite(monad, fresh(), tree.tpe, blockTp, flat = false) { (refs, meth) =>
+              Block(tail.init, tail.last).changeOwner(owner, meth)
+            })
 
           case head :: TransformBlock(Block(stats, expr)) =>
             Some(Block(head +: stats, expr))
@@ -143,15 +149,15 @@ object Transformer {
           unapply(ifTrue, ifFalse) match {
             case Some(ifTrue, ifFalse) =>
               val resTp = Type.lub(ifTrue.tpe, ifFalse.tpe)
-              val res = rewrite(monad, fresh(), Type.typeRef("scala.Boolean"), resTp, flat = true, flatTp = tree.tpe) { refs =>
+              val res = rewrite(monad, fresh(), Type.typeRef("scala.Boolean"), resTp, flat = true, flatTp = tree.tpe) { (refs, meth) =>
                 val ident = refs.head
-                If(ident, ifTrue, ifFalse)
+                If(ident, ifTrue, ifFalse).changeOwner(owner, meth)
               }
               Some(res)
             case None =>
-              val res = rewrite(monad, fresh(), Type.typeRef("scala.Boolean"), tree.tpe, flat = false) { refs =>
+              val res = rewrite(monad, fresh(), Type.typeRef("scala.Boolean"), tree.tpe, flat = false) { (refs, meth) =>
                 val ident = refs.head
-                If(ident, ifTrue, ifFalse)
+                If(ident, ifTrue, ifFalse).changeOwner(owner, meth)
               }
               Some(res)
           }
@@ -212,7 +218,7 @@ object Transformer {
           unlifts.toList match {
             case List() => None
             case List((tree, dummy, tpt)) =>
-              val res = rewrite(tree, dummy.name, tpt.tpe, newTree.tpe, flat = false) { refs =>
+              val res = rewrite(tree, dummy.name, tpt.tpe, newTree.tpe, flat = false) { (refs, meth) =>
                 newTree.subst(dummy :: Nil, refs.head.symbol.get :: Nil)
               }
 
@@ -227,7 +233,7 @@ object Transformer {
 
 
               val tp = Type.typeRef("scala.List").appliedTo(types.head.tpe)
-              val fun = Function((list, tp) :: Nil, newTree.tpe) { refs =>
+              val fun = Function((list, tp) :: Nil, newTree.tpe) { (refs, meth) =>
                 val iter = ValDef(fresh("iter"), refs.head.select("iterator"))
                 val elements = unlifts.map { case (tree, dummy, tpe) =>
                   val rhs = Ident(iter.symbol).select("next").appliedTo().select("asInstanceOf").appliedToTypes(tpe)
@@ -238,7 +244,7 @@ object Transformer {
                 val tos     = elements.map(_.symbol)
                 val content = newTree.subst(froms, tos)
 
-                Block(iter +: elements, content)
+                Block(iter +: elements, content).changeOwner(owner, meth)
               }
               Some(q"${Resolve.map(tree.pos, collect).appliedToTypes(types.head.tpe.toTree)}($fun)")
           }

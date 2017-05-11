@@ -368,17 +368,14 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def apply(params: Seq[Param], body: TermTree): TermTree =
       d.Function(params.toList, body).withPosition
 
-    def apply(params: Seq[(String, Type)], resTp: Type)(bodyFn: Seq[tpd.Tree] => tpd.Tree): tpd.Tree = {
+    def apply(params: Seq[(String, Type)], resTp: Type)(bodyFn: (Seq[tpd.Tree], Symbol) => tpd.Tree): tpd.Tree = {
       val meth = ctx.newSymbol(
         owner, nme.ANON_FUN,
         Flags.Synthetic | Flags.Method,
         Types.MethodType(params.map(_._1.toTermName).toList, params.map(_._2).toList, resTp)
       )
       t.Closure(meth, paramss => {
-        ownerStack.push(meth)
-        val res = bodyFn(paramss.head)
-        ownerStack.pop()
-        res
+        bodyFn(paramss.head, meth)
       }) // possible to change owner here, why Dotty doesn't do that?
     }
   }
@@ -1137,8 +1134,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   }
 
   /*------------------------------- symbols -------------------------------------*/
-  def owner: Symbol = ownerStack.top
-  private val ownerStack = collection.mutable.Stack(ctx.owner)
+  def owner: Symbol = ctx.owner
 
   def newValSymbol(name: String, info: Type): Symbol =
     ctx.newSymbol(owner, name.toTermName, Flags.EmptyFlags, info)
@@ -1152,6 +1148,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
     /** subst symbols in tree */
     def subst(tree: tpd.Tree)(from: List[Symbol], to: List[Symbol]): tpd.Tree = new t.TreeOps(tree).subst(from, to)
+
+    def changeOwner(tree: tpd.Tree)(from: Symbol, to: Symbol): tpd.Tree = new t.TreeOps(tree).changeOwner(from, to)
   }
 
   /*------------------------------- Denotations -------------------------------------*/

@@ -28,6 +28,7 @@ trait Types extends MethodTypes { this: Toolbox =>
     def wrap: Splice = TypedSplice(tree)
     def subst(from: List[Symbol], to: List[Symbol]): tpd.Tree = Symbol.subst(tree)(from, to)
     def symbol: Option[Symbol] = tree.tpe.denot.map(_.symbol)
+    def changeOwner(from: Symbol, to: Symbol): tpd.Tree = Symbol.changeOwner(tree)(from, to)
   }
 
   val Type: TypeImpl
