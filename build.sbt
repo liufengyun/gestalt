@@ -61,7 +61,7 @@ lazy val gestalt = (project in file(".")).
 
 lazy val macrosSetting = Seq(
   scalacOptions := {
-    Seq("-Xprint:frontend,parser,macrosTransform") // "-Yplain-printer", "-Xprint:frontend,parser", "-Ylog:frontend",
+    Seq("-Xprint:frontend,parser,macrosTransform", "-Ycheck:all") // "-Yplain-printer", "-Xprint:frontend,parser", "-Ylog:frontend",
   },
 
   traceLevel := 0,
