@@ -36,9 +36,8 @@ object JsonMacros {
       }
 
       case class JsonItem(name: String, pairOut: TermTree, readOption: ValDef, implicitFormat: Option[ValDef])
-
       val jsonItems: Seq[JsonItem] = namesAndTypes.map {
-        case (name, stringType) if stringType.show == "String" =>
+        case (name, stringType) if stringType =:= Type.typeRef("java.lang.String") =>
           JsonItem(name,
             pairOut = Tuple(Seq(Lit(name), q"JsString(${Select(Ident("o"), name)})")),
             readOption = q"val $name = obj.firstValue(${Lit(name)}).collect{case JsString(value) => value}",
