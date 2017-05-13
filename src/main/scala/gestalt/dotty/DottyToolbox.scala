@@ -524,12 +524,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   }
 
   object Case extends CaseImpl {
-    private def ensureBlock(t:TermTree):TermTree = t match {
-      case unchanged:d.Block => unchanged
-      case other => d.Block(Nil,other)
-    }
     def apply(pat: TermTree, cond: Option[TermTree], body: TermTree): Tree =
-      d.CaseDef(pat, cond.getOrElse(d.EmptyTree), /*ensureBlock(*/body/*)*/).withPosition
+      d.CaseDef(pat, cond.getOrElse(d.EmptyTree), body).withPosition
 
     def unapply(tree: Tree): Option[(TermTree, Option[TermTree], TermTree)] = tree match {
       case c.CaseDef(pat, cond, body) =>
