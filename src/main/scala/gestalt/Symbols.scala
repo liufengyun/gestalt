@@ -26,6 +26,6 @@ trait Symbols { this: Toolbox =>
     def subst(tree: tpd.Tree)(from: List[Symbol], to: List[Symbol]): tpd.Tree
 
     /** change owner of the tree */
-    def changeOwner(tree: tpd.Tree)(from: Symbol, to: Symbol): tpd.Tree
+    // def changeOwner(tree: tpd.Tree)(from: Symbol, to: Symbol): tpd.Tree
   }
 }

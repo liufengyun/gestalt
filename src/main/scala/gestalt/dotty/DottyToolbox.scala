@@ -377,7 +377,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
         Types.MethodType(params.map(_._1.toTermName).toList, params.map(_._2).toList, resTp)
       )
       t.Closure(meth, paramss => {
-        bodyFn(paramss.head).changeOwner(owner, meth)
+        ensureOwner(bodyFn(paramss.head), meth)
       })
     }
   }
@@ -1151,7 +1151,20 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     /** subst symbols in tree */
     def subst(tree: tpd.Tree)(from: List[Symbol], to: List[Symbol]): tpd.Tree = new t.TreeOps(tree).subst(from, to)
 
-    def changeOwner(tree: tpd.Tree)(from: Symbol, to: Symbol): tpd.Tree = new t.TreeOps(tree).changeOwner(from, to)
+    // def changeOwner(tree: tpd.Tree)(from: Symbol, to: Symbol): tpd.Tree = new t.TreeOps(tree).changeOwner(from, to)
+  }
+
+  def ensureOwner(tree: tpd.Tree, owner: Symbol): tpd.Tree = {
+    val froms = new ListBuffer[Symbol]
+    new t.TreeTraverser {
+      def traverse(tree: t.Tree)(implicit ctx: Context): Unit = tree match {
+        case tree: t.Tree if tree.isDef =>
+          if (!froms.exists(_ eq tree.symbol)) froms += tree.symbol.owner
+        case _ => traverseChildren(tree)
+      }
+    }.traverse(tree)
+
+    froms.foldRight(tree) { (from, acc) => new t.TreeOps(acc).changeOwner(from, owner) }
   }
 
   /*------------------------------- Denotations -------------------------------------*/
