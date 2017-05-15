@@ -26,13 +26,13 @@ final class Optional[+A >: Null](val value: A) extends AnyVal {
     val tempIdent = Ident(tempValDef.symbol)
 
     val newBody = transform(body) {
-      case id @ Ident(_) if id.symbol == param =>
+      case id @ Ident(_) if id.symbol.get eq param =>
         Select(tempIdent, "value")
     }
 
     q"""
        $tempValDef
-       if ($tempValDef.isEmpty) new Optional(null)
+       if ($tempIdent.isEmpty) new Optional(null)
        else new Optional($newBody)
      """
   }

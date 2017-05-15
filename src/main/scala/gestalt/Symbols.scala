@@ -1,7 +1,7 @@
 package scala.gestalt
 
 trait Symbols { this: Toolbox =>
-  type Symbol
+  type Symbol <: AnyRef
 
   /** owner of current macro expansion */
   def owner: Symbol
