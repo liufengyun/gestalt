@@ -389,6 +389,13 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
         ensureOwner(bodyFn(paramss.head), meth)
       })
     }
+
+
+    def unapply(tree: tpd.Tree): Option[(Seq[Symbol], tpd.Tree)] = tree match {
+      case c.Block((meth : t.DefDef) :: Nil, _ : t.Closure) if meth.name == nme.ANON_FUN =>
+        Some((meth.vparamss.head.map(_.symbol), meth.rhs))
+      case _ => None
+    }
   }
 
   object While extends WhileImpl {
@@ -957,7 +964,16 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   }
 
   object TypedSplice extends TypedSpliceImpl {
-    def apply(tree: tpd.Tree): Splice = d.TypedSplice(tree)
+    def apply(tree: tpd.Tree): Splice = {
+      val owners = getOwners(tree)
+
+      // make sure the spliced tree only has one owner
+      val treeNew = if (owners.length > 1) ensureOwner(tree, owners.head) else tree
+
+      val newCtx = if (owners.isEmpty) ctx else ctx.withOwner(owners.head)
+      d.TypedSplice(treeNew)(newCtx)
+    }
+
     def unapply(tree: Tree): Option[tpd.Tree] = tree match {
       case d.TypedSplice(tree) => Some(tree)
       case _ => None
@@ -1159,16 +1175,21 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   }
 
   def ensureOwner(tree: tpd.Tree, owner: Symbol): tpd.Tree = {
-    val froms = new ListBuffer[Symbol]
+    val froms = getOwners(tree)
+    froms.foldRight(tree) { (from, acc) => new t.TreeOps(acc).changeOwner(from, owner) }
+  }
+
+  def getOwners(tree: tpd.Tree): List[Symbol] = {
+    val owners = new ListBuffer[Symbol]
     new t.TreeTraverser {
       def traverse(tree: t.Tree)(implicit ctx: Context): Unit = tree match {
         case tree: t.Tree if tree.isDef =>
-          if (!froms.exists(_ eq tree.symbol)) froms += tree.symbol.owner
+          if (!owners.exists(_ eq tree.symbol)) owners += tree.symbol.owner
         case _ => traverseChildren(tree)
       }
     }.traverse(tree)
 
-    froms.foldRight(tree) { (from, acc) => new t.TreeOps(acc).changeOwner(from, owner) }
+    owners.toList
   }
 
   /*------------------------------- Denotations -------------------------------------*/
