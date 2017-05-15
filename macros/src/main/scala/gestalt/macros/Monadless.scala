@@ -22,9 +22,12 @@ trait Monadless[Monad[_]] {
     def isUnlift(tp: Type) = tp.denot.map(_.symbol) == unliftSym
 
 
-    toolbox.traverse(tree) {
-      case q"$fun[$tp]($v)" if fun.hasType && isUnlift(fun.tpe) =>
-        error("Unsupported unlift position", tree.pos)
+    traverse(tree) {
+      case TypedSplice(tree) =>
+        traverse(tree) {
+          case tree @ q"$fun[$tp]($v)" if isUnlift(fun.tpe) =>
+            error("Unsupported unlift position", tree.pos)
+        }
     }
 
     tree
@@ -41,17 +44,23 @@ object Monadless {
 
 object Transformer {
 
-  def apply(toolbox: Toolbox)(prefix: toolbox.TermTree, tree: toolbox.TermTree)(implicit m: toolbox.WeakTypeTag[_]): toolbox.Tree = {
+  def apply(toolbox: Toolbox)(prefix: toolbox.tpd.Tree, tree: toolbox.tpd.Tree)(implicit m: toolbox.WeakTypeTag[_]): toolbox.Tree = {
     import toolbox._
 
     val unliftSym = prefix.tpe.method("unlift").headOption.map(_.symbol)
     def isUnlift(tp: Type) = tp.denot.map(_.symbol) == unliftSym
 
+    def rewrite(monad: tpd.Tree, name: String, tp: Type, resTp: Type, flat: Boolean, flatTp: Type = null)
+               (bodyFn: Seq[tpd.Tree] => tpd.Tree): tpd.Tree =
+    {
+      val fun = Function((name, tp) :: Nil, resTp)(bodyFn)
+      if (flat)
+        q"${Resolve.flatMap(monad.pos, monad).appliedToTypes(flatTp.toTree)}($fun)"
+      else
+        q"${Resolve.map(monad.pos, monad).appliedToTypes(resTp.toTree)}($fun)"
+    }
 
-    def toParam(name: String) = Param(emptyMods, name, None, None)
-    def wrap(tree: Tree): Splice = TypedSplice(tree)
-
-    def validate(tree: Tree): Tree = {
+    def validate(tree: tpd.Tree): tpd.Tree = {
       traverse(tree) {
         case t @ Match(_, cases) =>
           cases.foreach {
@@ -64,8 +73,8 @@ object Transformer {
         case t @ Return(_) =>
           abort("Lifted expression can't contain `return` statements.", t.pos)
 
-        case t @ ValDef(mods, _, _, Transform(_)) if mods.isLazy =>
-          abort("Unlift can't be used as a lazy val initializer.", t.pos)
+        // case t @ ValDef(_, _, Transform(_)) if mods.isLazy =>
+        //  abort("Unlift can't be used as a lazy val initializer.", t.pos)
 
         case t @ ApplySeq(method, argss) if argss.size > 0 =>
           var methodTp: MethodType = method.tpe.widen.asInstanceOf[MethodType]
@@ -83,120 +92,159 @@ object Transformer {
             }
           }
           argss.flatten.foreach(validate(_))
-
-        case t @ DefDef(mods, _, _, paramss, _, Transform(body)) =>
-          validate(body)
       }
       tree
     }
 
     object PureTree {
-      def unapply(tree: Tree): Option[Tree] =
+      def unapply(tree: tpd.Tree): Option[tpd.Tree] = {
         exists(tree) {
-          case q"$fun[$tp]($v)" if fun.hasType && isUnlift(fun.tpe) => true
+          case q"$fun[$tp]($v)" if isUnlift(fun.tpe) => true
         } match {
-          case true  => None
+          case true => None
           case false => Some(tree)
         }
+      }
     }
 
     object TransformBlock {
-      def unapply(trees: List[Tree]): Option[TermTree] =
+      def unapply(trees: List[tpd.Tree])(implicit blockTp: Type): Option[tpd.Tree] =
         trees match {
-          case ValDef(mods, name, _, Transform(monad)) :: tail =>
-            Some(Nest(monad, name, Block(tail)))
+          case (tree @ ValDef(name, _, Transform(monad))) :: TransformBlock(body) =>
+            val res = rewrite(monad, name, tree.tpe.widen, body.tpe, flat = true, flatTp = blockTp) { refs =>
+              body.subst(tree.symbol.get :: Nil, refs.head.symbol.get :: Nil)
+            }
+            Some(res)
+
+          case (tree @ ValDef(name, _, Transform(monad))) :: tail =>       // tail cannot be empty
+            Some(rewrite(monad, name, tree.tpe.widen, blockTp, flat = false) { refs =>
+              Block(tail.init, tail.last).subst(tree.symbol.get :: Nil, refs.head.symbol.get :: Nil)
+            })
 
           case Transform(head) :: Nil =>
             Some(head)
 
-          case Transform(monad) :: tail =>
-            Some(Nest(monad, "_", Block(tail)))
+          case (tree @ Transform(monad)) :: TransformBlock(body) =>
+            Some(rewrite(monad, fresh(), tree.tpe, body.tpe, flat = true, flatTp = blockTp) { refs =>
+              body
+            })
 
-          case head :: TransformBlock(Block(tail)) =>
-            Some(Block(head +: tail))
+          case (tree @ Transform(monad)) :: tail =>
+            Some(rewrite(monad, fresh(), tree.tpe, blockTp, flat = false) { refs =>
+              Block(tail.init, tail.last)
+            })
+
+          case head :: TransformBlock(Block(stats, expr)) =>
+            Some(Block(head +: stats, expr))
 
           case other => None
         }
     }
 
-    object Nest {
-      def apply(monad: TermTree, name: String, body: TermTree): TermTree =
-        body match {
-          case Transform(body) =>
-            val fun = Function(toParam(name) :: Nil, body)
-            q"${Resolve.flatMap(monad.pos, monad)}($fun)"
-          case body: TermTree =>
-            val fun = Function(toParam(name) :: Nil, body)
-            q"${Resolve.map(monad.pos, monad)}($fun)"
+    object TransformIf {
+      def unapply(tree: tpd.Tree): Option[tpd.Tree] = tree match {
+        case tree @ If(Transform(monad), ifTrue, ifFalse) =>
+          unapply(ifTrue, ifFalse) match {
+            case Some(ifTrue, ifFalse) =>
+              val resTp = Type.lub(ifTrue.tpe, ifFalse.tpe)
+              val res = rewrite(monad, fresh(), Type.typeRef("scala.Boolean"), resTp, flat = true, flatTp = tree.tpe) { refs =>
+                val ident = refs.head
+                If(ident, ifTrue, ifFalse)
+              }
+              Some(res)
+            case None =>
+              val res = rewrite(monad, fresh(), Type.typeRef("scala.Boolean"), tree.tpe, flat = false) { refs =>
+                val ident = refs.head
+                If(ident, ifTrue, ifFalse)
+              }
+              Some(res)
+          }
+
+        case If(cond, ifTrue, ifFalse) =>
+          unapply(ifTrue, ifFalse) match {
+            case Some(ifTrue, ifFalse) =>
+              Some(If(cond, ifTrue, ifFalse))
+            case None =>
+              Some(If(cond, ifTrue, ifFalse))
+          }
+
+        case _ => None
+      }
+
+      def unapply(ifTrue: tpd.Tree, ifFalse: tpd.Tree): Option[(tpd.Tree, tpd.Tree)] =
+        (ifTrue, ifFalse) match {
+          case (Transform(ifTrue), Transform(ifFalse)) =>
+            Some((ifTrue, ifFalse))
+          case (Transform(ifTrue), ifFalse) =>
+            val elsep = Apply(Resolve.apply(tree.pos), List(ifFalse))
+            Some((ifTrue, elsep))
+          case (ifTrue, Transform(ifFalse)) =>
+            val ifp = Apply(Resolve.apply(tree.pos), List(ifTrue))
+            Some((ifp, ifFalse))
+          case (ifTrue, ifFalse) =>
+            None
         }
     }
 
     object Transform {
 
-      def apply(tree: Tree): Tree =
+      def apply(tree: tpd.Tree): tpd.Tree =
         unapply(tree).getOrElse(tree)
 
-      def unapply(tree: Tree): Option[TermTree] = tree match {
+      def unapply(tree: tpd.Tree): Option[tpd.Tree] = tree match {
         case PureTree(tree) => None
 
         case Ascribe(tree, _) => unapply(tree)
 
-        case Block(trees) if trees.size > 1 => TransformBlock.unapply(trees.toList)
+        case block @ Block(stats, expr) => TransformBlock.unapply(stats.toList :+ expr)(block.tpe)
 
-        case If(Transform(monad), ifTrue, ifFalse) =>
-          val name = fresh()
-          val body = If(Ident(name), ifTrue, ifFalse)
-          Some(Nest(monad, name, body))
-
-        case If(cond, ifTrue, Some(ifFalse)) =>
-          (ifTrue, ifFalse) match {
-            case (Transform(ifTrue), Transform(ifFalse)) =>
-              Some(If(cond, ifTrue, Some(ifFalse)))
-            case (Transform(ifTrue), ifFalse) =>
-              val elsep = Apply(Resolve.apply(tree.pos), List(ifFalse))
-              Some(If(cond, ifTrue, Some(elsep)))
-            case (ifTrue, Some(Transform(ifFalse))) =>
-              val ifp = Apply(Resolve.apply(tree.pos), List(ifTrue))
-              Some(If(cond, ifp, Some(ifFalse)))
-            case (ifTrue, ifFalse) =>
-              None
-          }
-
+        case If(cond, ifTrue, ifFalse) => TransformIf.unapply(tree)
 
         case q"$fun[$tp]($v)" if isUnlift(fun.tpe) => Some(v)
 
-        case tree: Tree =>
-          val unlifts = collection.mutable.ListBuffer.empty[(TermTree, String, TypeTree)]
-          val newTree: TermTree =
+        case tree =>
+          val unlifts = collection.mutable.ListBuffer.empty[(tpd.Tree, Symbol, tpd.Tree)]
+          val newTree =
             transform(tree) {
-              case q"$fun[$tp]($v)" if isUnlift(fun.tpe) =>
+              case tree @ q"$fun[$tp]($v)" if isUnlift(fun.tpe) =>
                 val name = fresh()
-                val splice = wrap(tp)
-                unlifts += ((v, name, splice))
-                Ident(name)
-            }.asInstanceOf[TermTree]
+                val dummy = newValSymbol(name, tree.tpe)
+                unlifts += ((v, dummy, tp))
+                Ident(dummy)
+            }
 
           unlifts.toList match {
             case List() => None
-            case List((tree, name, _)) =>
-              val fun = Function(toParam(name) :: Nil, newTree)
-              Some(q"${Resolve.map(tree.pos, tree)}($fun)")
-            case unlifts =>
-              val (trees, names, types) = unlifts.unzip3
-              val list = fresh("list")
-              val iterator = fresh("iterator")
-              val collect = q"${Resolve.collect(tree.pos)}(scala.List(..${trees.toSeq}))"
-
-              val elements = unlifts.map {
-                case (tree, name, tpe) =>
-                  q"val $name = ${Ident(iterator)}.next().asInstanceOf[$tpe]"
+            case List((tree, dummy, tpt)) =>
+              val res = rewrite(tree, dummy.name, tpt.tpe, newTree.tpe, flat = false) { refs =>
+                newTree.subst(dummy :: Nil, refs.head.symbol.get :: Nil)
               }
 
-              val iteratorDef = q"val $iterator = ${Ident(list)}.iterator"
-              val body = Block(iteratorDef +: elements :+ newTree)
+              Some(res)
+            case unlifts =>
+              val (trees, dummies, types) = unlifts.unzip3
+              val list = fresh("list")
+              val scalaList = Ident(Type.termRef("scala.collection.immutable.List").symbol.get).select("apply")
+              val seqLiteral = SeqLiteral(trees, trees.head.tpe.widen)
+              val arg = scalaList.appliedToTypes(trees.head.tpe.widen.toTree).appliedTo(seqLiteral)
+              val collect = q"${Resolve.collect(tree.pos).appliedToTypes(types.head.tpe.toTree)}($arg)"
 
-              val fun = Function(toParam(list) :: Nil, body)
-              Some(q"${Resolve.map(tree.pos, collect)}($fun)")
+
+              val tp = Type.typeRef("scala.List").appliedTo(types.head.tpe)
+              val fun = Function((list, tp) :: Nil, newTree.tpe) { refs =>
+                val iter = ValDef(fresh("iter"), refs.head.select("iterator"))
+                val elements = unlifts.map { case (tree, dummy, tpe) =>
+                  val rhs = Ident(iter.symbol).select("next").appliedTo().select("asInstanceOf").appliedToTypes(tpe)
+                  ValDef(dummy.name, rhs)
+                }
+
+                val froms   = dummies
+                val tos     = elements.map(_.symbol)
+                val content = newTree.subst(froms, tos)
+
+                Block(iter +: elements, content)
+              }
+              Some(q"${Resolve.map(tree.pos, collect).appliedToTypes(types.head.tpe.toTree)}($fun)")
           }
       }
     }
@@ -211,7 +259,7 @@ object Transformer {
            |defined by the monad instance and its companion object.
         """.stripMargin
 
-      def apply(pos: Pos): TermTree =
+      def apply(pos: Pos): tpd.Tree =
         companionMethod(pos, "apply").getOrElse {
           val msg =
             s"""Transformation requires the method `apply` to create a monad instance for a value.
@@ -220,7 +268,7 @@ object Transformer {
           abort(msg, pos)
         }
 
-      def collect(pos: Pos): TermTree =
+      def collect(pos: Pos): tpd.Tree =
         companionMethod(pos, "collect").getOrElse {
           val msg =
             s"""Transformation requires the method `collect` to transform List[M[T]] into M[List[T]]. The implementation
@@ -237,7 +285,7 @@ object Transformer {
            |$sourceCompatibilityMessage
         """.stripMargin
 
-      def map(pos: Pos, instance: TermTree): TermTree =
+      def map(pos: Pos, instance: tpd.Tree): tpd.Tree =
         instanceMethod(pos, instance, "map").getOrElse {
           val msg =
             s"""Transformation requires the method `map` to transform the result of a monad instance.
@@ -246,7 +294,7 @@ object Transformer {
           abort(msg, pos)
         }
 
-      def flatMap(pos: Pos, instance: TermTree): TermTree =
+      def flatMap(pos: Pos, instance: tpd.Tree): tpd.Tree =
         instanceMethod(pos, instance, "flatMap").getOrElse {
           val msg =
             s"""Transformation requires the method `flatMap` to transform the result of a monad instance.
@@ -255,7 +303,7 @@ object Transformer {
           abort(msg, pos)
         }
 
-      def rescue(pos: Pos, instance: TermTree): TermTree =
+      def rescue(pos: Pos, instance: tpd.Tree): tpd.Tree =
         instanceMethod(pos, instance, "rescue").getOrElse {
           val msg =
             s"""Transformation requires the method `rescue` to recover from a failure (translate a `catch` clause).
@@ -265,7 +313,7 @@ object Transformer {
           abort(msg, pos)
         }
 
-      def ensure(pos: Pos, instance: TermTree): TermTree =
+      def ensure(pos: Pos, instance: tpd.Tree): tpd.Tree =
         instanceMethod(pos, instance, "ensure").getOrElse {
           val msg =
             s"""Transformation requires the method `ensure` to execute code regardless of the outcome of the
@@ -289,15 +337,15 @@ object Transformer {
           |that don't represent a computation and/or don't handle exceptions (e.g. `Option`)
         """.stripMargin
 
-      private def instanceMethod(pos: Pos, instance: TermTree, name: String) =
+      private def instanceMethod(pos: Pos, instance: tpd.Tree, name: String) =
         this.method(prefix, prefix.tpe, name).map(t => q"$t($instance)")
           .orElse(this.method(instance, m.tpe, name))
 
       private def companionMethod(pos: Pos, name: String) =
         method(prefix, prefix.tpe, name)
-          .orElse(method(Ident(m.tpe.denot.get.name), m.tpe.companion.get, name))
+          .orElse(method(Ident(m.tpe.companion.get.symbol.get), m.tpe.companion.get, name))
 
-      private def method(instance: TermTree, tpe: Type, name: String) =
+      private def method(instance: tpd.Tree, tpe: Type, name: String) =
         find(tpe, name).map(_ => Select(instance, name))
 
       private def find(tpe: Type, method: String) =
@@ -308,8 +356,8 @@ object Transformer {
     }
 
     validate(tree) match {
-      case PureTree(tree: TermTree) => Apply(Resolve.apply(tree.pos), List(tree))
-      case tree: Tree     => Transform(tree)
+      case PureTree(tree: tpd.Tree) => Apply(Resolve.apply(tree.pos), List(tree.wrap))
+      case tree => Transform(tree)
     }
   }
 }

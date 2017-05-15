@@ -8,15 +8,21 @@ trait Positions { this: Trees =>
     def pos: Pos = Pos.pos(tree)
   }
 
+  implicit class TypedTreePos(tree: tpd.Tree) {
+    def pos: Pos = Pos.pos(tree)
+  }
+
   val Pos: PositionImpl
   trait PositionImpl {
     def pos(tree: Tree): Pos
+    def pos(tree: tpd.Tree)(implicit c: Cap): Pos
   }
 }
 
 trait Trees extends Params with TypeParams with
   ValDefs with ValDecls with DefDefs with DefDecls with
-  Classes with Traits with Objects with Positions with TreeOps {
+  Classes with Traits with Objects with Positions with TreeOps
+  with TreeHelpers { this: Toolbox =>
   // safety by construction -- implementation can have TypeTree = Tree
   type Tree     >: Null <: AnyRef
   type TypeTree >: Null <: Tree
@@ -83,6 +89,13 @@ trait Trees extends Params with TypeParams with
   // modifiers
   def emptyMods: Mods
 
+  // typed trees
+  val tpd: TypedTrees
+  trait TypedTrees {
+    type Tree      >: Null <: AnyRef
+    type Param     <: Tree
+    type ValDef    <: Tree
+  }
 
   // definition trees
   val NewAnonymClass: NewAnonymClassImpl
@@ -240,6 +253,9 @@ trait Trees extends Params with TypeParams with
   trait IfImpl {
     def apply(cond: TermTree, thenp: TermTree, elsep: Option[TermTree]): TermTree
     def unapply(tree: Tree): Option[(TermTree, TermTree, Option[TermTree])]
+
+    def apply(cond: tpd.Tree, thenp: tpd.Tree, elsep: tpd.Tree): tpd.Tree
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, tpd.Tree, tpd.Tree)]
   }
 
   val Try: TryImpl
@@ -251,6 +267,7 @@ trait Trees extends Params with TypeParams with
   val Function: FunctionImpl
   trait FunctionImpl {
     def apply(params: Seq[Param], body: TermTree): TermTree
+    def apply(params: Seq[(String, Type)], resTp: Type)(bodyFn: Seq[tpd.Tree] => tpd.Tree): tpd.Tree
   }
 
   val While: WhileImpl
@@ -308,30 +325,39 @@ trait Trees extends Params with TypeParams with
   trait LitImpl {
     def apply(value: Any): TermTree
     def unapply(tree: Tree): Option[Any]
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[Any]
   }
 
   val Apply: ApplyImpl
   trait ApplyImpl {
     def apply(fun: TermTree, args: Seq[TermTree]): TermTree
     def unapply(tree: Tree): Option[(TermTree, Seq[TermTree])]
+    def apply(fun: tpd.Tree, args: Seq[tpd.Tree])(implicit c: Cap): tpd.Tree
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, Seq[tpd.Tree])]
   }
 
   val ApplyType: ApplyTypeImpl
   trait ApplyTypeImpl {
     def apply(fun: TermTree, args: Seq[TypeTree]): TermTree
     def unapply(tree: Tree): Option[(TermTree, Seq[TypeTree])]
+
+    def apply(fun: tpd.Tree, args: Seq[tpd.Tree])(implicit c: Cap): tpd.Tree
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, Seq[tpd.Tree])]
   }
 
   val Ident: IdentImpl
   trait IdentImpl {
     def apply(name: String): TermTree
+    def apply(symbol: Symbol): tpd.Tree
     def unapply(tree: Tree): Option[String]
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[String]
   }
 
   val This: ThisImpl
   trait ThisImpl {
     def apply(qual: String): TermTree
     def unapply(tree: Tree): Option[String]
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[String]
   }
 
   val Super: SuperImpl
@@ -343,18 +369,25 @@ trait Trees extends Params with TypeParams with
   trait SelectImpl {
     def apply(qual: TermTree, name: String): TermTree
     def unapply(tree: Tree): Option[(TermTree, String)]
+
+    def apply(qual: tpd.Tree, name: String)(implicit c: Cap): tpd.Tree
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, String)]
   }
 
   val Ascribe: AscribeImpl
   trait AscribeImpl {
     def apply(expr: TermTree, tpe: TypeTree): TermTree
     def unapply(tree: Tree): Option[(TermTree, TypeTree)]
+
+    def apply(expr: tpd.Tree, tpe: tpd.Tree)(implicit c: Cap): tpd.Tree
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, tpd.Tree)]
   }
 
   val Assign: AssignImpl
   trait AssignImpl {
     def apply(lhs: TermTree, rhs: TermTree): TermTree
     def unapply(tree: Tree): Option[(TermTree, TermTree)]
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, tpd.Tree)]
   }
 
 
@@ -363,12 +396,16 @@ trait Trees extends Params with TypeParams with
     def apply(expr: TermTree): TermTree
     def apply: TermTree
     def unapply(tree: Tree): Option[Option[TermTree]]
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[tpd.Tree]
   }
 
   val Block: BlockImpl
   trait BlockImpl {
     def apply(stats: Seq[Tree]): TermTree
     def unapply(tree: Tree): Option[Seq[Tree]]
+
+    def apply(stats: Seq[tpd.Tree], expr: tpd.Tree)(implicit c: Cap): tpd.Tree
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(Seq[tpd.Tree], tpd.Tree)]
   }
 
   val PartialFunction: PartialFunctionImpl
@@ -381,18 +418,21 @@ trait Trees extends Params with TypeParams with
   trait MatchImpl {
     def apply(expr: TermTree, cases: Seq[Tree]): TermTree
     def unapply(tree: Tree): Option[(TermTree, Seq[Tree])]
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, Seq[tpd.Tree])]
   }
 
   val Case: CaseImpl
   trait CaseImpl {
     def apply(pat: TermTree, cond: Option[TermTree], body: TermTree): Tree
     def unapply(tree: Tree): Option[(TermTree, Option[TermTree], TermTree)]
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, Option[tpd.Tree], tpd.Tree)]
   }
 
   val Tuple: TupleImpl
   trait TupleImpl {
     def apply(args: Seq[TermTree]): TermTree
     def unapply(tree: Tree): Option[Seq[TermTree]]
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[Seq[tpd.Tree]]
   }
 
   val Interpolate: InterpolateImpl
@@ -402,12 +442,14 @@ trait Trees extends Params with TypeParams with
 
   val SeqLiteral: SeqLiteralImpl
   trait SeqLiteralImpl {
-    def unapply(tree: Tree): Option[Seq[TermTree]]
+    def apply(trees: Seq[tpd.Tree], tp: Type): tpd.Tree
+    def unapply(tree: tpd.Tree): Option[Seq[tpd.Tree]]
   }
 
   val TypedSplice: TypedSpliceImpl
   trait TypedSpliceImpl {
-    def apply(tree: Tree): Splice
+    def apply(tree: tpd.Tree): Splice
+    def unapply(tree: Tree): Option[tpd.Tree]
   }
 
   // helper
@@ -425,23 +467,50 @@ trait Trees extends Params with TypeParams with
 
       Some(recur(Nil, call))
     }
+
+    def unapply(call: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, Seq[Seq[tpd.Tree]])] =
+      unapply(call.asInstanceOf[TermTree]).asInstanceOf[Option[(tpd.Tree, Seq[Seq[tpd.Tree]])]]
+  }
+}
+
+trait TreeHelpers { this: Trees =>
+  implicit class TpdTreeHelper(tree: tpd.Tree) {
+    def select(name: String): tpd.Tree = Select(tree, name)
+
+    def appliedTo(args: tpd.Tree*): tpd.Tree = Apply(tree, args)
+
+    def appliedToTypes(args: tpd.Tree*): tpd.Tree = ApplyType(tree, args)
   }
 }
 
 trait TreeOps { this: Trees =>
+  implicit def tpd2untpd(tree: tpd.Tree): Splice = TypedSplice(tree)
+
   // traverser
   def traverse(tre: Tree)(pf: PartialFunction[Tree, Unit]): Unit
   def exists(tree: Tree)(pf: PartialFunction[Tree, Boolean]): Boolean
   def transform(tree: Tree)(pf: PartialFunction[Tree, Tree]): Tree
+
+  def traverse(tre: tpd.Tree)(pf: PartialFunction[tpd.Tree, Unit])(implicit c: Cap): Unit
+  def exists(tree: tpd.Tree)(pf: PartialFunction[tpd.Tree, Boolean])(implicit c: Cap): Boolean
+  def transform(tree: tpd.Tree)(pf: PartialFunction[tpd.Tree, tpd.Tree])(implicit c: Cap): tpd.Tree
 }
 
-trait ValDefs { this: Trees =>
+trait ValDefs { this: Toolbox =>
   implicit class ValDefOps(tree: ValDef) {
     def mods: Mods = ValDef.mods(tree)
     def name: String = ValDef.name(tree)
     def tptOpt: Option[TypeTree] = ValDef.tptOpt(tree)
     def rhs: TermTree = ValDef.rhs(tree)
     def copy(rhs: TermTree = this.rhs): ValDef = ValDef.copyRhs(tree)(rhs)
+  }
+
+  implicit class ValDefTypedOps(tree: tpd.ValDef) {
+    def symbol: Symbol = ValDef.symbol(tree)
+    def name: String = ValDef.name(tree)
+    def tptOpt: Option[TypeTree] = ValDef.tptOpt(tree)
+    def rhs: TermTree = ValDef.rhs(tree)
+    def copy(rhs: tpd.Tree): tpd.ValDef = ValDef.copyRhs(tree)(rhs)
   }
 
   val ValDef: ValDefImpl
@@ -453,11 +522,21 @@ trait ValDefs { this: Trees =>
     def tptOpt(tree: ValDef): Option[TypeTree]
     def copyRhs(tree: ValDef)(rhs: TermTree): ValDef
     def get(tree: Tree): Option[ValDef]
-    def unapply(tree: Tree): Option[(Mods, String, Option[TypeTree], TermTree)]
+    def unapply(tree: Tree): Option[(String, Option[TypeTree], TermTree)]
+
+    def apply(name: String, rhs: tpd.Tree): tpd.ValDef
+    def symbol(tree: tpd.ValDef)(implicit c: Cap): Symbol
+    def name(tree: tpd.ValDef)(implicit c: Cap): String
+    def rhs(tree: tpd.ValDef)(implicit c: Cap): TermTree
+    def tptOpt(tree: tpd.ValDef)(implicit c: Cap): Option[TypeTree]
+    def copyRhs(tree: tpd.ValDef)(rhs: tpd.Tree)(implicit c: Cap): tpd.ValDef
+    def get(tree: tpd.Tree)(implicit c: Cap): Option[tpd.ValDef]
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(String, Option[TypeTree], TermTree)]
   }
 
   object OfValDef {
     def unapply(tree: Tree): Option[ValDef] = ValDef.get(tree)
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[tpd.ValDef] = ValDef.get(tree)(c)
   }
 }
 
@@ -539,14 +618,19 @@ trait DefDecls { this: Trees =>
   }
 }
 
-trait Params { this: Trees =>
+trait Params { self : Toolbox =>
   implicit class ParamOps(tree: Param) {
     def mods: Mods = Param.mods(tree)
     def name: String = Param.name(tree)
     def tptOpt: Option[TypeTree] = Param.tptOpt(tree)
     def defaultOpt: Option[TermTree] = Param.defaultOpt(tree)
-    def copy(mods: Mods = this.mods): Param
-    = Param.copyMods(tree)(mods)
+    def copy(mods: Mods = this.mods): Param = Param.copyMods(tree)(mods)
+  }
+
+  implicit class ParamTpdOps(tree: tpd.Param) {
+    def symbol: Symbol = Param.symbol(tree)
+    def name: String = Param.name(tree)
+    def tpt: tpd.Tree = Param.tpt(tree)
   }
 
   val Param: ParamImpl
@@ -557,6 +641,10 @@ trait Params { this: Trees =>
     def tptOpt(tree: Param): Option[TypeTree]
     def defaultOpt(tree: Param): Option[TermTree]
     def copyMods(tree: Param)(mods: Mods): Param
+
+    def symbol(tree: tpd.Param)(implicit c: Cap): Symbol
+    def name(tree: tpd.Param)(implicit c: Cap): String
+    def tpt(tree: tpd.Param)(implicit c: Cap): tpd.Tree
   }
 }
 

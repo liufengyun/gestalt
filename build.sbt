@@ -1,5 +1,5 @@
 lazy val metaVersion = "1.6.0"
-lazy val dottyVersion = "0.2.2-SNAPSHOT"
+lazy val dottyVersion = "0.3.0-SNAPSHOT"
 
 lazy val common = Seq(
   resolvers ++= Seq(
@@ -41,9 +41,9 @@ lazy val gestaltSetting = Seq(
   pomIncludeRepository := { _ => false },
 
   pomExtra := (
-    <url>https://github.com/liufengyun/eden</url>
+    <url>https://github.com/liufengyun/gestalt</url>
     <scm>
-      <url>http://github.com/liufengyun/eden</url>
+      <url>http://github.com/liufengyun/gestalt</url>
       <connection>scm:git:git@github.com:liufengyun/eden.git</connection>
     </scm>
     <developers>
@@ -61,7 +61,7 @@ lazy val gestalt = (project in file(".")).
 
 lazy val macrosSetting = Seq(
   scalacOptions := {
-    Seq("-Xprint:frontend,parser,macrosTransform") // "-Yplain-printer", "-Xprint:frontend,parser", "-Ylog:frontend",
+    Seq("-Xprint:frontend,parser,macrosTransform", "-Ycheck:all") // "-Yplain-printer", "-Xprint:frontend,parser", "-Ylog:frontend",
   },
 
   traceLevel := 0,
@@ -79,11 +79,11 @@ lazy val macrosSetting = Seq(
   autoScalaLibrary := false,
 
   libraryDependencies ++= Seq(
-    "com.novocode" % "junit-interface" % "0.11" % "test",
+    // "com.novocode" % "junit-interface" % "0.11" % "test",
 
     // Dotty depends on stdlib 2.11.5, best use that too (0.1-SNAPSHOT is
     // actually 2.11.5, published under ch.epfl.lamp)
-    "ch.epfl.lamp" % "scala-library_2.11" % "0.1-SNAPSHOT",
+    // "ch.epfl.lamp" % "scala-library_2.11" % "0.1-SNAPSHOT",
     // Compiler on tool path
     "me.fengy" % "dotty_2.11" % dottyVersion % "scala-tool"
   ),

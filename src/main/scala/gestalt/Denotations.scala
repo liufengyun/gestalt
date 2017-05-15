@@ -1,6 +1,6 @@
 package scala.gestalt
 
-trait Denotations { self: Toolbox =>
+trait Denotations { this: Toolbox =>
   type Denotation
 
   implicit class DenotationOps(denot: Denotation) {
