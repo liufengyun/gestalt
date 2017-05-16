@@ -203,9 +203,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   // new qual.T[A, B](x, y)(z)
   object NewInstance extends NewInstanceImpl {
-    def apply(typeSelector: TypeTree, targs: Seq[TypeTree], argss: Seq[Seq[TermTree]]): TermTree = {
-      val fun = if (targs.isEmpty) typeSelector else TypeApply(typeSelector, targs.toList)
-      ApplySeq(d.Select(d.New(fun), nme.CONSTRUCTOR), argss).withPosition
+    def apply(tpe: TypeTree, argss: Seq[Seq[TermTree]]): TermTree = {
+      ApplySeq(d.Select(d.New(tpe), nme.CONSTRUCTOR), argss).withPosition
     }
   }
 
