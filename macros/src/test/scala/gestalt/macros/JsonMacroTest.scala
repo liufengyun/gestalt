@@ -16,8 +16,8 @@ class JsonMacroTest extends TestSuite {
     case class Name(first: String, last: String)
     case class Registration(name: Name, email: String)
 
-    implicit val nameFormat = JsonMacros.format[Name]()
-    val registrationFormat = JsonMacros.format[Registration]()
+    implicit val nameFormat: JsonMacros.Format[Name] = JsonMacros.format[Name]()
+    implicit val registrationFormat: JsonMacros.Format[Registration] = JsonMacros.format[Registration]()
     import JsonMacros._
 
     val registration = Registration(Name("Tom","Sawyer"),"tom.s@mark.twain.book")
