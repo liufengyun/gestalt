@@ -1,7 +1,10 @@
 package scala.gestalt
 
 trait Symbols { this: Toolbox =>
-  type Symbol
+  type Symbol <: AnyRef
+
+  /** create a new symbol with current owner */
+  def newValSymbol(name: String, info: Type): Symbol
 
   implicit class SymbolOps(sym: Symbol) {
     def name: String = Symbol.name(sym)
@@ -15,5 +18,8 @@ trait Symbols { this: Toolbox =>
 
     /** type of a member with respect to a prefix */
     def asSeenFrom(mem: Symbol, prefix: Type): Type
+
+    /** subst symbols in tree */
+    def subst(tree: tpd.Tree)(from: List[Symbol], to: List[Symbol]): tpd.Tree
   }
 }

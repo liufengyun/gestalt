@@ -1,6 +1,6 @@
 package scala.gestalt
 
-trait Types extends MethodTypes { self: Toolbox =>
+trait Types extends MethodTypes { this: Toolbox =>
   type Type >: Null <: AnyRef
 
   implicit class TypeOps(tp: Type) {
@@ -18,11 +18,16 @@ trait Types extends MethodTypes { self: Toolbox =>
     def show: String = Type.show(tp)
     def widen: Type = Type.widen(tp)
     def denot: Option[Denotation] = Type.denot(tp)
+    def symbol: Option[Symbol] = denot.map(_.symbol)
+    def appliedTo(args: Type*): Type = Type.appliedTo(tp, args)
+    def toTree: tpd.Tree = Type.toTree(tp)
   }
 
-  implicit class TreeTypeOps(tree: Tree) {
+  implicit class TreeTypeOps(tree: tpd.Tree) {
     def tpe: Type = Type.typeOf(tree)
-    def hasType: Boolean = Type.hasType(tree)
+    def wrap: Splice = TypedSplice(tree)
+    def subst(from: List[Symbol], to: List[Symbol]): tpd.Tree = Symbol.subst(tree)(from, to)
+    def symbol: Option[Symbol] = tree.tpe.denot.map(_.symbol)
   }
 
   val Type: TypeImpl
@@ -36,6 +41,9 @@ trait Types extends MethodTypes { self: Toolbox =>
     /** is `tp1` a subtype of `tp2` */
     def <:<(tp1: Type, tp2: Type): Boolean
 
+    /** least upper bound of two types */
+    def lub(tp1: Type, tp2: Type): Type
+
     /** returning a type referring to a global type definition */
     def typeRef(path: String): Type
 
@@ -43,14 +51,14 @@ trait Types extends MethodTypes { self: Toolbox =>
     def termRef(path: String): Type
 
     /** type associated with the tree */
-    def typeOf(tree: Tree): Type
+    def typeOf(tree: tpd.Tree): Type
 
     /** whether the tree is typed or not
      *
      *  @note this is temporary, once we separate typed trees from untped
      *        trees, this should be removed.
      */
-    def hasType(tree: Tree): Boolean
+    def hasType(tree: tpd.Tree): Boolean
 
     /** does the type refer to a case class? */
     def isCaseClass(tp: Type): Boolean
@@ -86,6 +94,12 @@ trait Types extends MethodTypes { self: Toolbox =>
 
     /** denotation associated with the type */
     def denot(tp: Type): Option[Denotation]
+
+    /** The type representing  T[U1, ..., Un] */
+    def appliedTo(tp: Type, args: Seq[Type]): Type
+
+    /** Turn a type into a typed tree */
+    def toTree(tp: Type): tpd.Tree
   }
 
 

@@ -33,4 +33,6 @@ package object gestalt {
     quote.expand(label, tree.asInstanceOf[quote.t.Tree], parts, argsTyped, isPattern).asInstanceOf[t.Tree]
   }
 
+  type Cap >: Null
+  implicit val cap: Cap = null
 }
