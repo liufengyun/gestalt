@@ -251,10 +251,13 @@ trait Trees extends Params with TypeParams with
 
   val If: IfImpl
   trait IfImpl {
+    def apply(cond: TermTree, thenp: TermTree, elsep: TermTree): TermTree =
+      apply(cond, thenp, Some(elsep))
+
     def apply(cond: TermTree, thenp: TermTree, elsep: Option[TermTree]): TermTree
     def unapply(tree: Tree): Option[(TermTree, TermTree, Option[TermTree])]
 
-    def apply(cond: tpd.Tree, thenp: tpd.Tree, elsep: tpd.Tree): tpd.Tree
+    def apply(cond: tpd.Tree, thenp: tpd.Tree, elsep: tpd.Tree)(implicit cap: Cap): tpd.Tree
     def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, tpd.Tree, tpd.Tree)]
   }
 

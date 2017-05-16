@@ -207,6 +207,8 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
           liftQuasi(quasi)
         case m.Term.Name(name) =>
           t.Lit(name)
+        case m.Pat.Var.Term(m.Term.Name(name)) =>
+          t.Lit(name)
         case pat =>
           lift(pat)
       }
@@ -467,7 +469,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     case m.Pat.Var.Type(m.Type.Name(name)) =>
       selectToolbox("TypeIdent").appliedTo(t.Lit(name))
     case m.Pat.Wildcard() =>
-      selectToolbox("Wildcard").appliedTo() // FIXME Wildcard is not defined in toolbox
+      selectToolbox("Ident").appliedTo(t.Lit("_")) // FIXME Wildcard is not defined in toolbox
     case m.Pat.Bind(m.Pat.Var.Term(name), expr) =>
       selectToolbox("Bind").appliedTo(t.Lit(name), lift(expr))
     case m.Pat.Alternative(lhs, rhs) =>

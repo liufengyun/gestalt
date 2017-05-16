@@ -179,40 +179,57 @@ class Quasiquotes extends StaticAnnotation {
       assert(q"f($q, y: Y) = $r".toString === res.toString)
     }
 
-    /*
     test("block") {
       val q"{foo; ..$statz; $astat}" = q"{ foo; val a = x; val b = y; val c = z }"
-      assert(statz.toString === "List(val a = x, val b = y)")
-      assert(statz(0).toString === "")
-      assert(statz(1).toString === "")
-      assert(astat.toString === "")
+      assert(statz.toString ===
+        List(
+          ValDef(emptyMods, "a", None, Ident("x")),
+          ValDef(emptyMods, "b", None, Ident("y"))
+        ).toString
+      )
+
+      assert(astat.toString === ValDef(emptyMods, "c", None, Ident("z")).toString)
     }
+
 
     test("block 2") {
       val stats = List(q"val x = 1", q"val y = 2")
-      assert(q"{ ..$stats }".toString === "")
+      assert(q"{ ..$stats }".toString ===
+        Block(
+          List(ValDef(emptyMods, "x", None, Lit(1)), ValDef(emptyMods, "y", None, Lit(2)))
+        ).toString
+      )
     }
 
     test("if") {
       val q"if ($expr1) $expr2 else $expr3" = q"if (1 > 2) a else b"
-      assert(expr1.toString === "")
-      assert(expr2.toString === "")
-      assert(expr3.toString === "")
+      assert(expr1.toString === Infix(Lit(1), ">", Lit(2)).toString)
+      assert(expr2.toString === Ident("a").toString)
+      assert(expr3.toString === Ident("b").toString)
     }
 
     test("if2") {
       val expr1 = q"1 > 2"
       val expr2 = q"a"
       val expr3 = q"b"
-      assert(q"if ($expr1) $expr2 else $expr3".toString === "")
+      assert(q"if ($expr1) $expr2 else $expr3".toString ===
+        If(Infix(Lit(1), ">", Lit(2)), Ident("a"), Ident("b")).toString
+      )
     }
 
     test("match") {
-      val q"$expr match { case bar => baz; ..case $casez; case _ => foo }" = q"foo match { case bar => baz; case _ => foo }"
-      assert(expr.toString === "")
-      assert(casez.isEmpty)
+      val expr = q"foo match { case bar => baz; case _ => foo }"
+      val res = Match(
+        Ident("foo"),
+        List(
+          Case(Ident("bar"), None, Ident("baz")),
+          Case(Ident("_"), None, Ident("foo"))
+        )
+      )
+      assert(expr.toString === res.toString)
     }
 
+    /*
     test("function") {
       assert(q"(i: Int) => 42".toString === "Term.Function(Seq(Term.Param(Nil, Term.Name(\"i\"), Some(Type.Name(\"Int\")), None)), Lit(42))")
 
@@ -302,6 +319,13 @@ class Quasiquotes extends StaticAnnotation {
     test("repeated type") {
       q"def f(x: Int*): Int = 3"
     }
+
+    test("pat def") {
+    }
+
+    test("seq def") {
+    }
+
     */
 
     defn

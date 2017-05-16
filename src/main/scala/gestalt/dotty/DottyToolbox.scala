@@ -358,7 +358,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case _ => None
     }
 
-    def apply(cond: tpd.Tree, thenp: tpd.Tree, elsep: tpd.Tree): tpd.Tree =
+    def apply(cond: tpd.Tree, thenp: tpd.Tree, elsep: tpd.Tree)(implicit c: Cap): tpd.Tree =
       t.If(cond, thenp, elsep)
 
     def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, tpd.Tree, tpd.Tree)] = tree match {
