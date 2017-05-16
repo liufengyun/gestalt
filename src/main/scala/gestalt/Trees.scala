@@ -136,7 +136,7 @@ trait Trees extends Params with TypeParams with
 
   val NewInstance: NewInstanceImpl
   trait NewInstanceImpl {
-    def apply(qual: Option[Tree], name: String, targs: Seq[TypeTree], argss: Seq[Seq[TermTree]]): TermTree
+    def apply(typeSelector: TypeTree, targs: Seq[TypeTree], argss: Seq[Seq[TermTree]]): TermTree
   }
 
   val SecondaryCtor: SecondaryCtorImpl

@@ -158,6 +158,13 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     }
   }
 
+    def liftTypeSelector(tree: m.Tree) = tree match {
+      case m.Ctor.Ref.Select(qual, m.Ctor.Ref.Name(name)) =>
+        selectToolbox("TypeSelect").appliedTo(lift(qual),t.Lit(name))
+      case m.Ctor.Ref.Name(name) =>
+        selectToolbox("TypeIdent").appliedTo(t.Lit(name))
+    }
+
   private object Argss {
     def unapply(tree: m.Tree) = tree match {
       case m.internal.ast.Helpers.TermApply(inner, argss) => Some(inner -> argss)
@@ -173,8 +180,8 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
   }
 
   def liftNewInstance(tree: m.Tree): t.TermTree = {
-    val Argss(TypeArguments(Qualifier(m.Ctor.Ref.Name(name), qualOpt), targs), argss) = tree
-    selectToolbox("NewInstance").appliedTo(qualOpt, t.Lit(name), targs, liftSeqSeq(argss))
+    val Argss(TypeArguments(sel, targs), argss) = tree
+    selectToolbox("NewInstance").appliedTo(liftTypeSelector(sel), targs, liftSeqSeq(argss))
   }
 
   /** {{{(trees: Seq[t.Tree[t.Tree[A]]]) => t.Tree[Seq[t.Tree[A]]]}}} */
