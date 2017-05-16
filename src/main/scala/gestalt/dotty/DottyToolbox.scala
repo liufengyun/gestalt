@@ -381,7 +381,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
     def apply(params: Seq[(String, Type)], resTp: Type)(bodyFn: Seq[tpd.Tree] => tpd.Tree): tpd.Tree = {
       val meth = ctx.newSymbol(
-        owner, nme.ANON_FUN,
+        ctx.owner, nme.ANON_FUN,
         Flags.Synthetic | Flags.Method,
         Types.MethodType(params.map(_._1.toTermName).toList, params.map(_._2).toList, resTp)
       )
@@ -876,7 +876,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     }
 
     def apply(name: String, rhs: tpd.Tree): tpd.ValDef = {
-      val vsym = ctx.newSymbol(owner, name.toTermName, Flags.EmptyFlags, rhs.tpe)
+      val vsym = ctx.newSymbol(ctx.owner, name.toTermName, Flags.EmptyFlags, rhs.tpe)
       t.ValDef(vsym, rhs)
     }
 
@@ -1156,10 +1156,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   }
 
   /*------------------------------- symbols -------------------------------------*/
-  def owner: Symbol = ctx.owner
-
   def newValSymbol(name: String, info: Type): Symbol =
-    ctx.newSymbol(owner, name.toTermName, Flags.EmptyFlags, info)
+    ctx.newSymbol(ctx.owner, name.toTermName, Flags.EmptyFlags, info)
 
   object Symbol extends SymbolImpl {
     /** name of a member */
@@ -1170,8 +1168,6 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
     /** subst symbols in tree */
     def subst(tree: tpd.Tree)(from: List[Symbol], to: List[Symbol]): tpd.Tree = new t.TreeOps(tree).subst(from, to)
-
-    // def changeOwner(tree: tpd.Tree)(from: Symbol, to: Symbol): tpd.Tree = new t.TreeOps(tree).changeOwner(from, to)
   }
 
   def ensureOwner(tree: tpd.Tree, owner: Symbol): tpd.Tree = {
