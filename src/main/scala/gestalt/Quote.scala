@@ -364,8 +364,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
       selectToolbox("Assign").appliedTo(lift(lhs), lift(rhs))
     case m.Term.Update(fun, argss, rhs) =>
       require(argss.size > 0)
-      val left = selectToolbox("ApplySeq").appliedTo(lift(fun), liftSeqSeq(argss))
-      selectToolbox("Assign").appliedTo(left, lift(rhs))
+      selectToolbox("Update").appliedTo(lift(fun), liftSeqSeq(argss), lift(rhs))
     case m.Term.Return(expr) =>
       selectToolbox("Return").appliedTo(lift(expr))
     case m.Term.Throw(expr) =>

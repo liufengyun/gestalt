@@ -391,6 +391,10 @@ trait Trees extends Params with TypeParams with
     def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, tpd.Tree)]
   }
 
+  val Update: UpdateImpl
+  trait UpdateImpl {
+    def apply(fun: TermTree, argss: Seq[Seq[TermTree]], rhs: TermTree): TermTree
+  }
 
   val Return: ReturnImpl
   trait ReturnImpl {
@@ -454,7 +458,7 @@ trait Trees extends Params with TypeParams with
   }
 
   // helper
-  def ApplySeq(fun: TermTree, argss: Seq[Seq[TermTree]]): Tree = argss match {
+  def ApplySeq(fun: TermTree, argss: Seq[Seq[TermTree]]): TermTree = argss match {
    case args :: rest => rest.foldLeft(Apply(fun, args)) { (acc, args) => Apply(acc, args) }
    case _ => fun
   }

@@ -99,94 +99,89 @@ class Quasiquotes extends StaticAnnotation {
       assert(q"$expr($name)".toString === Apply(Ident("foo"), Ident("bar") :: Nil).toString)
     }
 
-    /*
     test("apply") {
       val q"$ref[..$tpes](..$apats)" = q"x[A, B](Q, W)"
-      assert(ref.toString === "Term.Name(\"x\")")
-      assert(tpes.toString === "List(A, B)")
-      assert(tpes(0).toString === "Type.Name(\"A\")")
-      assert(tpes(1).toString === "Type.Name(\"B\")")
-      assert(apats.toString === "List(Q, W)")
-      assert(apats(0).toString === "Term.Name(\"Q\")")
-      assert(apats(1).toString === "Term.Name(\"W\")")
+      assert(ref.toString === Ident("x").toString)
+      assert(tpes.toString === List(TypeIdent("A"), TypeIdent("B")).toString)
+      assert(apats.toString === List(Ident("Q"), Ident("W")).toString)
     }
 
     test("apply") {
       val q"$ref[..$tpes](..$apats)" = q"x(Q, W)"
-      assert(ref.toString === "Term.Name(\"x\")")
-      assert(tpes.toString === "List()")
-      assert(apats.toString === "List(Q, W)")
-      assert(apats(0).toString === "Term.Name(\"Q\")")
-      assert(apats(1).toString === "Term.Name(\"W\")")
+      assert(ref.toString === Ident("x").toString)
+      assert(tpes.toString === List().toString)
+      assert(apats.toString === List(Ident("Q"), Ident("W")).toString)
     }
 
     test("select") {
       val q"$expr.$name" = q"foo.bar"
-      assert(expr.toString === "")
-      assert(name.toString === "")
+      assert(expr.toString === Ident("foo").toString)
+      assert(name === "bar")
     }
 
     test("select") {
       val expr = q"foo"
       val name = "bar"
-      assert(q"$expr.$name".toString === "")
+      assert(q"$expr.$name".toString === Select(Ident("foo"), "bar").toString)
     }
-
 
     test("tuple") {
       val q"(..$terms)" = q"(y, z)"
-      assert(terms.toString === "List(y, z)")
-      assert(terms(0).toString === "")
-      assert(terms(1).toString === "")
+      assert(terms.toString === List(Ident("y"), Ident("z")).toString)
     }
 
     test("tuple") {
       val terms = List(q"y", q"z")
-      assert(q"(..$terms)".toString === "")
+      assert(q"(..$terms)".toString === Tuple(Ident("y") :: Ident("z") :: Nil).toString)
     }
 
     test("ascribe") {
       val exp = q"1"
       val tpe = t"Double"
-      assert(q"$exp: $tpe".toString === "")
+      assert(q"$exp: $tpe".toString === Ascribe(Lit(1), TypeIdent("Double")).toString)
     }
 
     test("ascribe") {
       val q"$exp: $tpe" = q"1: Double"
-      assert(exp.toString === "Lit(1)")
-      assert(tpe.toString === "Type.Name(\"Double\")")
+      assert(exp.toString === Lit(1).toString)
+      assert(tpe.toString === TypeIdent("Double").toString)
     }
 
     test("assign") {
-      val q"$expr1(...$aexprs) = $expr2" = q"foo(a, b) = bar"
-      assert(expr1.toString === "")
-      assert(aexprs.toString === "")
-      assert(aexprs(0)(0).toString === "")
-      assert(aexprs(0)(1).toString === "")
-      assert(expr2.toString === "")
+      val q"$expr1 = $expr2" = q"foo = bar"
+      assert(expr1.toString === Ident("foo").toString)
+      assert(expr2.toString === Ident("bar").toString)
     }
 
-    test("assign 2") {
+    test("update") {
       val expr1 = q"foo"
       val aexprs = List(List(q"a", q"b"))
       val expr2 = q"bar"
-      assert(q"$expr1(...$aexprs) = $expr2".toString === "")
+      val res = Update(Ident("foo"), (Ident("a") :: Ident("b") :: Nil) :: Nil, Ident("bar"))
+      assert(q"$expr1(...$aexprs) = $expr2".toString === res.toString)
     }
 
-    test("apply 2") {
-      val q"f($q, y: Y) = $r" = q"f(x: X, y: Y) = 1"
-      assert(q.toString === "")
-      assert(r.toString === "")
-    }
+    /*
+    test("update 2") {
+      val q"f($q, y: $_) = $r" = q"f(x: X, y: Y) = 1"
+      assert(q.toString === Ident("x".toString))
+      assert(r.toString === Lit(1).toString)
+    } */
 
     test("apply 3") {
       val q = q"x: X"
       val r = q"1"
-      assert(q"f($q, y: Y) = $r".toString === "")
+      val res = Update(
+        Ident("f"),
+        (Ascribe(Ident("x"), TypeIdent("X")) :: Ascribe(Ident("y"), TypeIdent("Y")) :: Nil) :: Nil,
+        Lit(1)
+      )
+      assert(q"f($q, y: Y) = $r".toString === res.toString)
     }
 
+    /*
     test("block") {
-      val q"{foo; ..$statz; $astat}" = q"{foo; val a = x; val b = y; val c = z}"
+      val q"{foo; ..$statz; $astat}" = q"{ foo; val a = x; val b = y; val c = z }"
       assert(statz.toString === "List(val a = x, val b = y)")
       assert(statz(0).toString === "")
       assert(statz(1).toString === "")

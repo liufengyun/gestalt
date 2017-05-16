@@ -547,6 +547,13 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[(tpd.Tree, tpd.Tree)]]
   }
 
+  object Update extends UpdateImpl {
+    def apply(fun: TermTree, argss: Seq[Seq[TermTree]], rhs: TermTree): TermTree = {
+      d.Assign(ApplySeq(fun, argss), rhs)
+    }
+  }
+
+
   object Annotated extends AnnotatedImpl {
     def apply(expr: TermTree, annots: Seq[Tree]): TermTree = {
       require(annots.size > 0)
@@ -654,7 +661,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def apply(fun: Tree, args: Seq[TypeTree]): TermTree = d.TypeApply(fun, args.toList).withPosition
     def unapply(tree: Tree): Option[(TermTree, Seq[TypeTree])] = tree match {
       case c.TypeApply(fun, args) => Some((fun, args))
-      case _ => None
+      case _ => Some((tree, Nil))
     }
 
     def apply(fun: tpd.Tree, args: Seq[tpd.Tree])(implicit c: Cap): tpd.Tree =
