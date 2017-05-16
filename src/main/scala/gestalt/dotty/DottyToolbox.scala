@@ -13,7 +13,7 @@ import Constants._
 import d.modsDeco
 import util.Positions.Position
 
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.{ ListBuffer, Set }
 
 
 class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
@@ -1176,16 +1176,18 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   def ensureOwner(tree: tpd.Tree, owner: Symbol): tpd.Tree = {
     val froms = getOwners(tree)
-    froms.foldRight(tree) { (from, acc) => new t.TreeOps(acc).changeOwner(from, owner) }
+    froms.foldRight(tree) { (from, acc) =>
+      if (from eq owner) acc
+      else new t.TreeOps(acc).changeOwner(from, owner)
+    }
   }
 
   def getOwners(tree: tpd.Tree): List[Symbol] = {
-    val owners = new ListBuffer[Symbol]
+    val owners = Set.empty[Symbol]
     new t.TreeTraverser {
       def traverse(tree: t.Tree)(implicit ctx: Context): Unit = tree match {
-        case tree: t.Tree if tree.isDef =>
-          if (!owners.exists(_ eq tree.symbol)) owners += tree.symbol.owner
-        case _ => traverseChildren(tree)
+        case tree: t.DefTree => owners += tree.symbol.owner
+        case _               => traverseChildren(tree)
       }
     }.traverse(tree)
 
