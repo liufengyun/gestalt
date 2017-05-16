@@ -19,7 +19,6 @@ object JsonMacros {
     * Limitations:
     * 1. does not handle cyclic references, i.e. {{{case class A(field: A, ...)}}}
     * 2. does not handle optional arguments
-    * 3. only handles field types that are in scope, not fully qualified ones, i.e.{{{case class A(field: pack.B, ...)}}} .
     * @tparam T type of the case class
     * @return new anonymous Format class
     */
@@ -45,11 +44,10 @@ object JsonMacros {
           )
         case (name, otherType) =>
           val implFormaterName = name + "_formatter"
-          val formatTypeTree = TypeApply(TypeIdent("Format"), Seq(TypeIdent(otherType.show)))
           JsonItem(name,
             pairOut = Tuple(Seq(Lit(name), q"${Ident(implFormaterName)}.toJson(${Select(Ident("o"), name)})")),
             readOption = q"val $name = obj.firstValue(${Lit(name)}).flatMap(x =>${Ident(implFormaterName)}.fromJson(x))",
-            implicitFormat = Some(q"val $implFormaterName=implicitly[$formatTypeTree]")
+            implicitFormat = Some(q"val $implFormaterName=implicitly[Format[${otherType.toTree}]]")
           )
       }
       val allDefined = q"${jsonItems.map(i => q"${Ident(i.name)}.isDefined").reduceLeft((a, b) => q"$a && $b")}"
