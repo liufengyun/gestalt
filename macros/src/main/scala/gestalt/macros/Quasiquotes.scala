@@ -13,6 +13,9 @@ class modsTest extends StaticAnnotation {
     assert(mods2.isPrivate)
     assert(mods2.privateWithin == "core")
 
+    val sel = "hello"
+    q"JsString(o.$sel)"
+
     defn
   }
 }

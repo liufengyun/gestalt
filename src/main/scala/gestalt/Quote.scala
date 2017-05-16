@@ -335,6 +335,8 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
       selectToolbox("Super").appliedTo(t.Lit(qual), t.Lit(mix))
     case m.Term.Name(name) =>
       selectToolbox("Ident").appliedTo(t.Lit(name))
+    case m.Term.Select(qual, quasi: Quasi) =>
+      selectToolbox("Select").appliedTo(lift(qual), liftQuasi(quasi))
     case m.Term.Select(qual, m.Term.Name(name)) =>
       selectToolbox("Select").appliedTo(lift(qual), t.Lit(name))
     case m.Term.Interpolate(m.Term.Name(tag), parts, args) =>
@@ -404,7 +406,8 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
       // anonym: t.Tree[t.Tree[C]]
       selectToolbox("NewAnonymClass").appliedTo(parentCalls, liftSelf(self), liftOptSeq(stats))
     case m.Term.Placeholder() =>
-      selectToolbox("Wildcard").appliedTo() // FIXME Wildcard is not defined in toolbox
+      if (isTerm) t.error("placeholder is not supported", enclosingTree.pos)
+      selectToolbox("Ident").appliedTo(t.Lit("_"))
     case m.Term.Eta(expr) =>
       selectToolbox("Postfix").appliedTo(lift(expr), t.Lit("_"))
     case m.Term.Arg.Named(m.Term.Name(name), expr) =>
