@@ -10,6 +10,7 @@ object Driver {
     new QuasiquoteTest
     new TypeToolboxTest
     new MonadlessOptionTest
+    new OptionalTest
 
     var success = false
     var total = 0

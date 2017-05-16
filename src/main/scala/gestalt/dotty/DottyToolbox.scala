@@ -13,7 +13,7 @@ import Constants._
 import d.modsDeco
 import util.Positions.Position
 
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.{ ListBuffer, Set }
 
 
 class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
@@ -381,13 +381,20 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
     def apply(params: Seq[(String, Type)], resTp: Type)(bodyFn: Seq[tpd.Tree] => tpd.Tree): tpd.Tree = {
       val meth = ctx.newSymbol(
-        owner, nme.ANON_FUN,
+        ctx.owner, nme.ANON_FUN,
         Flags.Synthetic | Flags.Method,
         Types.MethodType(params.map(_._1.toTermName).toList, params.map(_._2).toList, resTp)
       )
       t.Closure(meth, paramss => {
         ensureOwner(bodyFn(paramss.head), meth)
       })
+    }
+
+
+    def unapply(tree: tpd.Tree): Option[(Seq[Symbol], tpd.Tree)] = tree match {
+      case c.Block((meth : t.DefDef) :: Nil, _ : t.Closure) if meth.name == nme.ANON_FUN =>
+        Some((meth.vparamss.head.map(_.symbol), meth.rhs))
+      case _ => None
     }
   }
 
@@ -869,7 +876,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     }
 
     def apply(name: String, rhs: tpd.Tree): tpd.ValDef = {
-      val vsym = ctx.newSymbol(owner, name.toTermName, Flags.EmptyFlags, rhs.tpe)
+      val vsym = ctx.newSymbol(ctx.owner, name.toTermName, Flags.EmptyFlags, rhs.tpe)
       t.ValDef(vsym, rhs)
     }
 
@@ -957,7 +964,16 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   }
 
   object TypedSplice extends TypedSpliceImpl {
-    def apply(tree: tpd.Tree): Splice = d.TypedSplice(tree)
+    def apply(tree: tpd.Tree): Splice = {
+      val owners = getOwners(tree)
+
+      // make sure the spliced tree only has one owner
+      val treeNew = if (owners.length > 1) ensureOwner(tree, owners.head) else tree
+
+      val newCtx = if (owners.isEmpty) ctx else ctx.withOwner(owners.head)
+      d.TypedSplice(treeNew)(newCtx)
+    }
+
     def unapply(tree: Tree): Option[tpd.Tree] = tree match {
       case d.TypedSplice(tree) => Some(tree)
       case _ => None
@@ -1140,10 +1156,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   }
 
   /*------------------------------- symbols -------------------------------------*/
-  def owner: Symbol = ctx.owner
-
   def newValSymbol(name: String, info: Type): Symbol =
-    ctx.newSymbol(owner, name.toTermName, Flags.EmptyFlags, info)
+    ctx.newSymbol(ctx.owner, name.toTermName, Flags.EmptyFlags, info)
 
   object Symbol extends SymbolImpl {
     /** name of a member */
@@ -1154,21 +1168,26 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
     /** subst symbols in tree */
     def subst(tree: tpd.Tree)(from: List[Symbol], to: List[Symbol]): tpd.Tree = new t.TreeOps(tree).subst(from, to)
-
-    // def changeOwner(tree: tpd.Tree)(from: Symbol, to: Symbol): tpd.Tree = new t.TreeOps(tree).changeOwner(from, to)
   }
 
   def ensureOwner(tree: tpd.Tree, owner: Symbol): tpd.Tree = {
-    val froms = new ListBuffer[Symbol]
+    val froms = getOwners(tree)
+    froms.foldRight(tree) { (from, acc) =>
+      if (from eq owner) acc
+      else new t.TreeOps(acc).changeOwner(from, owner)
+    }
+  }
+
+  def getOwners(tree: tpd.Tree): List[Symbol] = {
+    val owners = Set.empty[Symbol]
     new t.TreeTraverser {
       def traverse(tree: t.Tree)(implicit ctx: Context): Unit = tree match {
-        case tree: t.Tree if tree.isDef =>
-          if (!froms.exists(_ eq tree.symbol)) froms += tree.symbol.owner
-        case _ => traverseChildren(tree)
+        case tree: t.DefTree => owners += tree.symbol.owner
+        case _               => traverseChildren(tree)
       }
     }.traverse(tree)
 
-    froms.foldRight(tree) { (from, acc) => new t.TreeOps(acc).changeOwner(from, owner) }
+    owners.toList
   }
 
   /*------------------------------- Denotations -------------------------------------*/
