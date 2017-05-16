@@ -51,13 +51,13 @@ object JsonMacros {
           )
       }
       val allDefined = q"${jsonItems.map(i => q"${Ident(i.name)}.isDefined").reduceLeft((a, b) => q"$a && $b")}"
-      val construction = q"new R(..${jsonItems.map(i => q"${Ident(i.name)}.get")})"
+      val construction = NewInstance(T, Nil, Seq(jsonItems.map(i => q"${Ident(i.name)}.get")))
       val fromJson =
         q"""json match{
               case obj: JsObject =>
                {..${
           jsonItems.map(_.readOption) :+
-            q"if($allDefined){ type R = $T; Some($construction) }else None"
+            q"if($allDefined) Some($construction) else None"
         }}
               case other => None
             }"""
