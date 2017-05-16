@@ -229,104 +229,161 @@ class Quasiquotes extends StaticAnnotation {
       assert(expr.toString === res.toString)
     }
 
-    /*
-    test("function") {
-      assert(q"(i: Int) => 42".toString === "Term.Function(Seq(Term.Param(Nil, Term.Name(\"i\"), Some(Type.Name(\"Int\")), None)), Lit(42))")
 
-      val q"(..$paramz) => $expr" = q"(x: Int, y: String) => 42"
-      assert(paramz.toString === "List(x: Int, y: String)")
-      assert(paramz(0).toString === "Term.Param(Nil, Term.Name(\"x\"), Some(Type.Name(\"Int\")), None)")
-      assert(paramz(1).toString === "Term.Param(Nil, Term.Name(\"y\"), Some(Type.Name(\"String\")), None)")
-      assert(expr.toString === "Lit(42)")
+    test("function") {
+      assert(q"(i: Int) => 42".toString ===
+        Function(Param("i", TypeIdent("Int")) :: Nil, Lit(42)).toString
+      )
+    }
+
+    test("function2") {
+      val expr = q"(x: Int, y: String) => 42"
+      assert(expr.toString ===
+        Function(
+          Param("x", TypeIdent("Int")) :: Param("y", TypeIdent("String")) :: Nil,
+          Lit(42)
+        ).toString
+      )
     }
 
     test("while") {
-      q"while (foo) bar"
+      assert(q"while (foo) bar".toString === While(Ident("foo"), Ident("bar")).toString)
     }
 
     test("do while") {
-      q"do foo while (bar)"
+      assert(q"do foo while (bar)".toString === DoWhile(Ident("foo"), Ident("bar")).toString)
     }
 
     test("for") {
-      q"for (a <- as; x <- xs; y <- ys; if bar; b <- bs) foo(x, y)"
+      val expr = q"for (a <- as; x <- xs; y <- ys; if bar; b <- bs) foo(x, y)"
+      val res = For.ForDo(
+        For.GenFrom(Ident("a"), Ident("as")) ::
+          For.GenFrom(Ident("x"), Ident("xs")) ::
+          For.GenFrom(Ident("y"), Ident("ys")) ::
+          For.Guard(Ident("bar")) ::
+          For.GenFrom(Ident("b"), Ident("bs")) :: Nil,
+        Apply(Ident("foo"), List(Ident("x"), Ident("y")))
+      )
+      assert(expr.toString === res.toString)
     }
 
     test("for yield") {
-      q"for (a <- as; x <- xs; y <- ys; b <- bs) yield foo(x, y)"
+      val expr = q"for (a <- as; x <- xs; y <- ys; b <- bs) yield foo(x, y)"
+      val res = For.ForYield(
+        For.GenFrom(Ident("a"), Ident("as")) ::
+          For.GenFrom(Ident("x"), Ident("xs")) ::
+          For.GenFrom(Ident("y"), Ident("ys")) ::
+          For.GenFrom(Ident("b"), Ident("bs")) :: Nil,
+        Apply(Ident("foo"), List(Ident("x"), Ident("y")))
+      )
+      assert(expr.toString === res.toString)
     }
 
     test("try") {
-      q"try foo catch { case a => b; case _ => bar; case 1 => 2; case q => w} finally baz"
+      val expr = q"try foo catch { case a => b } finally baz"
+      val res = Try(
+        Ident("foo"),
+        Case(Ident("a"), None, Ident("b")) :: Nil,
+        Some(Ident("baz"))
+      )
+      assert(expr.toString === res.toString)
     }
 
     test("throw") {
-      q"throw new Exception"
+      assert(q"throw s".toString === Throw(Ident("s")).toString)
     }
 
     test("return") {
-      q"return 3 + 5"
+      assert(q"return 8".toString === Return(Lit(8)).toString)
     }
 
     test("type select") {
-      val t"$ref.$tname" = t"X.Y"
-      assert(ref.toString === "Term.Name(\"X\")")
-      assert(tname.toString === "Type.Name(\"Y\")")
+      val expr = t"x.Y"
+      assert(expr.toString === TypeSelect(Ident("x"), "Y").toString)
     }
 
     test("type singleton") {
-      val t"$ref.type" = t"X.type"
-      assert(ref.toString === "Term.Name(\"X\")")
+      val expr = t"x.type"
+      assert(expr.toString === TypeSingleton(Ident("x")).toString)
     }
 
     test("type applied") {
-      val t"$tpe[..$tpes]" = t"X[Y, Z]"
-      assert(tpe.toString === "Type.Name(\"X\")")
-      assert(tpes.toString === "List(Y, Z)")
-      assert(tpes(0).toString === "Type.Name(\"Y\")")
-      assert(tpes(1).toString === "Type.Name(\"Z\")")
+      val expr = t"X[Y, Z]"
+      val res = TypeApply(TypeIdent("X"), List(TypeIdent("Y"), TypeIdent("Z")))
+      assert(expr.toString === res.toString)
     }
 
+
     test("function type") {
-      val t"(..$atpes) => $tpe" = t"(X, Y) => Z"
-      assert(atpes.toString === "List(X, Y)")
-      assert(atpes(0).toString === "Type.Name(\"X\")")
-      assert(atpes(1).toString === "Type.Name(\"Y\")")
-      assert(tpe.toString === "Type.Name(\"Z\")")
+      val expr = t"(X, Y) => Z"
+      val res = TypeFunction(List(TypeIdent("X"), TypeIdent("Y")), TypeIdent("Z"))
+      assert(expr.toString === res.toString)
     }
 
     test("type tuple") {
-      val t"(..$tpes)" = t"(X, Y)"
-      assert(tpes.toString === "List(X, Y)")
+      val expr = t"(X, Y)"
+      val res = TypeTuple(List(TypeIdent("X"), TypeIdent("Y")))
+      assert(expr.toString === res.toString)
     }
 
     test("type refinement") {
-      val t"$tpe {..$stats}" = t"A with B with C { val a: A; val b: B }"
+      val expr = t"A { val a: A }"
+      val res = TypeRefine(TypeIdent("A"), List(ValDecl(emptyMods, "a", TypeIdent("A"))))
+      assert(expr.toString === res.toString)
     }
 
+    /*
     test("annotated type") {
       t"X @a @b"
     }
-
-    test("type bounds") {
-      val t"_ >: $tpe1 <: $tpe2" = t"_ >: X <: Y"
-    }
+    */
 
     test("by name type") {
-      q"def f(x: => Int): Int = 3"
+      val expr = q"def f(x: => Int): Int = 3"
+      val res = DefDef(emptyMods, "f", Nil,
+        (Param("x", TypeByName(TypeIdent("Int"))) :: Nil) :: Nil,
+        Some(TypeIdent("Int")),
+        Lit(3)
+      )
+      assert(expr.toString === res.toString)
     }
 
     test("repeated type") {
-      q"def f(x: Int*): Int = 3"
+      val expr = q"def f(x: Int*): Int = 3"
+      val res = DefDef(emptyMods, "f", Nil,
+        (Param("x", TypeRepeated(TypeIdent("Int"))) :: Nil) :: Nil,
+        Some(TypeIdent("Int")),
+        Lit(3)
+      )
+      assert(expr.toString === res.toString)
+
     }
 
     test("pat def") {
+      val expr = q"val f(x) = a"
+      val res = PatDef(emptyMods, Apply(Ident("f"), Ident("x") :: Nil), None, Ident("a"))
+      assert(expr.toString === res.toString)
     }
 
     test("seq def") {
+      val expr = q"val x, y : Int = 3"
+      val res = SeqDef(emptyMods, Ident("x") :: Ident("y") :: Nil, Some(TypeIdent("Int")), Lit(3))
+
+      assert(expr.toString === res.toString)
     }
 
-    */
+    test("type def") {
+      val expr = q"type T = Int"
+      val res = TypeAlias(emptyMods, "T", Nil, TypeIdent("Int"))
+      assert(expr.toString === res.toString)
+    }
+
+    test("type decl") {
+      val expr = q"type T >: A <: B"
+      val bound = TypeBounds(Some(TypeIdent("A")), Some(TypeIdent("B")))
+      val res = TypeDecl(emptyMods, "T", Nil, Some(bound))
+      assert(expr.toString === res.toString)
+    }
 
     defn
   }

@@ -260,8 +260,11 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   }
 
   object TypeRefine extends TypeRefineImpl {
-    def apply(tpe: Option[TypeTree], stats: Seq[Tree]): TypeTree =
-      d.RefinedTypeTree(tpe.getOrElse(d.EmptyTree), stats.toList).withPosition
+    def apply(stats: Seq[Tree]): TypeTree =
+      d.RefinedTypeTree(d.EmptyTree, stats.toList).withPosition
+
+    def apply(tpe: TypeTree, stats: Seq[Tree]): TypeTree =
+      d.RefinedTypeTree(tpe, stats.toList).withPosition
   }
 
   object TypeBounds extends TypeBoundsImpl {

@@ -198,7 +198,8 @@ trait Trees extends Params with TypeParams with
 
   val TypeRefine: TypeRefineImpl
   trait TypeRefineImpl {
-    def apply(tpe: Option[TypeTree], stats: Seq[Tree]): TypeTree
+    def apply(stats: Seq[Tree]): TypeTree
+    def apply(tpe: TypeTree, stats: Seq[Tree]): TypeTree
   }
 
   val TypeBounds: TypeBoundsImpl
@@ -643,6 +644,9 @@ trait Params { self : Toolbox =>
 
   val Param: ParamImpl
   trait ParamImpl {
+    def apply(name: String): Param = apply(emptyMods, name, None, None)
+    def apply(name: String, tpe: TypeTree): Param = apply(emptyMods, name, Some(tpe), None)
+
     def apply(mods: Mods, name: String, tpe: Option[TypeTree], default: Option[TermTree]): Param
     def mods(tree: Param): Mods
     def name(tree: Param): String

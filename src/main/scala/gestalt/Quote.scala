@@ -202,6 +202,8 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     if (pats.size == 1) {
       // AnyTree = t.Tree | t.TypeTree
       //left: t.Tree[AnyTree[?]] | t.Tree[String]
+      var isPatDef = false
+
       val left = pats(0) match {
         case quasi: Quasi =>
           liftQuasi(quasi)
@@ -210,11 +212,14 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
         case m.Pat.Var.Term(m.Term.Name(name)) =>
           t.Lit(name)
         case pat =>
+          isPatDef = true
           lift(pat)
       }
 
       if (isDecl)
         selectToolbox("ValDecl").appliedTo(mods, left, tpe)
+      else if (isPatDef)
+        selectToolbox("PatDef").appliedTo(mods, left, tpe, rhs)
       else
         selectToolbox("ValDef").appliedTo(mods, left, tpe, rhs)
     }
@@ -440,7 +445,10 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     case m.Type.Or(lhs, rhs) =>
       selectToolbox("TypeOr").appliedTo(lift(lhs), lift(rhs))
     case m.Type.Refine(tpe, stats) =>
-      selectToolbox("TypeRefine").appliedTo(liftOpt(tpe), liftSeq(stats))
+      if (tpe.isEmpty)
+        selectToolbox("TypeRefine").appliedTo(liftSeq(stats))
+      else
+        selectToolbox("TypeRefine").appliedTo(lift(tpe.get), liftSeq(stats))
     // case m.Type.Existential(tpe, stats) =>
     case m.Type.Annotate(tpe, annots) =>
       selectToolbox("TypeAnnotated").appliedTo(lift(tpe), liftSeq(annots))
