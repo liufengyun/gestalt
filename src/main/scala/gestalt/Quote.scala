@@ -61,7 +61,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
           if (prefix.isEmpty) loop(rest, Some(liftQuasi(quasi)), Nil)
           else loop(rest, Some(prefix.foldRight(liftQuasi(quasi))((curr, acc) => {
             val currElement = lift(curr)
-            t.Infix(acc, "+:", currElement)
+            t.Infix(currElement, "+:", acc)
           })), Nil)
         } else {
           require(prefix.isEmpty)
@@ -183,7 +183,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
       // Infix is sugar-less
       // the List is constructed as Nil.::(c).::(b).::(a)
       // Not a :: b :: c :: Nil
-      t.Infix(liftSeqTrees(rest), "::", head)
+      t.Infix(head, "::", liftSeqTrees(rest))
     case _ =>
       scalaNil
   }

@@ -321,7 +321,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   // a + (b, c)  =>  Infix(a, +, Tuple(b, c))
   object Infix extends InfixImpl {
     def apply(lhs: TermTree, op: String, rhs: TermTree): TermTree =
-      d.Apply(d.Select(lhs, op.toTermName), List(rhs)).withPosition
+      d.InfixOp(lhs, d.Ident(op.toTermName), rhs).withPosition
   }
 
   object Prefix extends PrefixImpl {
