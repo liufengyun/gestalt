@@ -33,42 +33,6 @@ object api extends Toolbox { pkg =>
   /** generate fresh unique name */
   def fresh(prefix: String = "$local"): String  = toolbox.get.fresh(prefix)
 
-  /**-------------------- abstract types ----------------------------*/
-  /*
-  type Pos
-
-  type Tree     >: Null <: AnyRef
-  type TypeTree >: Null <: Tree
-  type TermTree >: Null <: Tree
-  type DefTree  >: Null <: Tree
-  type PatTree  >: Null <: Tree
-
-  type Splice   <: TypeTree with TermTree with DefTree
-  type Lit      <: TermTree with PatTree
-  type Ident    <: TermTree with PatTree
-
-  type Class     <: DefTree
-  type Trait     <: DefTree
-  type Object    <: DefTree
-  type Param     <: DefTree
-  type TypeParam <: DefTree
-  type ValDef    <: DefTree
-  type ValDecl   <: DefTree
-  type DefDef    <: DefTree
-  type DefDecl   <: DefTree
-  type Self      <: DefTree
-  type InitCall  <: Tree
-
-
-  type Mods >: Null <: Modifiers
-
-  type Symbol <: AnyRef
-  type Denotation
-
-  type Type >: Null <: AnyRef
-  type MethodType >: Null <: Type
-  */
-
   /**------------------------------------------------*/
   // definitions
   def NewAnonymClass = toolbox.get.NewAnonymClass.asInstanceOf[NewAnonymClassImpl]
@@ -161,11 +125,6 @@ object api extends Toolbox { pkg =>
   }
 
   object tpd extends tpdImpl {
-    /*
-    type Tree      >: Null <: AnyRef
-    type Param     <: Tree
-    type ValDef    <: Tree */
-
     def typeOf(tree: Tree): Type = {
       val tb = toolbox.get
       tb.tpd.typeOf(tree.asInstanceOf[tb.tpd.Tree]).asInstanceOf[Type]
