@@ -22,8 +22,13 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   type TypeTree = d.Tree
   type TermTree = d.Tree
   type DefTree = d.Tree
-  type Splice = d.Tree
+  type PatTree = d.Tree
+
   type Mods = DottyModifiers
+
+  type Splice = d.Tree
+  type Ident  = d.Ident
+  type Lit    = d.Literal
 
   type Param = d.ValDef
   type TypeParam = d.TypeDef
@@ -173,13 +178,13 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   }
 
   object PatDef extends PatDefImpl {
-    def apply(mods: Mods, lhs: Tree, tpe: Option[TypeTree], rhs: TermTree): DefTree =
+    def apply(mods: Mods, lhs: PatTree, tpe: Option[TypeTree], rhs: TermTree): DefTree =
       d.PatDef(mods, List(lhs), tpe.getOrElse(d.TypeTree()), rhs).withPosition
   }
 
   object SeqDef extends SeqDefImpl {
-    def apply(mods: Mods, pats: Seq[Tree], tpe: Option[TypeTree], rhs: TermTree): DefTree =
-      d.PatDef(mods, pats.toList, tpe.getOrElse(d.TypeTree()), rhs).withPosition
+    def apply(mods: Mods, vals: Seq[String], tpe: Option[TypeTree], rhs: TermTree): DefTree =
+      d.PatDef(mods, vals.map(n => d.Ident(n.toTermName)).toList, tpe.getOrElse(d.TypeTree()), rhs).withPosition
   }
 
   object SeqDecl extends SeqDeclImpl {
@@ -412,8 +417,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   object For extends ForImpl {
     def ForDo(enums: Seq[Tree], body: TermTree): TermTree = d.ForDo(enums.toList, body)
     def ForYield(enums: Seq[Tree], body: TermTree): TermTree = d.ForYield(enums.toList, body)
-    def GenFrom(pat: TermTree, rhs: TermTree): Tree = d.GenFrom(pat, rhs)
-    def GenAlias(pat: TermTree, rhs: TermTree): Tree = d.GenAlias(pat, rhs)
+    def GenFrom(pat: PatTree, rhs: TermTree): Tree = d.GenFrom(pat, rhs)
+    def GenAlias(pat: PatTree, rhs: TermTree): Tree = d.GenAlias(pat, rhs)
     def Guard(cond: TermTree): Tree = cond
   }
 
@@ -428,14 +433,27 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   }
 
   // patterns
-  object Bind extends BindImpl {
-    def apply(name: String, expr: TermTree): TermTree =
+  object Pat extends PatImpl {
+    def Bind(name: String, expr: PatTree): PatTree =
       d.Bind(name.toTermName, expr).withPosition
-  }
 
-  object Alternative extends AlternativeImpl {
-    def apply(trees: Seq[TermTree]): TermTree =
+    def Alt(trees: Seq[PatTree]): PatTree =
       d.Alternative(trees.toList).withPosition
+
+    def Var(name: String): PatTree =
+      d.Ident(name.toTermName).withPosition
+
+    def Ascribe(name: String, tp: TypeTree): PatTree =
+      d.Typed(Ident(name), tp).withPosition
+
+    def Unapply(fun: TermTree, args: Seq[PatTree]): PatTree =
+      d.Apply(fun, args.toList).withPosition
+
+    def Infix(lhs: PatTree, op: String, rhs: PatTree): PatTree =
+      d.InfixOp(lhs, d.Ident(op.toTermName), rhs).withPosition
+
+    def Tuple(pats: Seq[PatTree]): PatTree =
+      d.Tuple(pats.toList)
   }
 
   // importees
@@ -460,7 +478,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   // extractors
   object Lit extends LitImpl {
-    def apply(value: Any): TermTree = d.Literal(Constant(value)).withPosition
+    def apply(value: Any): Lit = d.Literal(Constant(value)).withPosition
     def unapply(tree: Tree): Option[Any] = tree match {
       case c.Literal(Constant(v)) => Some(v)
       case _ => None
@@ -471,7 +489,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   }
 
   object Ident extends IdentImpl {
-    def apply(name: String): TermTree = d.Ident(name.toTermName).withPosition
+    def apply(name: String): Ident = d.Ident(name.toTermName).withPosition
     def unapply(tree: Tree): Option[String] = tree match {
       case c.Ident(name) if name.isTermName => Some(name.show)
       case _ => None
@@ -612,7 +630,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   }
 
   object Case extends CaseImpl {
-    def apply(pat: TermTree, cond: Option[TermTree], body: TermTree): Tree =
+    def apply(pat: PatTree, cond: Option[TermTree], body: TermTree): Tree =
       d.CaseDef(pat, cond.getOrElse(d.EmptyTree), body).withPosition
 
     def unapply(tree: Tree): Option[(TermTree, Option[TermTree], TermTree)] = tree match {

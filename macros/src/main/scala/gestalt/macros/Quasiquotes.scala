@@ -218,12 +218,20 @@ class Quasiquotes extends StaticAnnotation {
     }
 
     test("match") {
-      val expr = q"foo match { case bar => baz; case _ => foo }"
+      val expr =
+        q"""foo match {
+          case foo(x, y) => 3
+          case a @ bar(x : T) => 4
+          case bar => baz
+          case _ => foo
+        }"""
       val res = Match(
         Ident("foo"),
         List(
-          Case(Ident("bar"), None, Ident("baz")),
-          Case(Ident("_"), None, Ident("foo"))
+          Case(Pat.Unapply(Ident("foo"), Pat.Var("x") :: Pat.Var("y") :: Nil), None, Lit(3)),
+          Case(Pat.Bind("a", Pat.Unapply(Ident("bar"), Pat.Ascribe("x", TypeIdent("T")) :: Nil)), None, Lit(4)),
+          Case(Pat.Var("bar"), None, Ident("baz")),
+          Case(Pat.Var("_"), None, Ident("foo"))
         )
       )
       assert(expr.toString === res.toString)
@@ -361,13 +369,13 @@ class Quasiquotes extends StaticAnnotation {
 
     test("pat def") {
       val expr = q"val f(x) = a"
-      val res = PatDef(emptyMods, Apply(Ident("f"), Ident("x") :: Nil), None, Ident("a"))
+      val res = PatDef(emptyMods, Pat.Unapply(Ident("f"), Pat.Var("x") :: Nil), None, Ident("a"))
       assert(expr.toString === res.toString)
     }
 
     test("seq def") {
       val expr = q"val x, y : Int = 3"
-      val res = SeqDef(emptyMods, Ident("x") :: Ident("y") :: Nil, Some(TypeIdent("Int")), Lit(3))
+      val res = SeqDef(emptyMods, "x" :: "y" :: Nil, Some(TypeIdent("Int")), Lit(3))
 
       assert(expr.toString === res.toString)
     }
