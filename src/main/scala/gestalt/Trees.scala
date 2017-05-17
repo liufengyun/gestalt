@@ -22,13 +22,17 @@ trait Positions { this: Trees =>
 trait Trees extends Params with TypeParams with
   ValDefs with ValDecls with DefDefs with DefDecls with
   Classes with Traits with Objects with Positions with TreeOps
-  with TreeHelpers { this: Toolbox =>
+  with TreeHelpers { toolbox: Toolbox =>
   // safety by construction -- implementation can have TypeTree = Tree
   type Tree     >: Null <: AnyRef
   type TypeTree >: Null <: Tree
   type TermTree >: Null <: Tree
   type DefTree  >: Null <: Tree
+  type PatTree  >: Null <: Tree
+
   type Splice   <: TypeTree with TermTree with DefTree
+  type Lit      <: TermTree with PatTree
+  type Ident    <: TermTree with PatTree
 
   type Class     <: DefTree
   type Trait     <: DefTree
@@ -115,12 +119,12 @@ trait Trees extends Params with TypeParams with
 
   val PatDef: PatDefImpl
   trait PatDefImpl {
-    def apply(mods: Mods, lhs: TermTree, tpe: Option[TypeTree], rhs: Tree): DefTree
+    def apply(mods: Mods, lhs: PatTree, tpe: Option[TypeTree], rhs: Tree): DefTree
   }
 
   val SeqDef: SeqDefImpl
   trait SeqDefImpl {
-    def apply(mods: Mods, pats: Seq[TermTree], tpe: Option[TypeTree], rhs: Tree): DefTree
+    def apply(mods: Mods, vals: Seq[String], tpe: Option[TypeTree], rhs: Tree): DefTree
   }
 
   val SeqDecl: SeqDeclImpl
@@ -198,7 +202,8 @@ trait Trees extends Params with TypeParams with
 
   val TypeRefine: TypeRefineImpl
   trait TypeRefineImpl {
-    def apply(tpe: Option[TypeTree], stats: Seq[Tree]): TypeTree
+    def apply(stats: Seq[Tree]): TypeTree
+    def apply(tpe: TypeTree, stats: Seq[Tree]): TypeTree
   }
 
   val TypeBounds: TypeBoundsImpl
@@ -251,10 +256,13 @@ trait Trees extends Params with TypeParams with
 
   val If: IfImpl
   trait IfImpl {
+    def apply(cond: TermTree, thenp: TermTree, elsep: TermTree): TermTree =
+      apply(cond, thenp, Some(elsep))
+
     def apply(cond: TermTree, thenp: TermTree, elsep: Option[TermTree]): TermTree
     def unapply(tree: Tree): Option[(TermTree, TermTree, Option[TermTree])]
 
-    def apply(cond: tpd.Tree, thenp: tpd.Tree, elsep: tpd.Tree): tpd.Tree
+    def apply(cond: tpd.Tree, thenp: tpd.Tree, elsep: tpd.Tree)(implicit cap: Cap): tpd.Tree
     def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, tpd.Tree, tpd.Tree)]
   }
 
@@ -285,8 +293,8 @@ trait Trees extends Params with TypeParams with
   trait ForImpl {
     def ForDo(enums: Seq[Tree], body: TermTree): TermTree
     def ForYield(enums: Seq[Tree], body: TermTree): TermTree
-    def GenFrom(pat: TermTree, rhs: TermTree): Tree
-    def GenAlias(pat: TermTree, rhs: TermTree): Tree
+    def GenFrom(pat: PatTree, rhs: TermTree): Tree
+    def GenAlias(pat: PatTree, rhs: TermTree): Tree
     def Guard(cond: TermTree): Tree
   }
 
@@ -301,14 +309,17 @@ trait Trees extends Params with TypeParams with
   }
 
   // patterns
-  val Bind: BindImpl
-  trait BindImpl {
-    def apply(name: String, expr: TermTree): TermTree
-  }
-
-  val Alternative: AlternativeImpl
-  trait AlternativeImpl {
-    def apply(trees: Seq[TermTree]): TermTree
+  val Pat: PatImpl
+  trait PatImpl {
+    def Var(name: String): PatTree
+    def Ascribe(name: String, tp: TypeTree): PatTree
+    def Bind(name: String, expr: PatTree): PatTree
+    def Ident(name: String): PatTree = toolbox.Ident(name)
+    def Lit(value: Any): PatTree = toolbox.Lit(value)
+    def Alt(trees: Seq[PatTree]): PatTree
+    def Unapply(fun: TermTree, args: Seq[PatTree]): PatTree
+    def Infix(lhs: PatTree, op: String, rhs: PatTree): PatTree
+    def Tuple(pats: Seq[PatTree]): PatTree
   }
 
   // importees
@@ -324,7 +335,7 @@ trait Trees extends Params with TypeParams with
   // extractors
   val Lit: LitImpl
   trait LitImpl {
-    def apply(value: Any): TermTree
+    def apply(value: Any): Lit
     def unapply(tree: Tree): Option[Any]
     def unapply(tree: tpd.Tree)(implicit c: Cap): Option[Any]
   }
@@ -348,7 +359,7 @@ trait Trees extends Params with TypeParams with
 
   val Ident: IdentImpl
   trait IdentImpl {
-    def apply(name: String): TermTree
+    def apply(name: String): Ident
     def apply(symbol: Symbol): tpd.Tree
     def unapply(tree: Tree): Option[String]
     def unapply(tree: tpd.Tree)(implicit c: Cap): Option[String]
@@ -391,6 +402,10 @@ trait Trees extends Params with TypeParams with
     def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, tpd.Tree)]
   }
 
+  val Update: UpdateImpl
+  trait UpdateImpl {
+    def apply(fun: TermTree, argss: Seq[Seq[TermTree]], rhs: TermTree): TermTree
+  }
 
   val Return: ReturnImpl
   trait ReturnImpl {
@@ -424,7 +439,7 @@ trait Trees extends Params with TypeParams with
 
   val Case: CaseImpl
   trait CaseImpl {
-    def apply(pat: TermTree, cond: Option[TermTree], body: TermTree): Tree
+    def apply(pat: PatTree, cond: Option[TermTree], body: TermTree): Tree
     def unapply(tree: Tree): Option[(TermTree, Option[TermTree], TermTree)]
     def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, Option[tpd.Tree], tpd.Tree)]
   }
@@ -454,7 +469,7 @@ trait Trees extends Params with TypeParams with
   }
 
   // helper
-  def ApplySeq(fun: TermTree, argss: Seq[Seq[TermTree]]): Tree = argss match {
+  def ApplySeq(fun: TermTree, argss: Seq[Seq[TermTree]]): TermTree = argss match {
    case args :: rest => rest.foldLeft(Apply(fun, args)) { (acc, args) => Apply(acc, args) }
    case _ => fun
   }
@@ -636,6 +651,9 @@ trait Params { self : Toolbox =>
 
   val Param: ParamImpl
   trait ParamImpl {
+    def apply(name: String): Param = apply(emptyMods, name, None, None)
+    def apply(name: String, tpe: TypeTree): Param = apply(emptyMods, name, Some(tpe), None)
+
     def apply(mods: Mods, name: String, tpe: Option[TypeTree], default: Option[TermTree]): Param
     def mods(tree: Param): Mods
     def name(tree: Param): String
@@ -658,6 +676,7 @@ trait TypeParams { this: Trees =>
 
   val TypeParam: TypeParamImpl
   trait TypeParamImpl {
+    def apply(name: String, tbounds: TypeTree): TypeParam = apply(emptyMods, name, Nil, Some(tbounds), Nil)
     def apply(mods: Mods, name: String, tparams: Seq[TypeParam], tbounds: Option[TypeTree], cbounds: Seq[TypeTree]): TypeParam
     def mods(tree: TypeParam): Mods
     def name(tree: TypeParam): String
