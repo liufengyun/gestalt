@@ -43,7 +43,7 @@ object Quasiquote {
   }
 
   private def instantiateParser(parserName: String): MetaParser = {
-    val parsersModuleClass = Class.forName("scala.meta.quasiquotes.package$", true, this.getClass.getClassLoader)
+    val parsersModuleClass = java.lang.Class.forName("scala.meta.quasiquotes.package$", true, this.getClass.getClassLoader)
     val parsersModule = parsersModuleClass.getField("MODULE$").get(null)
     val parserModuleGetter = parsersModule.getClass.getDeclaredMethod(parserName)
     val parserModuleInstance = parserModuleGetter.invoke(parsersModule)
@@ -60,22 +60,17 @@ object Quasiquote {
  * @param t           the toolbox to use
  * @param toolboxName the name of the toolbox in the local environment
  */
-class Quasiquote(val t: Toolbox, val toolboxName: String) {
-  import t._
+class Quasiquote {
   import Quasiquote._
 
   def expand(label: String, tree: Tree, parts: List[String], unquotes: List[Tree], isPattern: Boolean): Tree = {
     val code = resugar(parts)
     val parser = instantiateParser(parserMap(label))
     val mTree = parser(m.Input.String(code), quasiquoteTermDialect)
-    val quote = new Quote(t, toolboxName) {
-      val args = unquotes.asInstanceOf[List[this.t.Tree]]    // fix compiler stupidity
-      val isTerm = !isPattern
-      val enclosingTree = tree.asInstanceOf[this.t.Tree]
-    }
+    val quote = new Quote(unquotes, !isPattern, tree)
 
     // compiler stupidity
-    quote.lift(mTree).asInstanceOf[Tree]
+    quote.lift(mTree)
   }
 
   /** Resugar tree into string interpolation */

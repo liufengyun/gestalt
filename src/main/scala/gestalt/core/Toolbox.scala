@@ -1,4 +1,5 @@
 package scala.gestalt
+package core
 
 case class Location(fileName: String, line: Int, column: Int)
 
@@ -16,4 +17,3 @@ trait Toolbox extends Trees with Types with Denotations with Symbols with TypeTa
   /** generate fresh unique name */
   def fresh(prefix: String = "$local"): String
 }
-
