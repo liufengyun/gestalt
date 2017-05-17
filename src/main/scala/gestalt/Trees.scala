@@ -676,7 +676,7 @@ trait TypeParams { this: Trees =>
 
   val TypeParam: TypeParamImpl
   trait TypeParamImpl {
-    def apply(name: String, tbounds: TypeTree) = apply(emptyMods, name, Nil, Some(tbounds), Nil)
+    def apply(name: String, tbounds: TypeTree): TypeParam = apply(emptyMods, name, Nil, Some(tbounds), Nil)
     def apply(mods: Mods, name: String, tparams: Seq[TypeParam], tbounds: Option[TypeTree], cbounds: Seq[TypeTree]): TypeParam
     def mods(tree: TypeParam): Mods
     def name(tree: TypeParam): String
