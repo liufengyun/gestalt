@@ -5,19 +5,8 @@ import scala.gestalt._
 import dotty.Toolbox
 
 class QuasiquoteTest extends TestSuite {
-  val context: Context = {
-    val base = new ContextBase {}
-    val ctx = base.initialCtx.fresh
-    ctx.setSetting(ctx.settings.encoding, "UTF8")
-    // ctx.setSetting(ctx.settings.classpath, Jars.dottyLib)
-    // when classpath is changed in ctx, we need to re-initialize to get the
-    // correct classpath from PathResolver
-    // base.initialize()(ctx)
-    ctx
-  }
-
   test("test modifiers") {
-    @modsTest val x = 5
+    @Quasiquotes val x = 5
   }
 
   /*

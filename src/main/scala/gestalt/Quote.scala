@@ -61,7 +61,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
           if (prefix.isEmpty) loop(rest, Some(liftQuasi(quasi)), Nil)
           else loop(rest, Some(prefix.foldRight(liftQuasi(quasi))((curr, acc) => {
             val currElement = lift(curr)
-            t.Infix(acc, "+:", currElement)
+            t.Infix(currElement, "+:", acc)
           })), Nil)
         } else {
           require(prefix.isEmpty)
@@ -180,10 +180,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
   /** {{{(trees: Seq[t.Tree[t.Tree[A]]]) => t.Tree[Seq[t.Tree[A]]]}}} */
   def liftSeqTrees(trees: Seq[t.TermTree]): t.TermTree = trees match {
     case head :: rest =>
-      // Infix is sugar-less
-      // the List is constructed as Nil.::(c).::(b).::(a)
-      // Not a :: b :: c :: Nil
-      t.Infix(liftSeqTrees(rest), "::", head)
+      t.Infix(head, "::", liftSeqTrees(rest))
     case _ =>
       scalaNil
   }
@@ -202,25 +199,41 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     if (pats.size == 1) {
       // AnyTree = t.Tree | t.TypeTree
       //left: t.Tree[AnyTree[?]] | t.Tree[String]
+      var isPatDef = false
+
       val left = pats(0) match {
         case quasi: Quasi =>
           liftQuasi(quasi)
         case m.Term.Name(name) =>
           t.Lit(name)
+        case m.Pat.Var.Term(m.Term.Name(name)) =>
+          t.Lit(name)
         case pat =>
+          isPatDef = true
           lift(pat)
       }
 
       if (isDecl)
         selectToolbox("ValDecl").appliedTo(mods, left, tpe)
+      else if (isPatDef)
+        selectToolbox("PatDef").appliedTo(mods, left, tpe, rhs)
       else
         selectToolbox("ValDef").appliedTo(mods, left, tpe, rhs)
     }
     else {
       if (isDecl)
         selectToolbox("SeqDecl").appliedTo(mods, liftSeq(pats), tpe)
-      else
-        selectToolbox("SeqDef").appliedTo(mods, liftSeq(pats), tpe, rhs)
+      else {
+        val names = pats.flatMap {
+          case m.Pat.Var.Term(m.Term.Name(name)) => List(name)
+          case _ => Nil
+        }
+
+        if (names.length != pats.length)
+          t.error("Patterns not supported in seqence definition", enclosingTree.pos)
+
+        selectToolbox("SeqDef").appliedTo(mods, scalaList.appliedTo(names.map(t.Lit(_)) : _*), tpe, rhs)
+      }
     }
   }
 
@@ -335,6 +348,8 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
       selectToolbox("Super").appliedTo(t.Lit(qual), t.Lit(mix))
     case m.Term.Name(name) =>
       selectToolbox("Ident").appliedTo(t.Lit(name))
+    case m.Term.Select(qual, quasi: Quasi) =>
+      selectToolbox("Select").appliedTo(lift(qual), liftQuasi(quasi))
     case m.Term.Select(qual, m.Term.Name(name)) =>
       selectToolbox("Select").appliedTo(lift(qual), t.Lit(name))
     case m.Term.Interpolate(m.Term.Name(tag), parts, args) =>
@@ -362,8 +377,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
       selectToolbox("Assign").appliedTo(lift(lhs), lift(rhs))
     case m.Term.Update(fun, argss, rhs) =>
       require(argss.size > 0)
-      val left = selectToolbox("ApplySeq").appliedTo(lift(fun), liftSeqSeq(argss))
-      selectToolbox("Assign").appliedTo(left, lift(rhs))
+      selectToolbox("Update").appliedTo(lift(fun), liftSeqSeq(argss), lift(rhs))
     case m.Term.Return(expr) =>
       selectToolbox("Return").appliedTo(lift(expr))
     case m.Term.Throw(expr) =>
@@ -404,7 +418,8 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
       // anonym: t.Tree[t.Tree[C]]
       selectToolbox("NewAnonymClass").appliedTo(parentCalls, liftSelf(self), liftOptSeq(stats))
     case m.Term.Placeholder() =>
-      selectToolbox("Wildcard").appliedTo() // FIXME Wildcard is not defined in toolbox
+      if (isTerm) t.error("placeholder is not supported", enclosingTree.pos)
+      selectToolbox("Ident").appliedTo(t.Lit("_"))
     case m.Term.Eta(expr) =>
       selectToolbox("Postfix").appliedTo(lift(expr), t.Lit("_"))
     case m.Term.Arg.Named(m.Term.Name(name), expr) =>
@@ -436,12 +451,15 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     case m.Type.Or(lhs, rhs) =>
       selectToolbox("TypeOr").appliedTo(lift(lhs), lift(rhs))
     case m.Type.Refine(tpe, stats) =>
-      selectToolbox("TypeRefine").appliedTo(liftOpt(tpe), liftSeq(stats))
+      if (tpe.isEmpty)
+        selectToolbox("TypeRefine").appliedTo(liftSeq(stats))
+      else
+        selectToolbox("TypeRefine").appliedTo(lift(tpe.get), liftSeq(stats))
     // case m.Type.Existential(tpe, stats) =>
     case m.Type.Annotate(tpe, annots) =>
       selectToolbox("TypeAnnotated").appliedTo(lift(tpe), liftSeq(annots))
     case m.Type.Placeholder(bounds) =>
-      selectToolbox("TypeWildcard").appliedTo(lift(bounds)) // FIXME TypeWildcard is not defined in toolbox
+      selectToolbox("TypeParam").appliedTo(t.Lit("_"), lift(bounds))
     case m.Type.Bounds(lo, hi) =>
       selectToolbox("TypeBounds").appliedTo(liftOpt(lo), liftOpt(hi))
     case m.Type.Arg.ByName(tpe) =>
@@ -461,35 +479,33 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
 
     // patterns
     case m.Pat.Var.Term(m.Term.Name(name)) =>
-      selectToolbox("Ident").appliedTo(t.Lit(name))
+      selectToolbox("Pat.Var").appliedTo(t.Lit(name))
     case m.Pat.Var.Type(m.Type.Name(name)) =>
       selectToolbox("TypeIdent").appliedTo(t.Lit(name))
     case m.Pat.Wildcard() =>
-      selectToolbox("Wildcard").appliedTo() // FIXME Wildcard is not defined in toolbox
-    case m.Pat.Bind(m.Pat.Var.Term(name), expr) =>
-      selectToolbox("Bind").appliedTo(t.Lit(name), lift(expr))
+      selectToolbox("Pat.Ident").appliedTo(t.Lit("_"))
+    case m.Pat.Bind(m.Pat.Var.Term(m.Term.Name(name)), expr) =>
+      selectToolbox("Pat.Bind").appliedTo(t.Lit(name), lift(expr))
     case m.Pat.Alternative(lhs, rhs) =>
-      selectToolbox("Alternative").appliedTo(scalaList.appliedTo(lift(lhs), lift(rhs)))
+      selectToolbox("Pat.Alt").appliedTo(scalaList.appliedTo(lift(lhs), lift(rhs)))
     case m.Pat.Tuple(args) =>
-      selectToolbox("Tuple").appliedTo(liftSeq(args))
+      selectToolbox("Pat.Tuple").appliedTo(liftSeq(args))
     case m.Pat.Extract(ref, targs, args) =>
-      if (targs.size == 0)
-        selectToolbox("Apply").appliedTo(lift(ref), liftSeq(args))
-      else
-        selectToolbox("Apply").appliedTo(
-          selectToolbox("TypeApply").appliedTo(lift(ref), liftSeq(targs)),
-          liftSeq(args)
-        )
+      if (!targs.isEmpty)
+        t.error("Type parameters not supported for extractors", enclosingTree.pos)
+
+      selectToolbox("Pat.Unapply").appliedTo(lift(ref), liftSeq(args))
     case m.Pat.ExtractInfix(lhs, m.Term.Name(op), rhs) =>
-      selectToolbox("Infix").appliedTo(lift(lhs), t.Lit(op), liftSeq(rhs))
+      selectToolbox("Pat.Infix").appliedTo(lift(lhs), t.Lit(op), liftSeq(rhs))
     case m.Pat.Interpolate(m.Term.Name(tag), parts, args) =>
+      t.error("Interpolaters not supported for patterns", enclosingTree.pos)
       selectToolbox("Interpolate").appliedTo(t.Lit(tag), liftSeq(parts), liftSeq(args))
     // case m.Pat.Xml(parts, args) =>
-    case m.Pat.Typed(lhs, rhs) =>
-      selectToolbox("Ascribe").appliedTo(lift(lhs), lift(rhs))
+    case m.Pat.Typed(m.Pat.Var.Term(m.Term.Name(name)), rhs) =>
+      selectToolbox("Pat.Ascribe").appliedTo(t.Lit(name), lift(rhs))
     // case m.Pat.Arg.SeqWildcard() =>
     case m.Pat.Type.Wildcard() =>
-      selectToolbox("TypeWildcard").appliedTo() // FIXME TypeWildcard is not defined in toolbox
+      selectToolbox("TypeIdent").appliedTo(t.Lit("_"))
     // case m.Pat.Type.Project(qual, name) =>
     case m.Pat.Type.Apply(tpe, args) =>
       selectToolbox("TypeApply").appliedTo(lift(tpe), liftSeq(args))
@@ -510,7 +526,7 @@ abstract class Quote(val t: Toolbox, val toolboxName: String) {
     case m.Pat.Type.Annotate(tpe, annots) =>
       selectToolbox("TypeAnnotated").appliedTo(lift(tpe), liftSeq(annots))
     case m.Pat.Type.Placeholder(bounds) =>
-      selectToolbox("TypeWildcard").appliedTo(lift(bounds)) // FIXME TypeWildcard is not defined in toolbox
+      selectToolbox("TypeParam").appliedTo(t.Lit("_"), lift(bounds))
 
     case m.Decl.Val(mods, pats, tpe) =>
       require(pats.size > 0)
