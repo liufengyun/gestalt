@@ -1,7 +1,7 @@
 import scala.annotation.StaticAnnotation
 import scala.collection.immutable.Seq
 
-import scala.gestalt._
+import scala.gestalt.api._
 
 class main extends StaticAnnotation {
   def apply(defn: Any): Any = meta {
@@ -15,8 +15,8 @@ class main extends StaticAnnotation {
 
 class addFields extends StaticAnnotation {
   def apply(defn: Any): Any = meta {
-    val q"$mods object $name { ..${stats:Seq[toolbox.Tree]} }" = defn
-    val additional: Seq[toolbox.Tree] = Seq(
+    val q"$mods object $name { ..${stats:Seq[Tree]} }" = defn
+    val additional: Seq[Tree] = Seq(
       q"private def a = 1",
       q"private[this] def b = 2",
       q"private[pack] def c = 3",

@@ -1,4 +1,4 @@
-import scala.gestalt._
+import scala.gestalt.api._
 
 trait Monadless[Monad[_]] {
 
@@ -13,10 +13,8 @@ trait Monadless[Monad[_]] {
 
   */
 
-  def lift[T](body: T)(implicit m: toolbox.WeakTypeTag[Monad[_]]): Monad[T] = meta {
-    import toolbox._
-
-    val tree = Transformer(toolbox)(this, body)
+  def lift[T](body: T)(implicit m: WeakTypeTag[Monad[_]]): Monad[T] = meta {
+    val tree = Transformer(this, body)
 
     val unliftSym = this.tpe.method("unlift").headOption.map(_.symbol)
     def isUnlift(tp: Type) = tp.denot.map(_.symbol) == unliftSym
@@ -44,9 +42,7 @@ object Monadless {
 
 object Transformer {
 
-  def apply(toolbox: Toolbox)(prefix: toolbox.tpd.Tree, tree: toolbox.tpd.Tree)(implicit m: toolbox.WeakTypeTag[_]): toolbox.Tree = {
-    import toolbox._
-
+  def apply(prefix: tpd.Tree, tree: tpd.Tree)(implicit m: WeakTypeTag[_]): Tree = {
     val unliftSym = prefix.tpe.method("unlift").headOption.map(_.symbol)
     def isUnlift(tp: Type) = tp.denot.map(_.symbol) == unliftSym
 
