@@ -244,7 +244,11 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       if (targs.isEmpty) select else TypeApply(select, targs.toList)
     }
     def unapply(tpe: TypeTree) = {
-      val (select, targs) = tpe match {
+      val noSplice = tpe match {
+        case TypedSplice(freeTree) => freeTree
+        case other => other
+      }
+      val (select, targs) = noSplice match {
         case TypeApply(select, targs) => select -> targs
         case other => other -> Nil
       }
