@@ -1,10 +1,9 @@
-package scala.gestalt
-package core
+package scala.gestalt.core
 
 trait Types extends MethodTypes { this: Toolbox =>
   type Type >: Null <: AnyRef
 
-  val Type: TypeImpl
+  def Type: TypeImpl
   trait TypeImpl {
     /** pretty print type */
     def show(tp: Type): String
@@ -69,7 +68,7 @@ trait Types extends MethodTypes { this: Toolbox =>
 
   /*-------------------- type extractors ---------------------*/
 
-  val ByNameType: ByNameTypeImpl
+  def ByNameType: ByNameTypeImpl
   trait ByNameTypeImpl {
     def unapply(tp: Type): Option[Type]
   }
@@ -78,7 +77,7 @@ trait Types extends MethodTypes { this: Toolbox =>
 trait MethodTypes { this: Types =>
   type MethodType >: Null <: Type
 
-  val MethodType: MethodTypeImpl
+  def MethodType: MethodTypeImpl
   trait MethodTypeImpl {
     def paramInfos(tp: MethodType): Seq[Type]
     def instantiate(tp: MethodType)(params: Seq[Type]): Type

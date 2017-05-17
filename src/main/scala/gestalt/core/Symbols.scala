@@ -1,10 +1,9 @@
-package scala.gestalt
-package core
+package scala.gestalt.core
 
 trait Symbols { this: Toolbox =>
   type Symbol <: AnyRef
 
-  val Symbol: SymbolImpl
+  def Symbol: SymbolImpl
   trait SymbolImpl {
      /** create a new symbol with current owner */
     def newValSymbol(name: String, info: Type): Symbol

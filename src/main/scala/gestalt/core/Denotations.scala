@@ -1,10 +1,9 @@
-package scala.gestalt
-package core
+package scala.gestalt.core
 
 trait Denotations { this: Toolbox =>
   type Denotation
 
-  val Denotation: DenotationImpl
+  def Denotation: DenotationImpl
   trait DenotationImpl {
     def name(denot: Denotation): String
 

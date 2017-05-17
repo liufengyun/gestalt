@@ -1,6 +1,6 @@
 package scala.gestalt.dotty
 
-import scala.gestalt.{Toolbox => Tbox, Location, Cap, cap}
+import scala.gestalt.core.{ Toolbox => Tbox, Location }
 
 import dotty.tools.dotc._
 import core._
@@ -45,7 +45,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   /*------------------------------ positions ------------------------------*/
   type Pos = Position
 
-  object Pos extends PositionImpl {
+  object Pos extends PosImpl {
     def pos(tree: Tree): Pos = tree.pos
 
     def pos(tree: tpd.Tree)(implicit c: Cap): Pos = tree.pos
@@ -140,6 +140,9 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   implicit class TreeHelper(tree: d.Tree) {
     def withPosition[T <: Tree] = tree.withPos(enclosingPosition).asInstanceOf[T]
   }
+
+  def ApplySeq(fun: TermTree, argss: Seq[Seq[TermTree]]): TermTree =
+    argss.foldLeft(fun) { (acc, args) => Apply(acc, args) }
 
   /*------------------------------ trees ------------------------------*/
 
@@ -662,7 +665,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   object SeqLiteral extends SeqLiteralImpl {
     def apply(trees: Seq[tpd.Tree], tp: Type): tpd.Tree = {
       val tpSeq = ctx.definitions.RepeatedParamType.appliedTo(tp)
-      t.Typed(t.SeqLiteral(trees.toList, tp.toTree), t.TypeTree(tpSeq))
+      t.Typed(t.SeqLiteral(trees.toList, t.TypeTree(tp)), t.TypeTree(tpSeq))
     }
 
     def unapply(tree: tpd.Tree): Option[Seq[tpd.Tree]] = tree match {
@@ -1035,21 +1038,21 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     type ValDef  = t.ValDef
     type Param   = t.ValDef
 
-    def traverse(tree: tpd.Tree)(pf: PartialFunction[tpd.Tree, Unit])(implicit c: Cap): Unit =
+    def traverse(tree: tpd.Tree)(pf: PartialFunction[tpd.Tree, Unit]): Unit =
       new t.TreeTraverser {
         override def traverse(tree: tpd.Tree)(implicit ctx: Context) =
           pf.lift(tree).getOrElse(super.traverseChildren(tree))
       }.traverse(tree)
 
-    def exists(tree: tpd.Tree)(pf: PartialFunction[tpd.Tree, Boolean])(implicit c: Cap): Boolean = {
+    def exists(tree: tpd.Tree)(pf: PartialFunction[tpd.Tree, Boolean]): Boolean = {
       var r = false
       traverse(tree) {
         case t if pf.isDefinedAt(t) && !r => r = pf(t)
-      }(cap)
+      }
       r
     }
 
-    def transform(tree: tpd.Tree)(pf: PartialFunction[tpd.Tree, tpd.Tree])(implicit c: Cap): tpd.Tree = {
+    def transform(tree: tpd.Tree)(pf: PartialFunction[tpd.Tree, tpd.Tree]): tpd.Tree = {
       new t.TreeMap() {
         override def transform(tree: tpd.Tree)(implicit ctx: Context) =
           pf.lift(tree).getOrElse(super.transform(tree))
@@ -1196,8 +1199,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def name(mem: Symbol): String = mem.showName
 
     /** type of a member with respect to a prefix */
-    def asSeenFrom(mem: Symbol, prefix: Type): Type = mem.asSeenFrom(prefix)
-
+    def asSeenFrom(mem: Symbol, prefix: Type): Type = mem.asSeenFrom(prefix).info
   }
 
   def ensureOwner(tree: tpd.Tree, owner: Symbol): tpd.Tree = {

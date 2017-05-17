@@ -1,8 +1,7 @@
 package scala.gestalt.dotty
 
 import dotty.tools.dotc._
-import ast.Trees._
-import ast.{tpd, untpd}
+import ast.{Trees => t, tpd, untpd}
 import ast.untpd.modsDeco
 import typer.Inferencing
 import core.StdNames._
@@ -48,20 +47,23 @@ object Expander {
 
   def expandQuasiquote(tree: untpd.Tree, isTerm: Boolean)(implicit ctx: Context): untpd.Tree = {
     val (tag, parts, args) = tree match {
-      case Apply(Select(Apply(Ident(nme.StringContext), parts), name), args) =>
+      case t.Apply(t.Select(t.Apply(t.Ident(nme.StringContext), parts), name), args) =>
         (name.toString, parts, args)
-      case UnApply(Select(Select(Apply(Select(Ident(nme.StringContext), nme.apply), List(Typed(SeqLiteral(parts, _), _))), name), nme.unapply), _, pats) =>
+      case t.UnApply(t.Select(t.Select(t.Apply(t.Select(t.Ident(nme.StringContext), nme.apply), List(t.Typed(t.SeqLiteral(parts, _), _))), name), nme.unapply), _, pats) =>
         (name.toString, parts, pats)
     }
-    val strs = for(Literal(Constant(v: String)) <- parts) yield v
-    expand(new Toolbox(tree.pos))(tag, tree, strs, args, !isTerm)
+    val strs = for(t.Literal(Constant(v: String)) <- parts) yield v
+
+    api.withToolbox(new Toolbox(tree.pos)) {
+      quasiquotes.expand(tag, tree.asInstanceOf[api.Tree], strs, args.asInstanceOf[List[api.Tree]], !isTerm).asInstanceOf[untpd.Tree]
+    }
   }
 
   /** Expand annotation macros */
   def expandAnnotMacro(mdef: untpd.MemberDef)(implicit ctx: Context): untpd.Tree = {
     val ann = mdef.mods.annotations.filter(macros.isAnnotMacro).headOption
     val expansion = ann.flatMap {
-      case ann @ Apply(Select(New(tpt), init), _) =>
+      case ann @ t.Apply(t.Select(t.New(tpt), init), _) =>
         val tpdClass = ctx.typer.typedAheadType(tpt)
 
         val className = tpdClass.symbol.fullName + "$inline"
@@ -74,8 +76,11 @@ object Expander {
           val mods1 = mdef.mods.withAnnotations(mdef.mods.annotations.filter(_ ne ann))
           mdef.withMods(mods1)
         }
-        val result = impl.invoke(null, new Toolbox(ann.pos), ann, expandee).asInstanceOf[untpd.Tree]
-        Some(result)
+
+        api.withToolbox(new Toolbox(ann.pos)) {
+          val result = impl.invoke(null, ann, expandee).asInstanceOf[untpd.Tree]
+          Some(result)
+        }
       case _ =>
         None
     }
@@ -131,9 +136,11 @@ object Expander {
       val prefix2 =
         if (prefix == null) tpd.ref(methodSelect.tpe.asInstanceOf[TermRef].prefix.asInstanceOf[NamedType])
         else prefix
-      val trees  = tb :: prefix2 :: targs ++ argss2.flatten
+      val trees  = prefix2 :: targs ++ argss2.flatten
       try {
-        val res = impl.invoke(null, trees: _*).asInstanceOf[untpd.Tree]
+        val res = api.withToolbox(tb) {
+          impl.invoke(null, trees: _*).asInstanceOf[untpd.Tree]
+        }
         println(" => {" + res.show + "}")
         res
       }

@@ -1,5 +1,4 @@
-package scala.gestalt
-package core
+package scala.gestalt.core
 
 case class Location(fileName: String, line: Int, column: Int)
 

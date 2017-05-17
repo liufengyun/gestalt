@@ -1,7 +1,18 @@
-package scala
+package scala.gestalt
 
-package object gestalt extends core.Toolbox {
-  private val toolbox: ThreadLocal[core.Toolbox] = new ThreadLocal[core.Toolbox]
+import gestalt.core._
+
+// package object causes compilation errors
+object api extends Toolbox { pkg =>
+  private val toolbox: ThreadLocal[Toolbox] = new ThreadLocal[Toolbox]
+
+  def withToolbox[T](tb: Toolbox)(f: => T): T = {
+    toolbox.set(tb)
+    val res = f
+    toolbox.remove()
+
+    res
+  }
 
   def emptyMods: Mods = toolbox.get.emptyMods.asInstanceOf[Mods]
 
@@ -23,6 +34,7 @@ package object gestalt extends core.Toolbox {
   def fresh(prefix: String = "$local"): String  = toolbox.get.fresh(prefix)
 
   /**-------------------- abstract types ----------------------------*/
+  /*
   type Pos
 
   type Tree     >: Null <: AnyRef
@@ -55,6 +67,7 @@ package object gestalt extends core.Toolbox {
 
   type Type >: Null <: AnyRef
   type MethodType >: Null <: Type
+  */
 
   /**------------------------------------------------*/
   // definitions
@@ -86,39 +99,38 @@ package object gestalt extends core.Toolbox {
   def TypeAnnotated  = toolbox.get.TypeAnnotated.asInstanceOf[TypeAnnotatedImpl]
 
   // terms
-  def Infix          = toolbox.get.Infix.asInstanceOf[InfixImpl]
-  def Prefix         = toolbox.get.Prefix.asInstanceOf[PrefixImpl]
-  def Postfix        = toolbox.get.Postfix.asInstanceOf[PostfixImpl]
-  def Throw          = toolbox.get.Throw.asInstanceOf[ThrowImpl]
-  def Annotated      = toolbox.get.Annotated.asInstanceOf[AnnotatedImpl]
-  def If             = toolbox.get.If.asInstanceOf[IfImpl]
-  def Try            = toolbox.get.Try.asInstanceOf[TryImpl]
-  def Function       = toolbox.get.Function.asInstanceOf[FunctionImpl]
-  def While          = toolbox.get.While.asInstanceOf[WhileImpl]
-  def DoWhile        = toolbox.get.DoWhile.asInstanceOf[DoWhileImpl]
-  def For            = toolbox.get.For.asInstanceOf[ForImpl]
-  def Named          = toolbox.get.Named.asInstanceOf[NamedImpl]
-  def Repeated       = toolbox.get.Repeated.asInstanceOf[RepeatedImpl]
-  def Lit            = toolbox.get.Lit.asInstanceOf[LitImpl]
-  def Apply          = toolbox.get.Apply.asInstanceOf[ApplyImpl]
-  def ApplyType      = toolbox.get.ApplyType.asInstanceOf[ApplyTypeImpl]
-  def Ident          = toolbox.get.Ident.asInstanceOf[IdentImpl]
-  def This           = toolbox.get.This.asInstanceOf[ThisImpl]
-  def Super          = toolbox.get.Super.asInstanceOf[SuperImpl]
-  def Select         = toolbox.get.Select.asInstanceOf[SelectImpl]
-  def Ascribe        = toolbox.get.Ascribe.asInstanceOf[AscribeImpl]
-  def Assign         = toolbox.get.Assign.asInstanceOf[AssignImpl]
-  def Update         = toolbox.get.Update.asInstanceOf[UpdateImpl]
-  def Return         = toolbox.get.Return.asInstanceOf[ReturnImpl]
-  def Block          = toolbox.get.Block.asInstanceOf[BlockImpl]
-  def PartialFunction= toolbox.get.PartialFunction.asInstanceOf[PartialFunctionImpl]
-  def Match          = toolbox.get.Match.asInstanceOf[MatchImpl]
-  def Case           = toolbox.get.Case.asInstanceOf[CaseImpl]
-  def Tuple          = toolbox.get.Tuple.asInstanceOf[TupleImpl]
-  def Interpolate    = toolbox.get.Interpolate.asInstanceOf[InterpolateImpl]
-  def SeqLiteral     = toolbox.get.SeqLiteral.asInstanceOf[SeqLiteralImpl]
-  def TypedSplice    = toolbox.get.TypedSplice.asInstanceOf[TypedSpliceImpl]
-
+  def Infix           = toolbox.get.Infix.asInstanceOf[InfixImpl]
+  def Prefix          = toolbox.get.Prefix.asInstanceOf[PrefixImpl]
+  def Postfix         = toolbox.get.Postfix.asInstanceOf[PostfixImpl]
+  def Throw           = toolbox.get.Throw.asInstanceOf[ThrowImpl]
+  def Annotated       = toolbox.get.Annotated.asInstanceOf[AnnotatedImpl]
+  def If              = toolbox.get.If.asInstanceOf[IfImpl]
+  def Try             = toolbox.get.Try.asInstanceOf[TryImpl]
+  def Function        = toolbox.get.Function.asInstanceOf[FunctionImpl]
+  def While           = toolbox.get.While.asInstanceOf[WhileImpl]
+  def DoWhile         = toolbox.get.DoWhile.asInstanceOf[DoWhileImpl]
+  def For             = toolbox.get.For.asInstanceOf[ForImpl]
+  def Named           = toolbox.get.Named.asInstanceOf[NamedImpl]
+  def Repeated        = toolbox.get.Repeated.asInstanceOf[RepeatedImpl]
+  def Lit             = toolbox.get.Lit.asInstanceOf[LitImpl]
+  def Apply           = toolbox.get.Apply.asInstanceOf[ApplyImpl]
+  def ApplyType       = toolbox.get.ApplyType.asInstanceOf[ApplyTypeImpl]
+  def Ident           = toolbox.get.Ident.asInstanceOf[IdentImpl]
+  def This            = toolbox.get.This.asInstanceOf[ThisImpl]
+  def Super           = toolbox.get.Super.asInstanceOf[SuperImpl]
+  def Select          = toolbox.get.Select.asInstanceOf[SelectImpl]
+  def Ascribe         = toolbox.get.Ascribe.asInstanceOf[AscribeImpl]
+  def Assign          = toolbox.get.Assign.asInstanceOf[AssignImpl]
+  def Update          = toolbox.get.Update.asInstanceOf[UpdateImpl]
+  def Return          = toolbox.get.Return.asInstanceOf[ReturnImpl]
+  def Block           = toolbox.get.Block.asInstanceOf[BlockImpl]
+  def PartialFunction = toolbox.get.PartialFunction.asInstanceOf[PartialFunctionImpl]
+  def Match           = toolbox.get.Match.asInstanceOf[MatchImpl]
+  def Case            = toolbox.get.Case.asInstanceOf[CaseImpl]
+  def Tuple           = toolbox.get.Tuple.asInstanceOf[TupleImpl]
+  def Interpolate     = toolbox.get.Interpolate.asInstanceOf[InterpolateImpl]
+  def SeqLiteral      = toolbox.get.SeqLiteral.asInstanceOf[SeqLiteralImpl]
+  def TypedSplice     = toolbox.get.TypedSplice.asInstanceOf[TypedSpliceImpl]
 
 
   def Import         = toolbox.get.Import.asInstanceOf[ImportImpl]
@@ -128,7 +140,7 @@ package object gestalt extends core.Toolbox {
   def Pos            = toolbox.get.Pos.asInstanceOf[PosImpl]
 
   /**--------------------- TreeOps ---------------------------------*/
-  def untpd          = toolbox.get.untpd.asInstanceOf[UntpdImpl]
+  def untpd          = toolbox.get.untpd.asInstanceOf[untpdImpl]
 
   implicit class UntypedTreeOps(tree: Tree) {
     def pos: Pos = Pos.pos(tree)
@@ -141,15 +153,18 @@ package object gestalt extends core.Toolbox {
 
     def transform(tree: Tree)(pf: PartialFunction[Tree, Tree]): Tree =
       untpd.transform(tree)(pf)
+  }
 
+  implicit class UntypedTermTreeOps(tree: TermTree) {
     def select(name: String): TermTree = Select(tree, name)
     def appliedTo(args: TermTree*): TermTree = Apply(tree, args.toList)
   }
 
   object tpd extends tpdImpl {
+    /*
     type Tree      >: Null <: AnyRef
     type Param     <: Tree
-    type ValDef    <: Tree
+    type ValDef    <: Tree */
 
     def typeOf(tree: Tree): Type = {
       val tb = toolbox.get
@@ -182,15 +197,15 @@ package object gestalt extends core.Toolbox {
       val tb = toolbox.get
       tb.tpd.transform(tree.asInstanceOf[tb.tpd.Tree])(
         pf.asInstanceOf[PartialFunction[tb.tpd.Tree, tb.tpd.Tree]]
-      )
+      ).asInstanceOf[Tree]
     }
   }
 
   implicit class TypedTreeOps(tree: tpd.Tree) {
     def pos: Pos = Pos.pos(tree)
-    def tpe: Type = TreeOps.typeOf(tree)
+    def tpe: Type = tpd.typeOf(tree)
     def wrap: Splice = TypedSplice(tree)
-    def subst(from: List[Symbol], to: List[Symbol]): tpd.Tree = TreeOps.subst(tree)(from, to)
+    def subst(from: List[Symbol], to: List[Symbol]): tpd.Tree = tpd.subst(tree)(from, to)
     def symbol: Option[Symbol] = tree.tpe.denot.map(_.symbol)
 
     def select(name: String): tpd.Tree = Select(tree, name)
@@ -363,15 +378,13 @@ package object gestalt extends core.Toolbox {
   }
 
   /**--------------------- helpers ---------------------------------*/
-  def ApplySeq(fun: TermTree, argss: Seq[Seq[TermTree]]): TermTree = argss match {
-    case args :: rest => rest.foldLeft(Apply(fun, args)) { (acc, args) => Apply(acc, args) }
-    case _ => fun
-  }
+  def ApplySeq(fun: TermTree, argss: Seq[Seq[TermTree]]): TermTree =
+    argss.foldLeft(fun) { (acc, args) => Apply(acc, args) }
 
   object ApplySeq {
     def unapply(call: TermTree): Option[(Tree, Seq[Seq[TermTree]])] = {
       def recur(acc: Seq[Seq[TermTree]], term: TermTree): (TermTree, Seq[Seq[TermTree]]) = term match {
-        case Apply(fun, args) => recur(args +: acc, fun) // inner-most is in the front
+        case pkg.Apply(fun, args) => recur(args +: acc, fun) // inner-most is in the front
         case fun => (fun, acc)
       }
 
@@ -448,15 +461,4 @@ package object gestalt extends core.Toolbox {
     }
   }
 
-  /** Quasiquote implementation based on standard constructors and extractors
-   *
-   *  This method is intended to be reflectively called by the compiler
-   */
-  def expand(label: String, tree: Tree, parts: List[String], unquotes: List[Tree], isPattern: Boolean): Tree = {
-    val quote      = new Quasiquote
-    quote.expand(label, tree, parts, unquotes, isPattern)
-  }
-
-  type Cap >: Null
-  implicit val cap: Cap = null
 }

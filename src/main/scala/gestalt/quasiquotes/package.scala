@@ -2,13 +2,14 @@ package scala.gestalt
 
 import scala.{meta => m}
 import m.dialects.Dotty
+import scala.gestalt.api._
 
-object Quasiquote {
+package object quasiquotes {
   type MetaParser = (m.Input, m.Dialect) => m.Tree
   type QuoteLabel = String
 
   // term dialect suffices the purpose, no need for pattern dialect
-  val quasiquoteTermDialect = m.dialects.Dotty.copy(allowTermUnquotes = true, allowMultilinePrograms = true)
+  private val quasiquoteTermDialect = m.dialects.Dotty.copy(allowTermUnquotes = true, allowMultilinePrograms = true)
 
   private val StringContextName = "StringContext"
   private val ApplyName = "apply"
@@ -53,30 +54,24 @@ object Quasiquote {
       catch { case ex: java.lang.reflect.InvocationTargetException => throw ex.getTargetException }
     }
   }
-}
-
-/** Implementation of quasiquotes
- *
- * @param t           the toolbox to use
- * @param toolboxName the name of the toolbox in the local environment
- */
-class Quasiquote {
-  import Quasiquote._
-
-  def expand(label: String, tree: Tree, parts: List[String], unquotes: List[Tree], isPattern: Boolean): Tree = {
-    val code = resugar(parts)
-    val parser = instantiateParser(parserMap(label))
-    val mTree = parser(m.Input.String(code), quasiquoteTermDialect)
-    val quote = new Quote(unquotes, !isPattern, tree)
-
-    // compiler stupidity
-    quote.lift(mTree)
-  }
 
   /** Resugar tree into string interpolation */
   private def resugar(parts: List[String]): String = {
     parts.init.zipWithIndex.map { case (part, i) =>
       s"$part${Hole(i)}"
     }.mkString("", "", parts.last)
+  }
+
+  /** Quasiquote implementation based on standard constructors and extractors
+   *
+   *  This method is intended to be reflectively called by the compiler
+   */
+  def expand(label: String, tree: Tree, parts: List[String], unquotes: List[Tree], isPattern: Boolean): Tree = {
+    val code = resugar(parts)
+    val parser = instantiateParser(parserMap(label))
+    val mTree = parser(m.Input.String(code), quasiquoteTermDialect)
+    val quote = new Quote(unquotes, !isPattern, tree)
+
+    quote.lift(mTree)
   }
 }

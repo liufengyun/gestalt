@@ -1,21 +1,21 @@
-package scala.gestalt
+package scala.gestalt.quasiquotes
 
 import scala.collection.immutable.Seq
 import scala.{meta => m}
 import scala.compat.Platform.EOL
+import scala.gestalt.api._
 
 /** Lift scala.meta trees as trees */
-abstract class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
-  import Quasiquote.Hole
-
+class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
   type Quasi = m.internal.ast.Quasi
 
   // lifted trees
-  lazy val scalaNil  = selectFullPath("scala.Nil")
-  lazy val scalaList = selectFullPath("scala.List")
-  lazy val scalaSome = selectFullPath("scala.Some")
-  lazy val scalaNone = selectFullPath("scala.None")
-  lazy val root      = Ident("_root_")
+  lazy val scalaNil       = selectFullPath("scala.Nil")
+  lazy val scalaList      = selectFullPath("scala.List")
+  lazy val scalaSome      = selectFullPath("scala.Some")
+  lazy val scalaNone      = selectFullPath("scala.None")
+  lazy val scalaGestalt   = selectFullPath("scala.gestalt")
+  lazy val root           = Ident("_root_")
 
   private def selectFullPath(path: String): TermTree = {
     val parts = path.split('.')
@@ -28,7 +28,7 @@ abstract class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
   private def selectPath(path: String): TermTree = {
     val parts = path.split('.')
 
-    parts.tail.foldLeft[TermTree](Ident(parts.head)) { (prefix, name) =>
+    parts.foldLeft[TermTree](scalaGestalt) { (prefix, name) =>
       prefix.select(name)
     }
   }
@@ -62,7 +62,7 @@ abstract class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
         }
       case Nil =>
         if (acc.isEmpty)
-          scalaLisappliedTo(prefix.map(lift): _*)
+          scalaList.appliedTo(prefix.map(lift): _*)
         else acc.get
     }
 
@@ -76,7 +76,7 @@ abstract class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
     val tripleDotQuasis = treess.flatten.collect{ case quasi: Quasi if quasi.rank == 2 => quasi }
     if (tripleDotQuasis.length == 0) {
       val args = treess.map(liftSeq)
-      scalaLisappliedTo(args: _*)
+      scalaList.appliedTo(args: _*)
     } else if (tripleDotQuasis.length == 1) {
       if (treess.flatten.length == 1) liftQuasi(tripleDotQuasis(0))
       else {
@@ -143,7 +143,7 @@ abstract class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
 
   private object Argss {
     def unapply(tree: m.Tree) = tree match {
-      case m.internal.asHelpers.TermApply(inner, argss) => Some(inner -> argss)
+      case m.internal.ast.Helpers.TermApply(inner, argss) => Some(inner -> argss)
       case inner => Some(inner -> Nil)
     }
   }
@@ -215,7 +215,7 @@ abstract class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
         if (names.length != pats.length)
           error("Patterns not supported in seqence definition", enclosingTree.pos)
 
-        selectPath("SeqDef").appliedTo(mods, scalaLisappliedTo(names.map(Lit(_)) : _*), tpe, rhs)
+        selectPath("SeqDef").appliedTo(mods, scalaList.appliedTo(names.map(Lit(_)) : _*), tpe, rhs)
       }
     }
   }
@@ -470,7 +470,7 @@ abstract class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
     case m.Pat.Bind(m.Pat.Var.Term(m.Term.Name(name)), expr) =>
       selectPath("Pat.Bind").appliedTo(Lit(name), lift(expr))
     case m.Pat.Alternative(lhs, rhs) =>
-      selectPath("Pat.Alt").appliedTo(scalaLisappliedTo(lift(lhs), lift(rhs)))
+      selectPath("Pat.Alt").appliedTo(scalaList.appliedTo(lift(lhs), lift(rhs)))
     case m.Pat.Tuple(args) =>
       selectPath("Pat.Tuple").appliedTo(liftSeq(args))
     case m.Pat.Extract(ref, targs, args) =>
