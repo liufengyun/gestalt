@@ -13,7 +13,7 @@ import Constants._
 import d.modsDeco
 import util.Positions.Position
 
-import scala.collection.mutable.{ ListBuffer, Set }
+import scala.collection.mutable.Set
 
 
 class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
@@ -208,8 +208,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   // new qual.T[A, B](x, y)(z)
   object NewInstance extends NewInstanceImpl {
-    def apply(tpe: TypeTree, argss: Seq[Seq[TermTree]]): TermTree = {
-      ApplySeq(d.Select(d.New(tpe), nme.CONSTRUCTOR), argss).withPosition
+    def apply(qual: Option[Tree], name: String, targs: Seq[TypeTree], argss: Seq[Seq[TermTree]]): TermTree = {
+      ApplySeq(d.Select(d.New(PathType(qual, name, targs)), nme.CONSTRUCTOR), argss).withPosition
     }
   }
 
@@ -224,10 +224,36 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   // types
   object TypeIdent extends TypeIdentImpl {
     def apply(name: String): TypeTree = d.Ident(name.toTypeName).withPosition
+    def unapply(tpe: TypeTree): Option[String] = tpe match {
+      case c.Ident(name) if name.isTypeName => Some(name.show)
+      case _ => None
+    }
   }
 
   object TypeSelect extends TypeSelectImpl {
     def apply(qual: Tree, name: String): TypeTree = d.Select(qual, name.toTypeName).withPosition
+    def unapply(tpe: TypeTree): Option[(Tree, String)] = tpe match {
+      case c.Select(qual, name) if name.isTypeName => Some((qual, name.show))
+      case _ => None
+    }
+  }
+
+  object PathType extends PathTypeImpl {
+    def apply(qual: Option[Tree], name: String, targs: Seq[TypeTree]) = {
+      val select = if (qual.isEmpty) TypeIdent(name) else TypeSelect(qual.get, name)
+      if (targs.isEmpty) select else TypeApply(select, targs.toList)
+    }
+    def unapply(tpe: TypeTree) = {
+      val (select, targs) = tpe match {
+        case TypeApply(select, targs) => select -> targs
+        case other => other -> Nil
+      }
+      select match {
+        case TypeSelect(qual, name) => Some((Some(qual), name, targs))
+        case TypeIdent(name) => Some((None, name, targs))
+        case _ => None
+      }
+    }
   }
 
   object TypeSingleton extends TypeSingletonImpl {
@@ -236,6 +262,10 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   object TypeApply extends TypeApplyImpl {
     def apply(tpe: TypeTree, args: Seq[TypeTree]): TypeTree = d.AppliedTypeTree(tpe, args.toList).withPosition
+    def unapply(tpe: TypeTree): Option[(TypeTree, Seq[TypeTree])] = tpe match {
+      case c.AppliedTypeTree(tpe, targs) => Some((tpe,targs))
+      case _ => None
+    }
   }
 
   object TypeApplyInfix extends TypeApplyInfixImpl {

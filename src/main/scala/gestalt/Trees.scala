@@ -140,12 +140,11 @@ trait Trees extends Params with TypeParams with
 
   val NewInstance: NewInstanceImpl
   trait NewInstanceImpl {
-    def apply(tpe: TypeTree, argss: Seq[Seq[TermTree]]): TermTree
-    def apply(qual: Option[Tree], name: String, targs: Seq[TypeTree], argss: Seq[Seq[TermTree]]): TermTree = {
-      val select = if (qual.isEmpty) TypeIdent(name) else TypeSelect(qual.get, name)
-      val tpe = if (targs.isEmpty) select else TypeApply(select, targs.toList)
-      apply(tpe, argss)
+    def apply(tpe: TypeTree, argss: Seq[Seq[TermTree]]): TermTree = {
+      val PathType(qual, name, targs) = tpe
+      apply(qual, name, targs, argss)
     }
+    def apply(qual: Option[Tree], name: String, targs: Seq[TypeTree], argss: Seq[Seq[TermTree]]): TermTree
   }
 
   val SecondaryCtor: SecondaryCtorImpl
@@ -163,11 +162,19 @@ trait Trees extends Params with TypeParams with
   val TypeIdent: TypeIdentImpl
   trait TypeIdentImpl {
     def apply(name: String): TypeTree
+    def unapply(tpe: TypeTree): Option[String]
   }
 
   val TypeSelect: TypeSelectImpl
   trait TypeSelectImpl {
     def apply(qual: Tree, name: String): TypeTree
+    def unapply(tpe: TypeTree): Option[(Tree, String)]
+  }
+
+  val PathType: PathTypeImpl
+  trait PathTypeImpl {
+    def apply(qual: Option[Tree], name: String, targs: Seq[TypeTree]): TypeTree
+    def unapply(tpe: TypeTree) : Option[(Option[Tree], String, Seq[TypeTree])]
   }
 
   val TypeSingleton: TypeSingletonImpl
@@ -178,6 +185,7 @@ trait Trees extends Params with TypeParams with
   val TypeApply: TypeApplyImpl
   trait TypeApplyImpl {
     def apply(tpe: TypeTree, args: Seq[TypeTree]): TypeTree
+    def unapply(arg: TypeTree): Option[(TypeTree, Seq[TypeTree])]
   }
 
   val TypeApplyInfix: TypeApplyInfixImpl
