@@ -201,13 +201,13 @@ object Transformer {
         case tree =>
           val unlifts = collection.mutable.ListBuffer.empty[(tpd.Tree, Symbol, tpd.Tree)]
           val newTree =
-            tree.transform ({
+            tree.transform {
               case tree @ q"$fun[$tp]($v)" if isUnlift(fun.tpe) =>
                 val name = fresh()
                 val dummy = ValDef(name, tree).symbol
                 unlifts += ((v, dummy, tp))
                 Ident(dummy)
-            } : PartialFunction[tpd.Tree, tpd.Tree])
+            }
 
           unlifts.toList match {
             case List() => None
