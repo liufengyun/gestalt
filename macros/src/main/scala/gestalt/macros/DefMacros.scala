@@ -172,9 +172,9 @@ object Materializer {
 }
 
 object Locations {
-  def currentLocation(): Location = meta {
-    val pos = currentLocation
-    q"scala.gestalt.Location(${Lit(pos.fileName)}, ${Lit(pos.line)}, ${Lit(pos.column)})"
+  def currentLine(): Int = meta {
+    val pos = location
+    Lit(pos.line)
   }
 }
 

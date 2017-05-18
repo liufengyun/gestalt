@@ -5,7 +5,7 @@ case class Location(fileName: String, line: Int, column: Int)
 trait Toolbox extends Trees with Types with Denotations with Symbols with TypeTags {
 
   /** get the location where the def macro is used */
-  def currentLocation: Location
+  def location: Location
 
   /** diagnostics */
   def error(message: String, pos: Pos): Unit

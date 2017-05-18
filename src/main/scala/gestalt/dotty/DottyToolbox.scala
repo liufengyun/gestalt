@@ -1073,7 +1073,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   type Symbol = Symbols.Symbol
 
   /** get the location where the def macro is used */
-  def currentLocation: Location = Location(ctx.compilationUnit.source.file.name, enclosingPosition.line(), enclosingPosition.column())
+  def location: Location = Location(ctx.compilationUnit.source.file.name, enclosingPosition.line(), enclosingPosition.column())
 
   object Type extends TypeImpl {
 
@@ -1192,9 +1192,6 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   /*------------------------------- symbols -------------------------------------*/
   object Symbol extends SymbolImpl {
-    def newValSymbol(name: String, info: Type): Symbol =
-      ctx.newSymbol(ctx.owner, name.toTermName, Flags.EmptyFlags, info)
-
     /** name of a member */
     def name(mem: Symbol): String = mem.showName
 

@@ -6,6 +6,8 @@ import gestalt.core._
 object api extends Toolbox { pkg =>
   private val toolbox: ThreadLocal[Toolbox] = new ThreadLocal[Toolbox]
 
+  type Location = core.Location
+
   def withToolbox[T](tb: Toolbox)(f: => T): T = {
     toolbox.set(tb)
     val res = f
@@ -17,7 +19,7 @@ object api extends Toolbox { pkg =>
   def emptyMods: Mods = toolbox.get.emptyMods.asInstanceOf[Mods]
 
   // diagnostics
-  def currentLocation: Location = toolbox.get.currentLocation
+  def location: Location = toolbox.get.location
 
   def error(message: String, pos: Pos) = {
     val tb = toolbox.get
@@ -109,13 +111,13 @@ object api extends Toolbox { pkg =>
   implicit class UntypedTreeOps(tree: Tree) {
     def pos: Pos = Pos.pos(tree)
 
-    def traverse(tree: Tree)(pf: PartialFunction[Tree, Unit]): Unit =
+    def traverse(pf: PartialFunction[Tree, Unit]): Unit =
       untpd.traverse(tree)(pf)
 
-    def exists(tree: Tree)(pf: PartialFunction[Tree, Boolean]): Boolean =
+    def exists(pf: PartialFunction[Tree, Boolean]): Boolean =
       untpd.exists(tree)(pf)
 
-    def transform(tree: Tree)(pf: PartialFunction[Tree, Tree]): Tree =
+    def transform(pf: PartialFunction[Tree, Tree]): Tree =
       untpd.transform(tree)(pf)
   }
 
@@ -171,13 +173,13 @@ object api extends Toolbox { pkg =>
     def appliedTo(args: tpd.Tree*): tpd.Tree = Apply(tree, args)
     def appliedToTypes(args: tpd.Tree*): tpd.Tree = ApplyType(tree, args)
 
-    def traverse(pf: PartialFunction[tpd.Tree, Unit])(implicit c: Cap): Unit =
+    def traverse(pf: PartialFunction[tpd.Tree, Unit]): Unit =
       tpd.traverse(tree)(pf)
 
-    def exists(pf: PartialFunction[tpd.Tree, Boolean])(implicit c: Cap): Boolean =
+    def exists(pf: PartialFunction[tpd.Tree, Boolean]): Boolean =
       tpd.exists(tree)(pf)
 
-    def transform(pf: PartialFunction[tpd.Tree, tpd.Tree])(implicit c: Cap): tpd.Tree =
+    def transform(pf: PartialFunction[tpd.Tree, tpd.Tree]): tpd.Tree =
       tpd.transform(tree)(pf)
   }
 

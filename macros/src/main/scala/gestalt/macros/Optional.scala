@@ -21,7 +21,7 @@ final class Optional[+A >: Null](val value: A) extends AnyVal {
     val tempValDef = ValDef(fresh("_temp"), prefix)
     val tempIdent = Ident(tempValDef.symbol)
 
-    val newBody = transform(body) {
+    val newBody = body.transform {
       case id @ Ident(_) if id.symbol.get eq param =>
         Select(tempIdent, "value")
     }

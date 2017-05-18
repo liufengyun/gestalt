@@ -14,7 +14,6 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
   lazy val scalaList      = selectFullPath("scala.List")
   lazy val scalaSome      = selectFullPath("scala.Some")
   lazy val scalaNone      = selectFullPath("scala.None")
-  lazy val scalaGestalt   = selectFullPath("scala.gestalt")
   lazy val root           = Ident("_root_")
 
   private def selectFullPath(path: String): TermTree = {
@@ -28,7 +27,7 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
   private def selectPath(path: String): TermTree = {
     val parts = path.split('.')
 
-    parts.foldLeft[TermTree](scalaGestalt) { (prefix, name) =>
+    parts.tail.foldLeft[TermTree](Ident(parts.head)) { (prefix, name) =>
       prefix.select(name)
     }
   }

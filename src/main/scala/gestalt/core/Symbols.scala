@@ -5,9 +5,6 @@ trait Symbols { this: Toolbox =>
 
   def Symbol: SymbolImpl
   trait SymbolImpl {
-     /** create a new symbol with current owner */
-    def newValSymbol(name: String, info: Type): Symbol
-
     /** name of a member */
     def name(mem: Symbol): String
 

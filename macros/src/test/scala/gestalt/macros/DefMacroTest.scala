@@ -174,9 +174,8 @@ class DefMacroTest extends TestSuite {
 
   test("location") {
     import Locations._
-    val pos = currentLocation()
-    assert(pos.fileName == "DefMacroTest.scala")
-    assert(pos.line == 176) // starts from 0
+    val line = currentLine()
+    assert(line == 176) // starts from 0
   }
 
   test("case info") {
