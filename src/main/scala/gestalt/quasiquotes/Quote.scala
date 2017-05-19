@@ -590,7 +590,7 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
     case m.Import(importers) =>
       selectPath("Import").appliedTo(liftSeq(importers))
     case m.Importer(ref, importees) =>
-      selectPath("ImporItem").appliedTo(lift(ref), liftSeq(importees))
+      selectPath("ImportItem").appliedTo(lift(ref), liftSeq(importees))
     case m.Importee.Wildcard() =>
       selectPath("ImporName").appliedTo(Lit("_"))
     case m.Importee.Name(m.Name.Indeterminate(name)) =>
