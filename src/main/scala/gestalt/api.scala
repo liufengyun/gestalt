@@ -1,9 +1,12 @@
 package scala.gestalt
 
-import gestalt.core._
+import scala.gestalt.core._
 
 // package object causes compilation errors
-object api extends Toolbox { pkg =>
+object api extends Toolbox {
+  /** The marker for meta block to highlight the different semantics */
+  def meta(body: Tree): Nothing = ???
+
   /**------------------------------------------------*/
   private val toolbox: ThreadLocal[Toolbox] = new ThreadLocal[Toolbox]
 
@@ -326,8 +329,9 @@ object api extends Toolbox { pkg =>
     def parents: Seq[InitCall] = Class.parents(tree)
     def selfOpt: Option[Self] = Class.selfOpt(tree)
     def stats: Seq[Tree] = Class.stats(tree)
-    def copy(mods: Mods = Class.mods(tree), paramss: Seq[Seq[Param]] = Class.paramss(tree), stats: Seq[Tree] = Class.stats(tree)): Class
-    = {
+    def copy(mods: Mods = Class.mods(tree),
+             paramss: Seq[Seq[Param]] = Class.paramss(tree),
+             stats: Seq[Tree] = Class.stats(tree)): Class = {
       val tree1 = Class.copyMods(tree)(mods)
       val tree2 = Class.copyParamss(tree1)(paramss)
       Class.copyStats(tree2)(stats)
@@ -381,7 +385,7 @@ object api extends Toolbox { pkg =>
   object ApplySeq {
     def unapply(call: TermTree): Option[(Tree, Seq[Seq[TermTree]])] = {
       def recur(acc: Seq[Seq[TermTree]], term: TermTree): (TermTree, Seq[Seq[TermTree]]) = term match {
-        case pkg.Apply(fun, args) => recur(args +: acc, fun) // inner-most is in the front
+        case api.Apply(fun, args) => recur(args +: acc, fun) // inner-most is in the front
         case fun => (fun, acc)
       }
 
