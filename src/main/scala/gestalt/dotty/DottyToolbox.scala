@@ -1,6 +1,6 @@
 package scala.gestalt.dotty
 
-import scala.gestalt.{Toolbox => Tbox, Location, Cap, cap}
+import scala.gestalt.core.{ Toolbox => Tbox, Location }
 
 import dotty.tools.dotc._
 import core._
@@ -45,17 +45,10 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   /*------------------------------ positions ------------------------------*/
   type Pos = Position
 
-  object Pos extends PositionImpl {
+  object Pos extends PosImpl {
     def pos(tree: Tree): Pos = tree.pos
 
     def pos(tree: tpd.Tree)(implicit c: Cap): Pos = tree.pos
-  }
-
-  /*------------------------------ typed trees ------------------------------*/
-  object tpd extends TypedTrees {
-    type Tree    = t.Tree
-    type ValDef  = t.ValDef
-    type Param   = t.ValDef
   }
 
   /*------------------------------ modifiers ------------------------------*/
@@ -147,6 +140,9 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   implicit class TreeHelper(tree: d.Tree) {
     def withPosition[T <: Tree] = tree.withPos(enclosingPosition).asInstanceOf[T]
   }
+
+  def ApplySeq(fun: TermTree, argss: Seq[Seq[TermTree]]): TermTree =
+    argss.foldLeft(fun) { (acc, args) => Apply(acc, args) }
 
   /*------------------------------ trees ------------------------------*/
 
@@ -240,7 +236,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def apply(tpe: TypeTree, args: Seq[TypeTree]): TypeTree = d.AppliedTypeTree(tpe, args.toList).withPosition
   }
 
-  object TypeApplyInfix extends TypeApplyInfixImpl {
+  object TypeInfix extends TypeInfixImpl {
     def apply(lhs: TypeTree, op: String, rhs: TypeTree): TypeTree =
       d.InfixOp(lhs, d.Ident(op.toTypeName), rhs).withPosition
   }
@@ -669,7 +665,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   object SeqLiteral extends SeqLiteralImpl {
     def apply(trees: Seq[tpd.Tree], tp: Type): tpd.Tree = {
       val tpSeq = ctx.definitions.RepeatedParamType.appliedTo(tp)
-      t.Typed(t.SeqLiteral(trees.toList, tp.toTree), t.TypeTree(tpSeq))
+      t.Typed(t.SeqLiteral(trees.toList, t.TypeTree(tp)), t.TypeTree(tpSeq))
     }
 
     def unapply(tree: tpd.Tree): Option[Seq[tpd.Tree]] = tree match {
@@ -1009,49 +1005,65 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   }
 
 
-  /*------------------------------- traversers -------------------------------------*/
-  def traverse(tree: Tree)(pf: PartialFunction[Tree, Unit]): Unit =
-     new d.UntypedTreeMap() {
-      override def transform(tree: Tree)(implicit ctx: Context) = {
-        pf.lift(tree).getOrElse(super.transform(tree))
-        tree
+  /*------------------------------- TreeOps-------------------------------------*/
+
+  object untpd extends untpdImpl {
+    def traverse(tree: Tree)(pf: PartialFunction[Tree, Unit]): Unit =
+      new d.UntypedTreeMap() {
+        override def transform(tree: Tree)(implicit ctx: Context) = {
+          pf.lift(tree).getOrElse(super.transform(tree))
+          tree
+        }
+      }.transform(tree)
+
+    def exists(tree: Tree)(pf: PartialFunction[Tree, Boolean]): Boolean = {
+      var r = false
+      traverse(tree) {
+        case t if pf.isDefinedAt(t) && !r => r = pf(t)
       }
-    }.transform(tree)
-
-  def exists(tree: Tree)(pf: PartialFunction[Tree, Boolean]): Boolean = {
-    var r = false
-    traverse(tree) {
-      case t if pf.isDefinedAt(t) && !r => r = pf(t)
+      r
     }
-    r
+
+    def transform(tree: Tree)(pf: PartialFunction[Tree, Tree]): Tree = {
+      new d.UntypedTreeMap() {
+        override def transform(tree: Tree)(implicit ctx: Context) =
+          pf.lift(tree).getOrElse(super.transform(tree))
+      }.transform(tree)
+    }
   }
 
-  def transform(tree: Tree)(pf: PartialFunction[Tree, Tree]): Tree = {
-    new d.UntypedTreeMap() {
-      override def transform(tree: Tree)(implicit ctx: Context) =
-        pf.lift(tree).getOrElse(super.transform(tree))
-    }.transform(tree)
-  }
 
-  def traverse(tree: tpd.Tree)(pf: PartialFunction[tpd.Tree, Unit])(implicit c: Cap): Unit =
-    new t.TreeTraverser {
-      override def traverse(tree: tpd.Tree)(implicit ctx: Context) =
-        pf.lift(tree).getOrElse(super.traverseChildren(tree))
-    }.traverse(tree)
+  object tpd extends tpdImpl {
+    type Tree    = t.Tree
+    type ValDef  = t.ValDef
+    type Param   = t.ValDef
 
-  def exists(tree: tpd.Tree)(pf: PartialFunction[tpd.Tree, Boolean])(implicit c: Cap): Boolean = {
-    var r = false
-    traverse(tree) {
-      case t if pf.isDefinedAt(t) && !r => r = pf(t)
-    } (cap)
-    r
-  }
+    def traverse(tree: tpd.Tree)(pf: PartialFunction[tpd.Tree, Unit]): Unit =
+      new t.TreeTraverser {
+        override def traverse(tree: tpd.Tree)(implicit ctx: Context) =
+          pf.lift(tree).getOrElse(super.traverseChildren(tree))
+      }.traverse(tree)
 
-  def transform(tree: tpd.Tree)(pf: PartialFunction[tpd.Tree, tpd.Tree])(implicit c: Cap): tpd.Tree = {
-    new t.TreeMap() {
-      override def transform(tree: tpd.Tree)(implicit ctx: Context) =
-        pf.lift(tree).getOrElse(super.transform(tree))
-    }.transform(tree)
+    def exists(tree: tpd.Tree)(pf: PartialFunction[tpd.Tree, Boolean]): Boolean = {
+      var r = false
+      traverse(tree) {
+        case t if pf.isDefinedAt(t) && !r => r = pf(t)
+      }
+      r
+    }
+
+    def transform(tree: tpd.Tree)(pf: PartialFunction[tpd.Tree, tpd.Tree]): tpd.Tree = {
+      new t.TreeMap() {
+        override def transform(tree: tpd.Tree)(implicit ctx: Context) =
+          pf.lift(tree).getOrElse(super.transform(tree))
+      }.transform(tree)
+    }
+
+    /** subst symbols in tree */
+    def subst(tree: tpd.Tree)(from: List[Symbol], to: List[Symbol]): tpd.Tree = new t.TreeOps(tree).subst(from, to)
+
+    /** type associated with the tree */
+    def typeOf(tree: tpd.Tree): Type = tree.tpe
   }
 
   /*------------------------------- types -------------------------------------*/
@@ -1061,7 +1073,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   type Symbol = Symbols.Symbol
 
   /** get the location where the def macro is used */
-  def currentLocation: Location = Location(ctx.compilationUnit.source.file.name, enclosingPosition.line(), enclosingPosition.column())
+  def location: Location = Location(ctx.compilationUnit.source.file.name, enclosingPosition.line(), enclosingPosition.column())
 
   object Type extends TypeImpl {
 
@@ -1081,11 +1093,6 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
     /** returning a type referring to a term definition */
     def termRef(path: String): Type = ctx.staticRef(path.toTermName, false).symbol.termRef
-
-    /** type associated with the tree */
-    def typeOf(tree: tpd.Tree): Type = tree.tpe
-
-    def hasType(tree: tpd.Tree): Boolean = tree.hasType
 
     /** does the type refer to a case class? */
     def isCaseClass(tp: Type): Boolean = tp.classSymbol.is(Flags.Case)
@@ -1184,18 +1191,12 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   }
 
   /*------------------------------- symbols -------------------------------------*/
-  def newValSymbol(name: String, info: Type): Symbol =
-    ctx.newSymbol(ctx.owner, name.toTermName, Flags.EmptyFlags, info)
-
   object Symbol extends SymbolImpl {
     /** name of a member */
     def name(mem: Symbol): String = mem.showName
 
     /** type of a member with respect to a prefix */
-    def asSeenFrom(mem: Symbol, prefix: Type): Type = mem.asSeenFrom(prefix)
-
-    /** subst symbols in tree */
-    def subst(tree: tpd.Tree)(from: List[Symbol], to: List[Symbol]): tpd.Tree = new t.TreeOps(tree).subst(from, to)
+    def asSeenFrom(mem: Symbol, prefix: Type): Type = mem.asSeenFrom(prefix).info
   }
 
   def ensureOwner(tree: tpd.Tree, owner: Symbol): tpd.Tree = {

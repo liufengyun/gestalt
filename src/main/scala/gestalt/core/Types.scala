@@ -1,36 +1,9 @@
-package scala.gestalt
+package scala.gestalt.core
 
 trait Types extends MethodTypes { this: Toolbox =>
   type Type >: Null <: AnyRef
 
-  implicit class TypeOps(tp: Type) {
-    def =:=(tp2: Type) = Type.=:=(tp, tp2)
-    def <:<(tp2: Type) = Type.<:<(tp, tp2)
-    def isCaseClass = Type.isCaseClass(tp)
-    def caseFields: Seq[Denotation] = Type.caseFields(tp)
-    def fieldIn(name: String): Option[Denotation] = Type.fieldIn(tp, name)
-    def fieldsIn: Seq[Denotation] = Type.fieldsIn(tp)
-    def methodIn(name: String): Seq[Denotation] = Type.methodIn(tp, name)
-    def methodsIn: Seq[Denotation] = Type.methodsIn(tp)
-    def method(name: String): Seq[Denotation] = Type.method(tp, name)
-    def methods: Seq[Denotation] = Type.methods(tp)
-    def companion: Option[Type] = Type.companion(tp)
-    def show: String = Type.show(tp)
-    def widen: Type = Type.widen(tp)
-    def denot: Option[Denotation] = Type.denot(tp)
-    def symbol: Option[Symbol] = denot.map(_.symbol)
-    def appliedTo(args: Type*): Type = Type.appliedTo(tp, args)
-    def toTree: tpd.Tree = Type.toTree(tp)
-  }
-
-  implicit class TreeTypeOps(tree: tpd.Tree) {
-    def tpe: Type = Type.typeOf(tree)
-    def wrap: Splice = TypedSplice(tree)
-    def subst(from: List[Symbol], to: List[Symbol]): tpd.Tree = Symbol.subst(tree)(from, to)
-    def symbol: Option[Symbol] = tree.tpe.denot.map(_.symbol)
-  }
-
-  val Type: TypeImpl
+  def Type: TypeImpl
   trait TypeImpl {
     /** pretty print type */
     def show(tp: Type): String
@@ -49,16 +22,6 @@ trait Types extends MethodTypes { this: Toolbox =>
 
     /** returning a type referring to a global value definition */
     def termRef(path: String): Type
-
-    /** type associated with the tree */
-    def typeOf(tree: tpd.Tree): Type
-
-    /** whether the tree is typed or not
-     *
-     *  @note this is temporary, once we separate typed trees from untped
-     *        trees, this should be removed.
-     */
-    def hasType(tree: tpd.Tree): Boolean
 
     /** does the type refer to a case class? */
     def isCaseClass(tp: Type): Boolean
@@ -105,7 +68,7 @@ trait Types extends MethodTypes { this: Toolbox =>
 
   /*-------------------- type extractors ---------------------*/
 
-  val ByNameType: ByNameTypeImpl
+  def ByNameType: ByNameTypeImpl
   trait ByNameTypeImpl {
     def unapply(tp: Type): Option[Type]
   }
@@ -114,16 +77,10 @@ trait Types extends MethodTypes { this: Toolbox =>
 trait MethodTypes { this: Types =>
   type MethodType >: Null <: Type
 
-  implicit class MethodTypeOps(tp: MethodType) {
-    def paramInfos: Seq[Type] = MethodType.paramInfos(tp)
-    def instantiate(params: Seq[Type]): Type = MethodType.instantiate(tp)(params)
-  }
-
-  val MethodType: MethodTypeImpl
+  def MethodType: MethodTypeImpl
   trait MethodTypeImpl {
     def paramInfos(tp: MethodType): Seq[Type]
     def instantiate(tp: MethodType)(params: Seq[Type]): Type
     def unapply(tp: Type): Option[MethodType]
   }
 }
-
