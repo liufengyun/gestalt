@@ -1,4 +1,4 @@
-import scala.gestalt._
+import scala.gestalt.api._
 
 object JsonMacros {
 
@@ -23,35 +23,38 @@ object JsonMacros {
     * @return new anonymous Format class
     */
   def format[T](): Format[T] = meta {
-    import toolbox._
+    import scala.gestalt.options.unsafe
     val tpe: Type = T.tpe
     if (!tpe.isCaseClass) {
       error("Not a case class", T.pos)
       q"???"
     } else {
       val fields = tpe.caseFields
-      val namesAndTypes = fields.map {
-        f => f.name -> f.info
+      val fieldsWithTypes = fields.map {
+        f => f-> f.info
       }
 
-      case class JsonItem(name: String, pairOut: TermTree, readOption: ValDef, implicitFormat: Option[ValDef])
-      val jsonItems: Seq[JsonItem] = namesAndTypes.map {
-        case (name, stringType) if stringType =:= Type.typeRef("java.lang.String") =>
-          JsonItem(name,
-            pairOut = Tuple(Seq(Lit(name), q"JsString(${Select(Ident("o"), name)})")),
+      case class JsonItem(symbol: Symbol, pairOut: TermTree, readOption: ValDef, implicitFormat: Option[ValDef])
+      val jsonItems: List[JsonItem] = fieldsWithTypes.map {
+        case (field, stringType) if stringType =:= Type.typeRef("java.lang.String") =>
+          val name = field.name
+          JsonItem(field.symbol,
+            pairOut = Tuple(List(Lit(name), q"JsString(o.$name)")),
             readOption = q"val $name = obj.firstValue(${Lit(name)}).collect{case JsString(value) => value}",
             implicitFormat = None
           )
-        case (name, otherType) =>
+        case (field, otherType) =>
+          val name = field.name
           val implFormaterName = name + "_formatter"
-          JsonItem(name,
-            pairOut = Tuple(Seq(Lit(name), q"${Ident(implFormaterName)}.toJson(${Select(Ident("o"), name)})")),
-            readOption = q"val $name = obj.firstValue(${Lit(name)}).flatMap(x =>${Ident(implFormaterName)}.fromJson(x))",
+          val formatterIdent = Ident(implFormaterName)
+          JsonItem(field.symbol,
+            pairOut = Tuple(List(Lit(name), q"$formatterIdent.toJson(o.$name)")),
+            readOption = q"val $name = obj.firstValue(${Lit(name)}).flatMap(x =>$formatterIdent.fromJson(x))",
             implicitFormat = Some(q"val $implFormaterName=implicitly[Format[${otherType.toTree}]]")
           )
       }
-      val allDefined = q"${jsonItems.map(i => q"${Ident(i.name)}.isDefined").reduceLeft((a, b) => q"$a && $b")}"
-      val construction = NewInstance(T, Seq(jsonItems.map(i => q"${Ident(i.name)}.get")))
+      val allDefined = q"${jsonItems.map(i => q"${Ident(i.symbol)}.isDefined").reduceLeft((a, b) => q"$a && $b")}"
+      val construction = NewInstance(T, List(jsonItems.map(i => q"${Ident(i.symbol)}.get")))
       val fromJson =
         q"""json match{
               case obj: JsObject =>
