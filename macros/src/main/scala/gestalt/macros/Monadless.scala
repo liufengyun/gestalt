@@ -14,7 +14,7 @@ trait Monadless[Monad[_]] {
   */
 
   def lift[T](body: T)(implicit m: WeakTypeTag[Monad[_]]): Monad[T] = meta {
-    val tree: Tree = Transformer(this, body)
+    val tree = Transformer(this, body)
 
     val unliftSym = this.tpe.method("unlift").headOption.map(_.symbol)
     def isUnlift(tp: Type) = tp.denot.map(_.symbol) == unliftSym
@@ -240,7 +240,7 @@ object Transformer {
 
                 Block(iter +: elements, content)
               }
-              Some(q"${Resolve.map(tree.pos, collect).appliedToTypes(types.head.tpe.toTree)}($fun)")
+              Some(Resolve.map(tree.pos, collect).appliedToTypes(types.head.tpe.toTree).appliedTo(fun))
           }
       }
     }

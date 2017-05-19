@@ -4,9 +4,8 @@ import gestalt.core._
 
 // package object causes compilation errors
 object api extends Toolbox { pkg =>
+  /**------------------------------------------------*/
   private val toolbox: ThreadLocal[Toolbox] = new ThreadLocal[Toolbox]
-
-  type Location = core.Location
 
   def withToolbox[T](tb: Toolbox)(f: => T): T = {
     toolbox.set(tb)
@@ -16,8 +15,13 @@ object api extends Toolbox { pkg =>
     res
   }
 
+  /**------------------------------------------------*/
+  type Unsafe >: Null
+  type Location = core.Location
+
   def emptyMods: Mods = toolbox.get.emptyMods.asInstanceOf[Mods]
 
+  /**------------------------------------------------*/
   // diagnostics
   def location: Location = toolbox.get.location
 
@@ -32,8 +36,25 @@ object api extends Toolbox { pkg =>
     tb.abort(message, pos.asInstanceOf[tb.Pos])
   }
 
+  /**------------------------------------------------*/
   /** generate fresh unique name */
   def fresh(prefix: String = "$local"): String  = toolbox.get.fresh(prefix)
+
+  /** The root package
+   *
+   *  For hygiene, by default only fully-qualified names are allowed, unless
+   *  `scala.gestalt.options.unsafe` is imported.
+   *
+   *  Ideally, literal types fit best here after it's supported in scalac:
+   *
+   *      def Ident(name: "_root_"): Tree
+   *      def Ident(name: "scala"): Tree
+   *
+   */
+  def root: TermTree = {
+    import options.unsafe
+    Ident("_root_")
+  }
 
   /**------------------------------------------------*/
   // definitions
@@ -122,8 +143,26 @@ object api extends Toolbox { pkg =>
   }
 
   implicit class UntypedTermTreeOps(tree: TermTree) {
-    def select(name: String): TermTree = Select(tree, name)
     def appliedTo(args: TermTree*): TermTree = Apply(tree, args.toList)
+    def selectType(path: String): TypeTree = {
+      val parts = path.split('.')
+
+      val prefix = parts.init.foldLeft[TermTree](tree) { (prefix, name) =>
+        prefix.select(name)
+      }
+
+      TypeSelect(prefix, parts.last)
+    }
+
+    def select(path: String): TermTree = {
+      val parts = path.split('.')
+
+      val prefix = parts.init.foldLeft[TermTree](tree) { (prefix, name) =>
+        prefix.select(name)
+      }
+
+      Select(prefix, parts.last)
+    }
   }
 
   object tpd extends tpdImpl {
@@ -421,5 +460,6 @@ object api extends Toolbox { pkg =>
       def unapply(tree: Tree): Any = ???
     }
   }
-
 }
+
+

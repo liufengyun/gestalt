@@ -221,7 +221,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   // types
   object TypeIdent extends TypeIdentImpl {
-    def apply(name: String): TypeTree = d.Ident(name.toTypeName).withPosition
+    def apply(name: String)(implicit c: Unsafe): TypeTree = d.Ident(name.toTypeName).withPosition
   }
 
   object TypeSelect extends TypeSelectImpl {
@@ -440,7 +440,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       d.Ident(name.toTermName).withPosition
 
     def Ascribe(name: String, tp: TypeTree): PatTree =
-      d.Typed(Ident(name), tp).withPosition
+      d.Typed(d.Ident(name.toTermName), tp).withPosition
 
     def Unapply(fun: TermTree, args: Seq[PatTree]): PatTree =
       d.Apply(fun, args.toList).withPosition
@@ -485,7 +485,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   }
 
   object Ident extends IdentImpl {
-    def apply(name: String): Ident = d.Ident(name.toTermName).withPosition
+    def apply(name: String)(implicit c: Unsafe): Ident = d.Ident(name.toTermName).withPosition
     def unapply(tree: Tree): Option[String] = tree match {
       case c.Ident(name) if name.isTermName => Some(name.show)
       case _ => None

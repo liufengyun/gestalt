@@ -18,6 +18,10 @@ trait Trees extends Params with TypeParams with
   type Cap >: Null
   implicit val cap: Cap = null
 
+  // An Unsafe capability is required to call the untyped Ident(name) and TypeIdent
+  // in order to achieve hygiene
+  type Unsafe
+
   // safety by construction -- implementation can have TypeTree = Tree
   type Tree     >: Null <: AnyRef
   type TypeTree >: Null <: Tree
@@ -144,7 +148,7 @@ trait Trees extends Params with TypeParams with
   // type trees
   def TypeIdent: TypeIdentImpl
   trait TypeIdentImpl {
-    def apply(name: String): TypeTree
+    def apply(name: String)(implicit unsafe: Unsafe): TypeTree
   }
 
   def TypeSelect: TypeSelectImpl
@@ -301,7 +305,7 @@ trait Trees extends Params with TypeParams with
     def Var(name: String): PatTree
     def Ascribe(name: String, tp: TypeTree): PatTree
     def Bind(name: String, expr: PatTree): PatTree
-    def Ident(name: String): PatTree = toolbox.Ident(name)
+    def Ident(name: String)(implicit unsafe: Unsafe): PatTree = toolbox.Ident(name)
     def Lit(value: Any): PatTree = toolbox.Lit(value)
     def Alt(trees: Seq[PatTree]): PatTree
     def Unapply(fun: TermTree, args: Seq[PatTree]): PatTree
@@ -346,7 +350,7 @@ trait Trees extends Params with TypeParams with
 
   def Ident: IdentImpl
   trait IdentImpl {
-    def apply(name: String): Ident
+    def apply(name: String)(implicit unsafe: Unsafe): Ident
     def apply(symbol: Symbol): tpd.Tree
     def unapply(tree: Tree): Option[String]
     def unapply(tree: tpd.Tree)(implicit c: Cap): Option[String]

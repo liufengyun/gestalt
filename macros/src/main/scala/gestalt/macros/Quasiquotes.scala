@@ -2,6 +2,7 @@ import scala.annotation.StaticAnnotation
 import scala.collection.immutable.Seq
 
 import scala.gestalt.api._
+import scala.gestalt.options.unsafe
 
 object Quasiquotes {
   implicit class TestHelper(lhs: Any) extends AnyVal {
