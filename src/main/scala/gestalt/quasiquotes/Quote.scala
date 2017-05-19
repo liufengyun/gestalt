@@ -590,15 +590,15 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
     case m.Import(importers) =>
       selectPath("Import").appliedTo(liftSeq(importers))
     case m.Importer(ref, importees) =>
-      selectPath("ImporItem").appliedTo(lift(ref), liftSeq(importees))
+      selectPath("Import.Item").appliedTo(lift(ref), liftSeq(importees))
     case m.Importee.Wildcard() =>
-      selectPath("ImporName").appliedTo(Lit("_"))
+      selectPath("Import.Name").appliedTo(Lit("_"))
     case m.Importee.Name(m.Name.Indeterminate(name)) =>
-      selectPath("ImporName").appliedTo(Lit(name))
+      selectPath("Import.Name").appliedTo(Lit(name))
     case m.Importee.Rename(m.Name.Indeterminate(name), m.Name.Indeterminate(rename)) =>
-      selectPath("ImporRename").appliedTo(Lit(name), Lit(rename))
+      selectPath("Import.Rename").appliedTo(Lit(name), Lit(rename))
     case m.Importee.Unimport(m.Name.Indeterminate(name)) =>
-      selectPath("ImporHide").appliedTo(Lit(name))
+      selectPath("Import.Hide").appliedTo(Lit(name))
 
     case m.Case(pat, cond, body) =>
       selectPath("Case").appliedTo(lift(pat), liftOpt(cond), lift(body))
