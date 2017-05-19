@@ -155,13 +155,9 @@ object api extends Toolbox { pkg =>
     }
 
     def select(path: String): TermTree = {
-      val parts = path.split('.')
-
-      val prefix = parts.init.foldLeft[TermTree](tree) { (prefix, name) =>
-        prefix.select(name)
+      parts.foldLeft[TermTree](tree) { (prefix, name) =>
+        Select(prefix, name)
       }
-
-      Select(prefix, parts.last)
     }
   }
 
