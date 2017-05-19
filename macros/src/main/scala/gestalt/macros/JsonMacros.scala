@@ -53,8 +53,8 @@ object JsonMacros {
             implicitFormat = Some(q"val $implFormaterName=implicitly[Format[${otherType.toTree}]]")
           )
       }
-      val allDefined = q"${jsonItems.map(i => q"${Ident(i.symbol)}.isDefined").reduceLeft((a, b) => q"$a && $b")}"
-      val construction = NewInstance(T, List(jsonItems.map(i => q"${Ident(i.symbol)}.get")))
+      val allDefined = q"${jsonItems.map(i => q"${Ident(i.symbol)}.isDefined".wrap).reduceLeft[TermTree]((a, b) => q"$a && $b")}"
+      val construction = NewInstance(T, List(jsonItems.map(i => q"${Ident(i.symbol)}.get".wrap)))
       val fromJson =
         q"""json match{
               case obj: JsObject =>
