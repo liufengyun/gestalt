@@ -7,6 +7,8 @@ final class Optional[+A >: Null](val value: A) extends AnyVal {
   def isEmpty = value == null
 
   def getOrElse[B >: A](alt: => B)(implicit m: WeakTypeTag[A] @uncheckVar): B = meta {
+    import scala.gestalt.options.unsafe
+
     val temp = fresh("_temp")
     val tempIdent = Ident(temp)
 

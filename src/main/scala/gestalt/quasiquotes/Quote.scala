@@ -4,25 +4,17 @@ import scala.collection.immutable.Seq
 import scala.{meta => m}
 import scala.compat.Platform.EOL
 import scala.gestalt.api._
+import scala.gestalt.options.unsafe
 
 /** Lift scala.meta trees as trees */
 class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
   type Quasi = m.internal.ast.Quasi
 
   // lifted trees
-  lazy val scalaNil       = selectFullPath("scala.Nil")
-  lazy val scalaList      = selectFullPath("scala.List")
-  lazy val scalaSome      = selectFullPath("scala.Some")
-  lazy val scalaNone      = selectFullPath("scala.None")
-  lazy val root           = Ident("_root_")
-
-  private def selectFullPath(path: String): TermTree = {
-    val parts = path.split('.')
-
-    parts.foldLeft[TermTree](root) { (prefix, name) =>
-      prefix.select(name)
-    }
-  }
+  lazy val scalaNil       = root.select("scala.Nil")
+  lazy val scalaList      = root.select("scala.List")
+  lazy val scalaSome      = root.select("scala.Some")
+  lazy val scalaNone      = root.select("scala.None")
 
   private def selectPath(path: String): TermTree = {
     val parts = path.split('.')
@@ -244,7 +236,7 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
       case _ =>
         if (!isTerm) {
           error("Match modifiers in syntax is problematic and not supported. Match the modifiers with a variable instead or $_ to ignore them.", enclosingTree.pos)
-          return Ident("_")
+          return selectPath("Pat.Var").appliedTo(Lit("_"))
         }
     }
 

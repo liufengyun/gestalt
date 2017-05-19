@@ -4,9 +4,8 @@ import gestalt.core._
 
 // package object causes compilation errors
 object api extends Toolbox { pkg =>
+  /**------------------------------------------------*/
   private val toolbox: ThreadLocal[Toolbox] = new ThreadLocal[Toolbox]
-
-  type Location = core.Location
 
   def withToolbox[T](tb: Toolbox)(f: => T): T = {
     toolbox.set(tb)
@@ -16,8 +15,13 @@ object api extends Toolbox { pkg =>
     res
   }
 
+  /**------------------------------------------------*/
+  type Unsafe >: Null
+  type Location = core.Location
+
   def emptyMods: Mods = toolbox.get.emptyMods.asInstanceOf[Mods]
 
+  /**------------------------------------------------*/
   // diagnostics
   def location: Location = toolbox.get.location
 
@@ -32,8 +36,25 @@ object api extends Toolbox { pkg =>
     tb.abort(message, pos.asInstanceOf[tb.Pos])
   }
 
+  /**------------------------------------------------*/
   /** generate fresh unique name */
   def fresh(prefix: String = "$local"): String  = toolbox.get.fresh(prefix)
+
+  /** The root package
+   *
+   *  For hygiene, by default only fully-qualified names are allowed, unless
+   *  `scala.gestalt.options.unsafe` is imported.
+   *
+   *  Ideally, literal types fit best here after it's supported in scalac:
+   *
+   *      def Ident(name: "_root_"): Tree
+   *      def Ident(name: "scala"): Tree
+   *
+   */
+  def root: TermTree = {
+    import options.unsafe
+    Ident("_root_")
+  }
 
   /**------------------------------------------------*/
   // definitions
@@ -122,8 +143,23 @@ object api extends Toolbox { pkg =>
   }
 
   implicit class UntypedTermTreeOps(tree: TermTree) {
-    def select(name: String): TermTree = Select(tree, name)
     def appliedTo(args: TermTree*): TermTree = Apply(tree, args.toList)
+    def selectType(path: String): TypeTree = {
+      val parts = path.split('.')
+
+      val prefix = parts.init.foldLeft[TermTree](tree) { (prefix, name) =>
+        Select(prefix, name)
+      }
+
+      TypeSelect(prefix, parts.last)
+    }
+
+    def select(path: String): TermTree = {
+      val parts = path.split('.')
+      parts.foldLeft[TermTree](tree) { (prefix, name) =>
+        Select(prefix, name)
+      }
+    }
   }
 
   object tpd extends tpdImpl {
@@ -364,7 +400,10 @@ object api extends Toolbox { pkg =>
   implicit class TypeOps(tp: Type) {
     def =:=(tp2: Type) = Type.=:=(tp, tp2)
     def <:<(tp2: Type) = Type.<:<(tp, tp2)
-    def isCaseClass = Type.isCaseClass(tp)
+    def isCaseClass = Type.classSymbol(tp) match {
+      case Some(cls) => Symbol.isCase(cls)
+      case None      => false
+    }
     def caseFields: Seq[Denotation] = Type.caseFields(tp)
     def fieldIn(name: String): Option[Denotation] = Type.fieldIn(tp, name)
     def fieldsIn: Seq[Denotation] = Type.fieldsIn(tp)
@@ -392,10 +431,20 @@ object api extends Toolbox { pkg =>
   /**--------------------- Symbols ---------------------------------*/
   def Symbol         = toolbox.get.Symbol.asInstanceOf[SymbolImpl]
 
-
   implicit class SymbolOps(sym: Symbol) {
     def name: String = Symbol.name(sym)
     def asSeenFrom(prefix: Type): Type = Symbol.asSeenFrom(sym, prefix)
+    def isCase: Boolean = Symbol.isCase(sym)
+    def isTrait: Boolean = Symbol.isTrait(sym)
+    def isPrivate: Boolean = Symbol.isPrivate(sym)
+    def isProtected: Boolean = Symbol.isProtected(sym)
+    def isOverride: Boolean = Symbol.isOverride(sym)
+    def isFinal: Boolean = Symbol.isFinal(sym)
+    def isImplicit: Boolean = Symbol.isImplicit(sym)
+    def isLazy: Boolean = Symbol.isLazy(sym)
+    def isSealed: Boolean = Symbol.isSealed(sym)
+    def isAbstract: Boolean = Symbol.isAbstract(sym)
+    def isMutable: Boolean = Symbol.isMutable(sym)
   }
 
   /**--------------------- Denotations ---------------------------------*/
@@ -421,5 +470,6 @@ object api extends Toolbox { pkg =>
       def unapply(tree: Tree): Any = ???
     }
   }
-
 }
+
+

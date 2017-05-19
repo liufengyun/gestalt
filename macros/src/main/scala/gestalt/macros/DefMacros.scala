@@ -1,4 +1,5 @@
 import scala.gestalt.api._
+import scala.gestalt.options.unsafe
 
 object plusObject {
   def apply(a: Int, b: Int): Int = meta {

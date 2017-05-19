@@ -23,8 +23,8 @@ trait Types extends MethodTypes { this: Toolbox =>
     /** returning a type referring to a global value definition */
     def termRef(path: String): Type
 
-    /** does the type refer to a case class? */
-    def isCaseClass(tp: Type): Boolean
+    /** class symbol associated with the type */
+    def classSymbol(tp: Type): Option[Symbol]
 
     /** fields of a case class type -- only the ones declared in primary constructor */
     def caseFields(tp: Type): Seq[Denotation]
