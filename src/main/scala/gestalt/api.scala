@@ -403,7 +403,10 @@ object api extends Toolbox { pkg =>
   implicit class TypeOps(tp: Type) {
     def =:=(tp2: Type) = Type.=:=(tp, tp2)
     def <:<(tp2: Type) = Type.<:<(tp, tp2)
-    def isCaseClass = Type.isCaseClass(tp)
+    def isCaseClass = Type.classSymbol(tp) match {
+      case Some(cls) => Symbol.isCase(cls)
+      case None      => false
+    }
     def caseFields: Seq[Denotation] = Type.caseFields(tp)
     def fieldIn(name: String): Option[Denotation] = Type.fieldIn(tp, name)
     def fieldsIn: Seq[Denotation] = Type.fieldsIn(tp)
@@ -431,10 +434,20 @@ object api extends Toolbox { pkg =>
   /**--------------------- Symbols ---------------------------------*/
   def Symbol         = toolbox.get.Symbol.asInstanceOf[SymbolImpl]
 
-
   implicit class SymbolOps(sym: Symbol) {
     def name: String = Symbol.name(sym)
     def asSeenFrom(prefix: Type): Type = Symbol.asSeenFrom(sym, prefix)
+    def isCase: Boolean = Symbol.isCase(sym)
+    def isTrait: Boolean = Symbol.isTrait(sym)
+    def isPrivate: Boolean = Symbol.isPrivate(sym)
+    def isProtected: Boolean = Symbol.isProtected(sym)
+    def isOverride: Boolean = Symbol.isOverride(sym)
+    def isFinal: Boolean = Symbol.isFinal(sym)
+    def isImplicit: Boolean = Symbol.isImplicit(sym)
+    def isLazy: Boolean = Symbol.isLazy(sym)
+    def isSealed: Boolean = Symbol.isSealed(sym)
+    def isAbstract: Boolean = Symbol.isAbstract(sym)
+    def isMutable: Boolean = Symbol.isMutable(sym)
   }
 
   /**--------------------- Denotations ---------------------------------*/

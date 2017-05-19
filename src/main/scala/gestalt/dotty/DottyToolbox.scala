@@ -1094,8 +1094,13 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     /** returning a type referring to a term definition */
     def termRef(path: String): Type = ctx.staticRef(path.toTermName, false).symbol.termRef
 
-    /** does the type refer to a case class? */
     def isCaseClass(tp: Type): Boolean = tp.classSymbol.is(Flags.Case)
+
+    /** class symbol associated with the type */
+    def classSymbol(tp: Type): Option[Symbol] = tp.classSymbol match {
+      case Symbols.NoSymbol => None
+      case cls      => Some(cls)
+    }
 
     /** val fields of a case class Type -- only the ones declared in primary constructor */
     def caseFields(tp: Type): Seq[Denotation] = {
@@ -1197,6 +1202,18 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
     /** type of a member with respect to a prefix */
     def asSeenFrom(mem: Symbol, prefix: Type): Type = mem.asSeenFrom(prefix).info
+
+    def isCase(sym: Symbol): Boolean = sym.is(Flags.Case)
+    def isTrait(sym: Symbol): Boolean = sym.is(Flags.Trait)
+    def isPrivate(sym: Symbol): Boolean = sym.is(Flags.Private)
+    def isProtected(sym: Symbol): Boolean = sym.is(Flags.Protected)
+    def isOverride(sym: Symbol): Boolean = sym.is(Flags.Override)
+    def isFinal(sym: Symbol): Boolean = sym.is(Flags.Final)
+    def isImplicit(sym: Symbol): Boolean = sym.is(Flags.Implicit)
+    def isLazy(sym: Symbol): Boolean = sym.is(Flags.Lazy)
+    def isSealed(sym: Symbol): Boolean = sym.is(Flags.Sealed)
+    def isAbstract(sym: Symbol): Boolean = sym.is(Flags.Abstract)
+    def isMutable(sym: Symbol): Boolean = sym.is(Flags.Mutable)
   }
 
   def ensureOwner(tree: tpd.Tree, owner: Symbol): tpd.Tree = {
