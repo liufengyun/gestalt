@@ -1,7 +1,8 @@
 import scala.annotation.StaticAnnotation
 import scala.collection.immutable.Seq
 
-import scala.gestalt._
+import scala.gestalt.api._
+import scala.gestalt.options.unsafe
 
 object Quasiquotes {
   implicit class TestHelper(lhs: Any) extends AnyVal {
@@ -22,7 +23,6 @@ import Quasiquotes._
 class Quasiquotes extends StaticAnnotation {
 
   def apply(defn: Any): Any = meta {
-    import toolbox._
 
     test("modifiers") {
       val q"$mods object $name" = q"private object A"

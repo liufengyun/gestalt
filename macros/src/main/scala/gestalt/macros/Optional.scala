@@ -1,4 +1,4 @@
-import scala.gestalt._
+import scala.gestalt.api._
 
 import scala.annotation.unchecked.{ uncheckedVariance => uncheckVar }
 
@@ -6,10 +6,10 @@ final class Optional[+A >: Null](val value: A) extends AnyVal {
   def get: A = value
   def isEmpty = value == null
 
-  def getOrElse[B >: A](alt: => B)(implicit m: toolbox.WeakTypeTag[A] @uncheckVar): B = meta {
-    import toolbox._
+  def getOrElse[B >: A](alt: => B)(implicit m: WeakTypeTag[A] @uncheckVar): B = meta {
+    import scala.gestalt.options.unsafe
 
-    val temp = toolbox.fresh("_temp")
+    val temp = fresh("_temp")
     val tempIdent = Ident(temp)
 
     q"""
@@ -18,14 +18,12 @@ final class Optional[+A >: Null](val value: A) extends AnyVal {
     """
   }
 
-  def map[B >: Null](f: A => B)(implicit m: toolbox.WeakTypeTag[A] @uncheckVar): Optional[B] = meta {
-    import toolbox._
-
+  def map[B >: Null](f: A => B)(implicit m: WeakTypeTag[A] @uncheckVar): Optional[B] = meta {
     val Function(param :: Nil, body) = f
-    val tempValDef = ValDef(toolbox.fresh("_temp"), prefix)
+    val tempValDef = ValDef(fresh("_temp"), prefix)
     val tempIdent = Ident(tempValDef.symbol)
 
-    val newBody = transform(body) {
+    val newBody = body.transform {
       case id @ Ident(_) if id.symbol.get eq param =>
         Select(tempIdent, "value")
     }

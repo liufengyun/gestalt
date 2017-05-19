@@ -1,4 +1,4 @@
-import scala.gestalt._
+import scala.gestalt.api._
 
 trait Monadless[Monad[_]] {
 
@@ -13,18 +13,16 @@ trait Monadless[Monad[_]] {
 
   */
 
-  def lift[T](body: T)(implicit m: toolbox.WeakTypeTag[Monad[_]]): Monad[T] = meta {
-    import toolbox._
-
-    val tree = Transformer(toolbox)(this, body)
+  def lift[T](body: T)(implicit m: WeakTypeTag[Monad[_]]): Monad[T] = meta {
+    val tree = Transformer(this, body)
 
     val unliftSym = this.tpe.method("unlift").headOption.map(_.symbol)
     def isUnlift(tp: Type) = tp.denot.map(_.symbol) == unliftSym
 
 
-    traverse(tree) {
+    tree.traverse {
       case TypedSplice(tree) =>
-        traverse(tree) {
+        tree.traverse {
           case tree @ q"$fun[$tp]($v)" if isUnlift(fun.tpe) =>
             error("Unsupported unlift position", tree.pos)
         }
@@ -44,9 +42,7 @@ object Monadless {
 
 object Transformer {
 
-  def apply(toolbox: Toolbox)(prefix: toolbox.tpd.Tree, tree: toolbox.tpd.Tree)(implicit m: toolbox.WeakTypeTag[_]): toolbox.Tree = {
-    import toolbox._
-
+  def apply(prefix: tpd.Tree, tree: tpd.Tree)(implicit m: WeakTypeTag[_]): Tree = {
     val unliftSym = prefix.tpe.method("unlift").headOption.map(_.symbol)
     def isUnlift(tp: Type) = tp.denot.map(_.symbol) == unliftSym
 
@@ -55,13 +51,13 @@ object Transformer {
     {
       val fun = Function((name, tp) :: Nil, resTp)(bodyFn)
       if (flat)
-        q"${Resolve.flatMap(monad.pos, monad).appliedToTypes(flatTp.toTree)}($fun)"
+        Resolve.flatMap(monad.pos, monad).appliedToTypes(flatTp.toTree).appliedTo(fun)
       else
-        q"${Resolve.map(monad.pos, monad).appliedToTypes(resTp.toTree)}($fun)"
+        Resolve.map(monad.pos, monad).appliedToTypes(resTp.toTree).appliedTo(fun)
     }
 
     def validate(tree: tpd.Tree): tpd.Tree = {
-      traverse(tree) {
+      tree.traverse {
         case t @ Match(_, cases) =>
           cases.foreach {
             case Case(_, Some(t @ Transform(_)), _) =>
@@ -98,7 +94,7 @@ object Transformer {
 
     object PureTree {
       def unapply(tree: tpd.Tree): Option[tpd.Tree] = {
-        exists(tree) {
+        tree.exists {
           case q"$fun[$tp]($v)" if isUnlift(fun.tpe) => true
         } match {
           case true => None
@@ -205,10 +201,10 @@ object Transformer {
         case tree =>
           val unlifts = collection.mutable.ListBuffer.empty[(tpd.Tree, Symbol, tpd.Tree)]
           val newTree =
-            transform(tree) {
+            tree.transform {
               case tree @ q"$fun[$tp]($v)" if isUnlift(fun.tpe) =>
                 val name = fresh()
-                val dummy = newValSymbol(name, tree.tpe)
+                val dummy = ValDef(name, tree).symbol
                 unlifts += ((v, dummy, tp))
                 Ident(dummy)
             }
@@ -227,7 +223,7 @@ object Transformer {
               val scalaList = Ident(Type.termRef("scala.collection.immutable.List").symbol.get).select("apply")
               val seqLiteral = SeqLiteral(trees, trees.head.tpe.widen)
               val arg = scalaList.appliedToTypes(trees.head.tpe.widen.toTree).appliedTo(seqLiteral)
-              val collect = q"${Resolve.collect(tree.pos).appliedToTypes(types.head.tpe.toTree)}($arg)"
+              val collect = Resolve.collect(tree.pos).appliedToTypes(types.head.tpe.toTree).appliedTo(arg)
 
 
               val tp = Type.typeRef("scala.List").appliedTo(types.head.tpe)
@@ -244,7 +240,7 @@ object Transformer {
 
                 Block(iter +: elements, content)
               }
-              Some(q"${Resolve.map(tree.pos, collect).appliedToTypes(types.head.tpe.toTree)}($fun)")
+              Some(Resolve.map(tree.pos, collect).appliedToTypes(types.head.tpe.toTree).appliedTo(fun))
           }
       }
     }
