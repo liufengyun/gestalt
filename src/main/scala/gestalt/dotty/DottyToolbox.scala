@@ -229,7 +229,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   object PathType extends PathTypeImpl {
     def apply(qual: Option[Tree], name: String, targs: List[TypeTree]) = {
       val select = if (qual.isEmpty) d.Ident(name.toTypeName) else d.Select(qual.get, name.toTypeName)
-      if (targs.isEmpty) select else d.TypeApply(select, targs)
+      if (targs.isEmpty) select else TypeApply(select, targs)
     }
     def unapply(tpe: TypeTree) = {
       val withoutTypedSplice = tpe match {
