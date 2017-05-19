@@ -232,7 +232,11 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       if (targs.isEmpty) select else d.TypeApply(select, targs)
     }
     def unapply(tpe: TypeTree) = {
-      val (select, targs) = tpe match {
+      val withoutTypedSplice = tpe match {
+        case TypedSplice(tree) => tree
+        case _ => tpe
+      }
+      val (select, targs) = withoutTypedSplice match {
         case c.AppliedTypeTree(tpe, targs) => tpe -> targs
         case other => other -> Nil
       }
