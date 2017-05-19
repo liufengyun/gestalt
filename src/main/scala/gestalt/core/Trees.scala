@@ -85,8 +85,8 @@ trait Trees extends Params with TypeParams with
     def setMutable: Mods
 
     def withAddedAnnotation(annot: Tree): Mods
-    def withAnnotations(annots: Seq[Tree]): Mods
-    def annotations: Seq[Tree]
+    def withAnnotations(annots: List[Tree]): Mods
+    def annotations: List[Tree]
   }
 
   // modifiers
@@ -95,17 +95,17 @@ trait Trees extends Params with TypeParams with
   // definition trees
   def NewAnonymClass: NewAnonymClassImpl
   trait NewAnonymClassImpl {
-    def apply(parents: Seq[InitCall], self: Option[Self], stats: Seq[Tree]): DefTree
+    def apply(parents: List[InitCall], self: Option[Self], stats: List[Tree]): DefTree
   }
 
   def TypeDecl: TypeDeclImpl
   trait TypeDeclImpl {
-    def apply(mods: Mods, name: String, tparams: Seq[TypeParam], tbounds: Option[TypeTree]): DefTree
+    def apply(mods: Mods, name: String, tparams: List[TypeParam], tbounds: Option[TypeTree]): DefTree
   }
 
   def TypeAlias: TypeAliasImpl
   trait TypeAliasImpl {
-    def apply(mods: Mods, name: String, tparams: Seq[TypeParam], rhs: TypeTree): DefTree
+    def apply(mods: Mods, name: String, tparams: List[TypeParam], rhs: TypeTree): DefTree
   }
 
   def PatDef: PatDefImpl
@@ -115,28 +115,28 @@ trait Trees extends Params with TypeParams with
 
   def SeqDef: SeqDefImpl
   trait SeqDefImpl {
-    def apply(mods: Mods, vals: Seq[String], tpe: Option[TypeTree], rhs: Tree): DefTree
+    def apply(mods: Mods, vals: List[String], tpe: Option[TypeTree], rhs: Tree): DefTree
   }
 
   def SeqDecl: SeqDeclImpl
   trait SeqDeclImpl {
-    def apply(mods: Mods, vals: Seq[String], tpe: TypeTree): DefTree
+    def apply(mods: Mods, vals: List[String], tpe: TypeTree): DefTree
   }
 
   // extends qual.T[A, B](x, y)(z)
   def InitCall: InitCallImpl
   trait InitCallImpl {
-    def apply(qual: Option[Tree], name: String, targs: Seq[TypeTree], argss: Seq[Seq[TermTree]]): InitCall
+    def apply(qual: Option[Tree], name: String, targs: List[TypeTree], argss: List[List[TermTree]]): InitCall
   }
 
   def NewInstance: NewInstanceImpl
   trait NewInstanceImpl {
-    def apply(qual: Option[Tree], name: String, targs: Seq[TypeTree], argss: Seq[Seq[TermTree]]): TermTree
+    def apply(qual: Option[Tree], name: String, targs: List[TypeTree], argss: List[List[TermTree]]): TermTree
   }
 
   def SecondaryCtor: SecondaryCtorImpl
   trait SecondaryCtorImpl {
-    def apply(mods: Mods, paramss: Seq[Seq[Param]], rhs: TermTree): Tree
+    def apply(mods: Mods, paramss: List[List[Param]], rhs: TermTree): Tree
   }
 
   def Self: SelfImpl
@@ -163,7 +163,7 @@ trait Trees extends Params with TypeParams with
 
   def TypeApply: TypeApplyImpl
   trait TypeApplyImpl {
-    def apply(tpe: TypeTree, args: Seq[TypeTree]): TypeTree
+    def apply(tpe: TypeTree, args: List[TypeTree]): TypeTree
   }
 
   def TypeInfix: TypeInfixImpl
@@ -173,12 +173,12 @@ trait Trees extends Params with TypeParams with
 
   def TypeFunction: TypeFunctionImpl
   trait TypeFunctionImpl {
-    def apply(params: Seq[TypeTree], res: TypeTree): TypeTree
+    def apply(params: List[TypeTree], res: TypeTree): TypeTree
   }
 
   def TypeTuple: TypeTupleImpl
   trait TypeTupleImpl {
-    def apply(args: Seq[TypeTree]): TypeTree
+    def apply(args: List[TypeTree]): TypeTree
   }
 
   def TypeAnd: TypeAndImpl
@@ -193,8 +193,8 @@ trait Trees extends Params with TypeParams with
 
   def TypeRefine: TypeRefineImpl
   trait TypeRefineImpl {
-    def apply(stats: Seq[Tree]): TypeTree
-    def apply(tpe: TypeTree, stats: Seq[Tree]): TypeTree
+    def apply(stats: List[Tree]): TypeTree
+    def apply(tpe: TypeTree, stats: List[Tree]): TypeTree
   }
 
   def TypeBounds: TypeBoundsImpl
@@ -214,7 +214,7 @@ trait Trees extends Params with TypeParams with
 
   def TypeAnnotated: TypeAnnotatedImpl
   trait TypeAnnotatedImpl {
-    def apply(tpe: TypeTree, annots: Seq[Tree]): TypeTree
+    def apply(tpe: TypeTree, annots: List[Tree]): TypeTree
   }
 
   // terms
@@ -241,8 +241,8 @@ trait Trees extends Params with TypeParams with
 
   def Annotated: AnnotatedImpl
   trait AnnotatedImpl {
-    def apply(expr: TermTree, annots: Seq[Tree]): TermTree
-    def unapply(tree: Tree): Option[(TermTree, Seq[Tree])]
+    def apply(expr: TermTree, annots: List[Tree]): TermTree
+    def unapply(tree: Tree): Option[(TermTree, List[Tree])]
   }
 
   def If: IfImpl
@@ -259,15 +259,15 @@ trait Trees extends Params with TypeParams with
 
   def Try: TryImpl
   trait TryImpl {
-    def apply(expr: Tree, cases: Seq[Tree], finallyp: Option[TermTree]): TermTree
+    def apply(expr: Tree, cases: List[Tree], finallyp: Option[TermTree]): TermTree
     def apply(expr: TermTree, handler: Tree, finallyp: Option[TermTree]): TermTree
   }
 
   def Function: FunctionImpl
   trait FunctionImpl {
-    def apply(params: Seq[Param], body: TermTree): TermTree
-    def apply(params: Seq[(String, Type)], resTp: Type)(bodyFn: Seq[tpd.Tree] => tpd.Tree): tpd.Tree
-    def unapply(tree: tpd.Tree): Option[(Seq[Symbol], tpd.Tree)]
+    def apply(params: List[Param], body: TermTree): TermTree
+    def apply(params: List[(String, Type)], resTp: Type)(bodyFn: List[tpd.Tree] => tpd.Tree): tpd.Tree
+    def unapply(tree: tpd.Tree): Option[(List[Symbol], tpd.Tree)]
   }
 
   def While: WhileImpl
@@ -282,8 +282,8 @@ trait Trees extends Params with TypeParams with
 
   def For: ForImpl
   trait ForImpl {
-    def ForDo(enums: Seq[Tree], body: TermTree): TermTree
-    def ForYield(enums: Seq[Tree], body: TermTree): TermTree
+    def ForDo(enums: List[Tree], body: TermTree): TermTree
+    def ForYield(enums: List[Tree], body: TermTree): TermTree
     def GenFrom(pat: PatTree, rhs: TermTree): Tree
     def GenAlias(pat: PatTree, rhs: TermTree): Tree
     def Guard(cond: TermTree): Tree
@@ -307,17 +307,17 @@ trait Trees extends Params with TypeParams with
     def Bind(name: String, expr: PatTree): PatTree
     def Ident(name: String)(implicit unsafe: Unsafe): PatTree = toolbox.Ident(name)
     def Lit(value: Any): PatTree = toolbox.Lit(value)
-    def Alt(trees: Seq[PatTree]): PatTree
-    def Unapply(fun: TermTree, args: Seq[PatTree]): PatTree
+    def Alt(trees: List[PatTree]): PatTree
+    def Unapply(fun: TermTree, args: List[PatTree]): PatTree
     def Infix(lhs: PatTree, op: String, rhs: PatTree): PatTree
-    def Tuple(pats: Seq[PatTree]): PatTree
+    def Tuple(pats: List[PatTree]): PatTree
   }
 
   // importees
   def Import: ImportImpl
   trait ImportImpl {
-    def apply(items: Seq[Tree]): Tree
-    def Item(prefix: Tree, importees: Seq[Tree]): Tree
+    def apply(items: List[Tree]): Tree
+    def Item(prefix: Tree, importees: List[Tree]): Tree
     def Name(name: String): Tree
     def Rename(from: String, to: String): Tree
     def Hide(name: String): Tree
@@ -333,19 +333,19 @@ trait Trees extends Params with TypeParams with
 
   def Apply: ApplyImpl
   trait ApplyImpl {
-    def apply(fun: TermTree, args: Seq[TermTree]): TermTree
-    def unapply(tree: Tree): Option[(TermTree, Seq[TermTree])]
-    def apply(fun: tpd.Tree, args: Seq[tpd.Tree])(implicit c: Cap): tpd.Tree
-    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, Seq[tpd.Tree])]
+    def apply(fun: TermTree, args: List[TermTree]): TermTree
+    def unapply(tree: Tree): Option[(TermTree, List[TermTree])]
+    def apply(fun: tpd.Tree, args: List[tpd.Tree])(implicit c: Cap): tpd.Tree
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, List[tpd.Tree])]
   }
 
   def ApplyType: ApplyTypeImpl
   trait ApplyTypeImpl {
-    def apply(fun: TermTree, args: Seq[TypeTree]): TermTree
-    def unapply(tree: Tree): Option[(TermTree, Seq[TypeTree])]
+    def apply(fun: TermTree, args: List[TypeTree]): TermTree
+    def unapply(tree: Tree): Option[(TermTree, List[TypeTree])]
 
-    def apply(fun: tpd.Tree, args: Seq[tpd.Tree])(implicit c: Cap): tpd.Tree
-    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, Seq[tpd.Tree])]
+    def apply(fun: tpd.Tree, args: List[tpd.Tree])(implicit c: Cap): tpd.Tree
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, List[tpd.Tree])]
   }
 
   def Ident: IdentImpl
@@ -395,7 +395,7 @@ trait Trees extends Params with TypeParams with
 
   def Update: UpdateImpl
   trait UpdateImpl {
-    def apply(fun: TermTree, argss: Seq[Seq[TermTree]], rhs: TermTree): TermTree
+    def apply(fun: TermTree, argss: List[List[TermTree]], rhs: TermTree): TermTree
   }
 
   def Return: ReturnImpl
@@ -408,24 +408,24 @@ trait Trees extends Params with TypeParams with
 
   def Block: BlockImpl
   trait BlockImpl {
-    def apply(stats: Seq[Tree]): TermTree
-    def unapply(tree: Tree): Option[Seq[Tree]]
+    def apply(stats: List[Tree]): TermTree
+    def unapply(tree: Tree): Option[List[Tree]]
 
-    def apply(stats: Seq[tpd.Tree], expr: tpd.Tree)(implicit c: Cap): tpd.Tree
-    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(Seq[tpd.Tree], tpd.Tree)]
+    def apply(stats: List[tpd.Tree], expr: tpd.Tree)(implicit c: Cap): tpd.Tree
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(List[tpd.Tree], tpd.Tree)]
   }
 
   def PartialFunction: PartialFunctionImpl
   trait PartialFunctionImpl {
-    def apply(cases: Seq[Tree]): TermTree
-    def unapply(tree: Tree): Option[Seq[Tree]]
+    def apply(cases: List[Tree]): TermTree
+    def unapply(tree: Tree): Option[List[Tree]]
   }
 
   def Match: MatchImpl
   trait MatchImpl {
-    def apply(expr: TermTree, cases: Seq[Tree]): TermTree
-    def unapply(tree: Tree): Option[(TermTree, Seq[Tree])]
-    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, Seq[tpd.Tree])]
+    def apply(expr: TermTree, cases: List[Tree]): TermTree
+    def unapply(tree: Tree): Option[(TermTree, List[Tree])]
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, List[tpd.Tree])]
   }
 
   def Case: CaseImpl
@@ -437,20 +437,20 @@ trait Trees extends Params with TypeParams with
 
   def Tuple: TupleImpl
   trait TupleImpl {
-    def apply(args: Seq[TermTree]): TermTree
-    def unapply(tree: Tree): Option[Seq[TermTree]]
-    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[Seq[tpd.Tree]]
+    def apply(args: List[TermTree]): TermTree
+    def unapply(tree: Tree): Option[List[TermTree]]
+    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[List[tpd.Tree]]
   }
 
   def Interpolate: InterpolateImpl
   trait InterpolateImpl {
-    def apply(prefix: String, parts: Seq[String], args: Seq[TermTree]): TermTree
+    def apply(prefix: String, parts: List[String], args: List[TermTree]): TermTree
   }
 
   def SeqLiteral: SeqLiteralImpl
   trait SeqLiteralImpl {
-    def apply(trees: Seq[tpd.Tree], tp: Type): tpd.Tree
-    def unapply(tree: tpd.Tree): Option[Seq[tpd.Tree]]
+    def apply(trees: List[tpd.Tree], tp: Type): tpd.Tree
+    def unapply(tree: tpd.Tree): Option[List[tpd.Tree]]
   }
 
   def TypedSplice: TypedSpliceImpl
@@ -526,16 +526,16 @@ trait DefDefs { this: Trees =>
 
   def DefDef: DefDefImpl
   trait DefDefImpl {
-    def apply(mods: Mods, name: String, tparams: Seq[TypeParam], paramss: Seq[Seq[Param]], tpe: Option[TypeTree], rhs: Tree): DefDef
+    def apply(mods: Mods, name: String, tparams: List[TypeParam], paramss: List[List[Param]], tpe: Option[TypeTree], rhs: Tree): DefDef
     def mods(tree: DefDef): Mods
-    def tparams(tree: DefDef): Seq[TypeParam]
-    def paramss(tree: DefDef): Seq[Seq[Param]]
+    def tparams(tree: DefDef): List[TypeParam]
+    def paramss(tree: DefDef): List[List[Param]]
     def name(tree: DefDef): String
     def tptOpt(tree: DefDef): Option[TypeTree]
     def rhs(tree: DefDef): TermTree
     def copyRhs(tree: DefDef)(rhs: TermTree): DefDef
     def get(tree: Tree): Option[DefDef]
-    def unapply(tree: Tree): Option[(Mods, String, Seq[TypeParam], Seq[Seq[Param]], Option[TypeTree], TermTree)]
+    def unapply(tree: Tree): Option[(Mods, String, List[TypeParam], List[List[Param]], Option[TypeTree], TermTree)]
   }
 
 }
@@ -544,14 +544,14 @@ trait DefDecls { this: Trees =>
 
   def DefDecl: DefDeclImpl
   trait DefDeclImpl {
-    def apply(mods: Mods, name: String, tparams: Seq[TypeParam], paramss: Seq[Seq[Param]], tpe: TypeTree): DefDecl
+    def apply(mods: Mods, name: String, tparams: List[TypeParam], paramss: List[List[Param]], tpe: TypeTree): DefDecl
     def mods(tree: DefDecl): Mods
-    def tparams(tree: DefDecl): Seq[TypeParam]
-    def paramss(tree: DefDecl): Seq[Seq[Param]]
+    def tparams(tree: DefDecl): List[TypeParam]
+    def paramss(tree: DefDecl): List[List[Param]]
     def name(tree: DefDecl): String
     def tpt(tree: DefDecl): TypeTree
     def get(tree: Tree): Option[DefDecl]
-    def unapply(tree: Tree): Option[(Mods, String, Seq[TypeParam], Seq[Seq[Param]], TypeTree)]
+    def unapply(tree: Tree): Option[(Mods, String, List[TypeParam], List[List[Param]], TypeTree)]
   }
 
 }
@@ -580,10 +580,10 @@ trait TypeParams { this: Trees =>
   def TypeParam: TypeParamImpl
   trait TypeParamImpl {
     def apply(name: String, tbounds: TypeTree): TypeParam = apply(emptyMods, name, Nil, Some(tbounds), Nil)
-    def apply(mods: Mods, name: String, tparams: Seq[TypeParam], tbounds: Option[TypeTree], cbounds: Seq[TypeTree]): TypeParam
+    def apply(mods: Mods, name: String, tparams: List[TypeParam], tbounds: Option[TypeTree], cbounds: List[TypeTree]): TypeParam
     def mods(tree: TypeParam): Mods
     def name(tree: TypeParam): String
-    def tparams(tree: TypeParam): Seq[TypeParam]
+    def tparams(tree: TypeParam): List[TypeParam]
   }
 }
 
@@ -591,20 +591,20 @@ trait Classes { this: Trees =>
 
   def Class: ClassImpl
   trait ClassImpl {
-    def apply(mods: Mods, name: String, tparams: Seq[TypeParam], ctorMods: Mods, paramss: Seq[Seq[Param]], parents: Seq[InitCall], self: Option[Self], stats: Seq[Tree]): Class
+    def apply(mods: Mods, name: String, tparams: List[TypeParam], ctorMods: Mods, paramss: List[List[Param]], parents: List[InitCall], self: Option[Self], stats: List[Tree]): Class
     def mods(tree: Class): Mods
     def name(tree: Class): String
     def ctorMods(tree: Class): Mods
-    def tparams(tree: Class): Seq[TypeParam]
-    def paramss(tree: Class): Seq[Seq[Param]]
-    def parents(tree: Class): Seq[InitCall]
+    def tparams(tree: Class): List[TypeParam]
+    def paramss(tree: Class): List[List[Param]]
+    def parents(tree: Class): List[InitCall]
     def selfOpt(tree: Class): Option[Self]
-    def stats(tree: Class): Seq[Tree]
+    def stats(tree: Class): List[Tree]
     def copyMods(tree: Class)(mods: Mods): Class
-    def copyParamss(tree: Class)(paramss: Seq[Seq[Param]]): Class
-    def copyStats(tree: Class)(stats: Seq[Tree]): Class
+    def copyParamss(tree: Class)(paramss: List[List[Param]]): Class
+    def copyStats(tree: Class)(stats: List[Tree]): Class
     def get(tree: Tree): Option[Class]
-    def unapply(tree: Tree): Option[(Mods, String, Seq[TypeParam], Mods, Seq[Seq[Param]], Seq[InitCall], Option[Self], Seq[Tree])]
+    def unapply(tree: Tree): Option[(Mods, String, List[TypeParam], Mods, List[List[Param]], List[InitCall], Option[Self], List[Tree])]
   }
 }
 
@@ -612,32 +612,32 @@ trait Traits { this: Trees =>
 
   def Trait: TraitImpl
   trait TraitImpl {
-    def apply(mods: Mods, name: String, tparams: Seq[TypeParam], ctorMods: Mods, paramss: Seq[Seq[Param]], parents: Seq[InitCall], self: Option[Self], stats: Seq[Tree]): Trait
+    def apply(mods: Mods, name: String, tparams: List[TypeParam], ctorMods: Mods, paramss: List[List[Param]], parents: List[InitCall], self: Option[Self], stats: List[Tree]): Trait
     def mods(tree: Trait): Mods
     def name(tree: Trait): String
-    def tparams(tree: Trait): Seq[TypeParam]
-    def paramss(tree: Trait): Seq[Seq[Param]]
-    def parents(tree: Trait): Seq[InitCall]
+    def tparams(tree: Trait): List[TypeParam]
+    def paramss(tree: Trait): List[List[Param]]
+    def parents(tree: Trait): List[InitCall]
     def selfOpt(tree: Trait): Option[Self]
-    def stats(tree: Trait): Seq[Tree]
-    def copyStats(tree: Trait)(stats: Seq[Tree]): Trait
+    def stats(tree: Trait): List[Tree]
+    def copyStats(tree: Trait)(stats: List[Tree]): Trait
     def get(tree: Tree): Option[Trait]
-    def unapply(tree: Tree): Option[(Mods, String, Seq[TypeParam], Mods, Seq[Seq[Param]], Seq[InitCall], Option[Self], Seq[Tree])]
+    def unapply(tree: Tree): Option[(Mods, String, List[TypeParam], Mods, List[List[Param]], List[InitCall], Option[Self], List[Tree])]
   }
 }
 
 trait Objects { this: Trees =>
   def Object: ObjectImpl
   trait ObjectImpl {
-    def apply(mods: Mods, name: String, parents: Seq[InitCall], selfOpt: Option[Self], stats: Seq[Tree]): Object
+    def apply(mods: Mods, name: String, parents: List[InitCall], selfOpt: Option[Self], stats: List[Tree]): Object
     def mods(tree: Object): Mods
     def name(tree: Object): String
-    def parents(tree: Object): Seq[InitCall]
+    def parents(tree: Object): List[InitCall]
     def selfOpt(tree: Object): Option[Self]
-    def stats(tree: Object): Seq[Tree]
+    def stats(tree: Object): List[Tree]
     // separate copy for better versioning compatibility
-    def copyStats(tree: Object)(stats: Seq[Tree]): Object
+    def copyStats(tree: Object)(stats: List[Tree]): Object
     def get(tree: Tree): Option[Object]
-    def unapply(tree: Tree): Option[(Mods, String, Seq[InitCall], Option[Self], Seq[Tree])]
+    def unapply(tree: Tree): Option[(Mods, String, List[InitCall], Option[Self], List[Tree])]
   }
 }

@@ -1,9 +1,12 @@
 package scala.gestalt
 
-import gestalt.core._
+import scala.gestalt.core._
 
 // package object causes compilation errors
-object api extends Toolbox { pkg =>
+object api extends Toolbox {
+  /** The marker for meta block to highlight the different semantics */
+  def meta(body: Tree): Nothing = ???
+
   /**------------------------------------------------*/
   private val toolbox: ThreadLocal[Toolbox] = new ThreadLocal[Toolbox]
 
@@ -206,8 +209,8 @@ object api extends Toolbox { pkg =>
     def symbol: Option[Symbol] = tree.tpe.denot.map(_.symbol)
 
     def select(name: String): tpd.Tree = Select(tree, name)
-    def appliedTo(args: tpd.Tree*): tpd.Tree = Apply(tree, args)
-    def appliedToTypes(args: tpd.Tree*): tpd.Tree = ApplyType(tree, args)
+    def appliedTo(args: tpd.Tree*): tpd.Tree = Apply(tree, args.toList)
+    def appliedToTypes(args: tpd.Tree*): tpd.Tree = ApplyType(tree, args.toList)
 
     def traverse(pf: PartialFunction[tpd.Tree, Unit]): Unit =
       tpd.traverse(tree)(pf)
@@ -261,8 +264,8 @@ object api extends Toolbox { pkg =>
 
   implicit class DefDefOps(tree: DefDef) {
     def mods: Mods = DefDef.mods(tree)
-    def tparams: Seq[TypeParam] = DefDef.tparams(tree)
-    def paramss: Seq[Seq[Param]] = DefDef.paramss(tree)
+    def tparams: List[TypeParam] = DefDef.tparams(tree)
+    def paramss: List[List[Param]] = DefDef.paramss(tree)
     def name: String = DefDef.name(tree)
     def tptOpt: Option[TypeTree] = DefDef.tptOpt(tree)
     def rhs: TermTree = DefDef.rhs(tree)
@@ -278,8 +281,8 @@ object api extends Toolbox { pkg =>
 
   implicit class DefDeclOps(tree: DefDecl) {
     def mods: Mods = DefDecl.mods(tree)
-    def tparams: Seq[TypeParam] = DefDecl.tparams(tree)
-    def paramss: Seq[Seq[Param]] = DefDecl.paramss(tree)
+    def tparams: List[TypeParam] = DefDecl.tparams(tree)
+    def paramss: List[List[Param]] = DefDecl.paramss(tree)
     def name: String = DefDecl.name(tree)
     def tpt: TypeTree = DefDecl.tpt(tree)
   }
@@ -311,7 +314,7 @@ object api extends Toolbox { pkg =>
   implicit class TypeParamOps(tree: TypeParam) {
     def mods: Mods = TypeParam.mods(tree)
     def name: String = TypeParam.name(tree)
-    def tparams: Seq[TypeParam] = TypeParam.tparams(tree)
+    def tparams: List[TypeParam] = TypeParam.tparams(tree)
   }
 
   /**--------------------- Classes ---------------------------------*/
@@ -321,13 +324,14 @@ object api extends Toolbox { pkg =>
     def mods: Mods = Class.mods(tree)
     def ctorMods: Mods = Class.ctorMods(tree)
     def name: String = Class.name(tree)
-    def tparams: Seq[TypeParam] = Class.tparams(tree)
-    def paramss: Seq[Seq[Param]] = Class.paramss(tree)
-    def parents: Seq[InitCall] = Class.parents(tree)
+    def tparams: List[TypeParam] = Class.tparams(tree)
+    def paramss: List[List[Param]] = Class.paramss(tree)
+    def parents: List[InitCall] = Class.parents(tree)
     def selfOpt: Option[Self] = Class.selfOpt(tree)
-    def stats: Seq[Tree] = Class.stats(tree)
-    def copy(mods: Mods = Class.mods(tree), paramss: Seq[Seq[Param]] = Class.paramss(tree), stats: Seq[Tree] = Class.stats(tree)): Class
-    = {
+    def stats: List[Tree] = Class.stats(tree)
+    def copy(mods: Mods = Class.mods(tree),
+             paramss: List[List[Param]] = Class.paramss(tree),
+             stats: List[Tree] = Class.stats(tree)): Class = {
       val tree1 = Class.copyMods(tree)(mods)
       val tree2 = Class.copyParamss(tree1)(paramss)
       Class.copyStats(tree2)(stats)
@@ -344,12 +348,12 @@ object api extends Toolbox { pkg =>
   implicit class TraitOps(tree: Trait) {
     def mods: Mods = Trait.mods(tree)
     def name: String = Trait.name(tree)
-    def tparams: Seq[TypeParam] = Trait.tparams(tree)
-    def paramss: Seq[Seq[Param]] = Trait.paramss(tree)
-    def parents: Seq[InitCall] = Trait.parents(tree)
+    def tparams: List[TypeParam] = Trait.tparams(tree)
+    def paramss: List[List[Param]] = Trait.paramss(tree)
+    def parents: List[InitCall] = Trait.parents(tree)
     def selfOpt: Option[Self] = Trait.selfOpt(tree)
-    def stats: Seq[Tree] = Trait.stats(tree)
-    def copy(stats: Seq[Tree] = Trait.stats(tree)): Trait
+    def stats: List[Tree] = Trait.stats(tree)
+    def copy(stats: List[Tree] = Trait.stats(tree)): Trait
     = Trait.copyStats(tree)(stats)
   }
 
@@ -363,10 +367,10 @@ object api extends Toolbox { pkg =>
   implicit class ObjectOps(tree: Object) {
     def mods: Mods = Object.mods(tree)
     def name: String = Object.name(tree)
-    def parents: Seq[InitCall] = Object.parents(tree)
+    def parents: List[InitCall] = Object.parents(tree)
     def selfOpt: Option[Self] = Object.selfOpt(tree)
-    def stats: Seq[Tree] = Object.stats(tree)
-    def copy(stats: Seq[Tree] = Object.stats(tree)): Object
+    def stats: List[Tree] = Object.stats(tree)
+    def copy(stats: List[Tree] = Object.stats(tree)): Object
     = Object.copyStats(tree)(stats)
   }
 
@@ -375,21 +379,21 @@ object api extends Toolbox { pkg =>
   }
 
   /**--------------------- helpers ---------------------------------*/
-  def ApplySeq(fun: TermTree, argss: Seq[Seq[TermTree]]): TermTree =
+  def ApplySeq(fun: TermTree, argss: List[List[TermTree]]): TermTree =
     argss.foldLeft(fun) { (acc, args) => Apply(acc, args) }
 
   object ApplySeq {
-    def unapply(call: TermTree): Option[(Tree, Seq[Seq[TermTree]])] = {
-      def recur(acc: Seq[Seq[TermTree]], term: TermTree): (TermTree, Seq[Seq[TermTree]]) = term match {
-        case pkg.Apply(fun, args) => recur(args +: acc, fun) // inner-most is in the front
+    def unapply(call: TermTree): Option[(Tree, List[List[TermTree]])] = {
+      def recur(acc: List[List[TermTree]], term: TermTree): (TermTree, List[List[TermTree]]) = term match {
+        case api.Apply(fun, args) => recur(args +: acc, fun) // inner-most is in the front
         case fun => (fun, acc)
       }
 
       Some(recur(Nil, call))
     }
 
-    def unapply(call: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, Seq[Seq[tpd.Tree]])] =
-      unapply(call.asInstanceOf[TermTree]).asInstanceOf[Option[(tpd.Tree, Seq[Seq[tpd.Tree]])]]
+    def unapply(call: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, List[List[tpd.Tree]])] =
+      unapply(call.asInstanceOf[TermTree]).asInstanceOf[Option[(tpd.Tree, List[List[tpd.Tree]])]]
   }
 
   implicit def tpd2untpd(tree: tpd.Tree): Splice = TypedSplice(tree)
@@ -404,19 +408,19 @@ object api extends Toolbox { pkg =>
       case Some(cls) => Symbol.isCase(cls)
       case None      => false
     }
-    def caseFields: Seq[Denotation] = Type.caseFields(tp)
+    def caseFields: List[Denotation] = Type.caseFields(tp)
     def fieldIn(name: String): Option[Denotation] = Type.fieldIn(tp, name)
-    def fieldsIn: Seq[Denotation] = Type.fieldsIn(tp)
-    def methodIn(name: String): Seq[Denotation] = Type.methodIn(tp, name)
-    def methodsIn: Seq[Denotation] = Type.methodsIn(tp)
-    def method(name: String): Seq[Denotation] = Type.method(tp, name)
-    def methods: Seq[Denotation] = Type.methods(tp)
+    def fieldsIn: List[Denotation] = Type.fieldsIn(tp)
+    def methodIn(name: String): List[Denotation] = Type.methodIn(tp, name)
+    def methodsIn: List[Denotation] = Type.methodsIn(tp)
+    def method(name: String): List[Denotation] = Type.method(tp, name)
+    def methods: List[Denotation] = Type.methods(tp)
     def companion: Option[Type] = Type.companion(tp)
     def show: String = Type.show(tp)
     def widen: Type = Type.widen(tp)
     def denot: Option[Denotation] = Type.denot(tp)
     def symbol: Option[Symbol] = denot.map(_.symbol)
-    def appliedTo(args: Type*): Type = Type.appliedTo(tp, args)
+    def appliedTo(args: Type*): Type = Type.appliedTo(tp, args.toList)
     def toTree: tpd.Tree = Type.toTree(tp)
   }
 
@@ -424,8 +428,8 @@ object api extends Toolbox { pkg =>
   def MethodType     = toolbox.get.MethodType.asInstanceOf[MethodTypeImpl]
 
   implicit class MethodTypeOps(tp: MethodType) {
-    def paramInfos: Seq[Type] = MethodType.paramInfos(tp)
-    def instantiate(params: Seq[Type]): Type = MethodType.instantiate(tp)(params)
+    def paramInfos: List[Type] = MethodType.paramInfos(tp)
+    def instantiate(params: List[Type]): Type = MethodType.instantiate(tp)(params)
   }
 
   /**--------------------- Symbols ---------------------------------*/

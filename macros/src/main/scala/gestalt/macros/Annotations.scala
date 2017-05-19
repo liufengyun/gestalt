@@ -16,8 +16,8 @@ class main extends StaticAnnotation {
 
 class addFields extends StaticAnnotation {
   def apply(defn: Any): Any = meta {
-    val q"$mods object $name { ..${stats:Seq[Tree]} }" = defn
-    val additional: Seq[Tree] = Seq(
+    val q"$mods object $name { ..$stats }" = defn
+    val additional: List[Tree] = List(
       q"private def a = 1",
       q"private[this] def b = 2",
       q"private[pack] def c = 3",
