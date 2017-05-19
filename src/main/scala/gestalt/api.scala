@@ -148,7 +148,7 @@ object api extends Toolbox { pkg =>
       val parts = path.split('.')
 
       val prefix = parts.init.foldLeft[TermTree](tree) { (prefix, name) =>
-        prefix.select(name)
+        Select(prefix, name)
       }
 
       TypeSelect(prefix, parts.last)
