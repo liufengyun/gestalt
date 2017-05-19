@@ -34,12 +34,13 @@ object JsonMacros {
         f => f-> f.info
       }
 
-      case class JsonItem(symbol: Symbol, pairOut: TermTree, readOption: ValDef, implicitFormat: Option[ValDef])
+      case class JsonItem(name: String, value: Ident, pairOut: TermTree, readOption: ValDef, implicitFormat: Option[ValDef])
       val jsonItems: List[JsonItem] = fieldsWithTypes.map {
         case (field, stringType) if stringType =:= Type.typeRef("java.lang.String") =>
           val name = field.name
-          JsonItem(field.symbol,
+          JsonItem(name,
             pairOut = Tuple(List(Lit(name), q"JsString(o.$name)")),
+            value = Ident(name),
             readOption = q"val $name = obj.firstValue(${Lit(name)}).collect{case JsString(value) => value}",
             implicitFormat = None
           )
@@ -47,14 +48,15 @@ object JsonMacros {
           val name = field.name
           val implFormaterName = name + "_formatter"
           val formatterIdent = Ident(implFormaterName)
-          JsonItem(field.symbol,
+          JsonItem(name,
             pairOut = Tuple(List(Lit(name), q"$formatterIdent.toJson(o.$name)")),
+            value = Ident(name),
             readOption = q"val $name = obj.firstValue(${Lit(name)}).flatMap(x =>$formatterIdent.fromJson(x))",
             implicitFormat = Some(q"val $implFormaterName=implicitly[Format[${otherType.toTree}]]")
           )
       }
-      val allDefined = q"${jsonItems.map(i => q"${Ident(i.symbol)}.isDefined".wrap).reduceLeft[TermTree]((a, b) => q"$a && $b")}"
-      val construction = NewInstance(T, List(jsonItems.map(i => q"${Ident(i.symbol)}.get".wrap)))
+      val allDefined = q"${jsonItems.map(i => q"${i.value}.isDefined").reduceLeft((a, b) => q"$a && $b")}"
+      val construction = NewInstance(T, List(jsonItems.map(i => q"${i.value}.get")))
       val fromJson =
         q"""json match{
               case obj: JsObject =>
