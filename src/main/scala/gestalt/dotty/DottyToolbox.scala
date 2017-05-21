@@ -204,9 +204,16 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   // new qual.T[A, B](x, y)(z)
   object NewInstance extends NewInstanceImpl {
-    def apply(qual: Option[Tree], name: String, targs: List[TypeTree], argss: List[List[TermTree]]): TermTree = {
-      ApplySeq(d.Select(d.New(PathType(qual, name, targs)), nme.CONSTRUCTOR), argss).withPosition
+    def apply(qual: Tree, name: String, targs: List[TypeTree], argss: List[List[TermTree]]): TermTree = {
+      ApplySeq(d.Select(d.New(PathType(Some(qual), name, targs)), nme.CONSTRUCTOR), argss).withPosition
     }
+
+    def apply(name: String, targs: List[TypeTree], argss: List[List[TermTree]])
+             (implicit unsafe: Unsafe): TermTree = {
+      ApplySeq(d.Select(d.New(PathType(None, name, targs)), nme.CONSTRUCTOR), argss).withPosition
+    }
+
+    def apply(tp: Type, args: List[tpd.Tree]): tpd.Tree = t.New(tp, args)
   }
 
   object Self extends SelfImpl {
@@ -230,21 +237,6 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def apply(qual: Option[Tree], name: String, targs: List[TypeTree]) = {
       val select = if (qual.isEmpty) d.Ident(name.toTypeName) else d.Select(qual.get, name.toTypeName)
       if (targs.isEmpty) select else TypeApply(select, targs)
-    }
-    def unapply(tpe: TypeTree) = {
-      val withoutTypedSplice = tpe match {
-        case TypedSplice(tree) => tree
-        case _ => tpe
-      }
-      val (select, targs) = withoutTypedSplice match {
-        case c.AppliedTypeTree(tpe, targs) => tpe -> targs
-        case other => other -> Nil
-      }
-      select match {
-        case c.Select(qual, name) if name.isTypeName => Some((Some(qual), name.show, targs))
-        case c.Ident(name) if name.isTypeName => Some((None, name.show, targs))
-        case _ => None
-      }
     }
   }
 
@@ -495,6 +487,9 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   // extractors
   object Lit extends LitImpl {
     def apply(value: Any): Lit = d.Literal(Constant(value)).withPosition
+
+    def apply(value: Any)(implicit c: Cap): tpd.Tree = t.Literal(Constant(value)).withPosition
+
     def unapply(tree: Tree): Option[Any] = tree match {
       case c.Literal(Constant(v)) => Some(v)
       case _ => None
@@ -672,6 +667,9 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   object Tuple extends TupleImpl {
     def apply(args: List[TermTree]): TermTree = d.Tuple(args).withPosition
+
+    def apply(args: List[tpd.Tree]): tpd.Tree = ???
+
     def unapply(tree: Tree): Option[List[TermTree]] = tree match {
       case d.Tuple(trees) => Some(trees)
       case _ => None
@@ -956,6 +954,17 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   object DefDef extends DefDefImpl {
     def apply(mods: Mods, name: String, tparams: List[TypeParam], paramss: List[List[Param]], tpe: Option[TypeTree], rhs: TermTree): DefDef = {
       d.DefDef(name.toTermName, tparams, paramss, tpe.getOrElse(d.TypeTree()), rhs).withMods(mods).withPosition
+    }
+
+    def apply(name: String, params: List[(String, Type)], resTp: Type)(bodyFn: List[tpd.Tree] => tpd.Tree): tpd.Tree = {
+      val meth = ctx.newSymbol(
+        ctx.owner, name.toTermName,
+        Flags.Synthetic | Flags.Method,
+        Types.MethodType(params.map(_._1.toTermName), params.map(_._2), resTp)
+      )
+      t.DefDef(meth, paramss => {
+        ensureOwner(bodyFn(paramss.head), meth)
+      })
     }
 
     def mods(tree: DefDef): Mods = new modsDeco(tree).mods

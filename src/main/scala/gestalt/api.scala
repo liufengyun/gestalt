@@ -75,7 +75,6 @@ object api extends Toolbox {
   // type trees
   def TypeIdent      = toolbox.get.TypeIdent.asInstanceOf[TypeIdentImpl]
   def TypeSelect     = toolbox.get.TypeSelect.asInstanceOf[TypeSelectImpl]
-  def PathType       = toolbox.get.PathType.asInstanceOf[PathTypeImpl]
   def TypeSingleton  = toolbox.get.TypeSingleton.asInstanceOf[TypeSingletonImpl]
   def TypeApply      = toolbox.get.TypeApply.asInstanceOf[TypeApplyImpl]
   def TypeInfix      = toolbox.get.TypeInfix.asInstanceOf[TypeInfixImpl]
