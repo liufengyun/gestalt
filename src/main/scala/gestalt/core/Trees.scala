@@ -362,6 +362,7 @@ trait Trees extends Params with TypeParams with
   trait IdentImpl {
     def apply(name: String)(implicit unsafe: Unsafe): Ident
     def apply(symbol: Symbol): tpd.Tree
+    def apply(tp: TermRef)(implicit c: Cap): tpd.Tree = Ident(Denotation.symbol(Type.denot(tp).get))
     def unapply(tree: Tree): Option[String]
     def unapply(tree: tpd.Tree)(implicit c: Cap): Option[String]
   }

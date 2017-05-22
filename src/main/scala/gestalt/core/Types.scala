@@ -2,6 +2,8 @@ package scala.gestalt.core
 
 trait Types extends MethodTypes { this: Toolbox =>
   type Type >: Null <: AnyRef
+  type TermRef <: Type
+  type TypeRef <: Type
 
   def Type: TypeImpl
   trait TypeImpl {
@@ -18,10 +20,10 @@ trait Types extends MethodTypes { this: Toolbox =>
     def lub(tp1: Type, tp2: Type): Type
 
     /** returning a type referring to a global type definition */
-    def typeRef(path: String): Type
+    def typeRef(path: String): TypeRef
 
     /** returning a type referring to a global value definition */
-    def termRef(path: String): Type
+    def termRef(path: String): TermRef
 
     /** class symbol associated with the type */
     def classSymbol(tp: Type): Option[Symbol]
@@ -63,6 +65,9 @@ trait Types extends MethodTypes { this: Toolbox =>
 
     /** Turn a type into a typed tree */
     def toTree(tp: Type): tpd.Tree
+
+    /** Infer an implicit instance of the given type */
+    def infer(tp: Type): Option[tpd.Tree]
   }
 
 
