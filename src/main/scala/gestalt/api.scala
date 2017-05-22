@@ -433,6 +433,11 @@ object api extends Toolbox {
     def instantiate(params: List[Type]): Type = MethodType.instantiate(tp)(params)
   }
 
+  implicit class TermRefOps(tp: TermRef) {
+    def symbol: Symbol    = denot.symbol
+    def denot: Denotation = Type.denot(tp).get
+  }
+
   /**--------------------- Symbols ---------------------------------*/
   def Symbol         = toolbox.get.Symbol.asInstanceOf[SymbolImpl]
 

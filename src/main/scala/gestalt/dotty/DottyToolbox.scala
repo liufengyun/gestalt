@@ -1082,9 +1082,11 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   /*------------------------------- types -------------------------------------*/
 
-  type Type = Types.Type
+  type Type       = Types.Type
+  type TermRef    = Types.TermRef
+  type TypeRef    = Types.TypeRef
   type MethodType = Types.MethodType
-  type Symbol = Symbols.Symbol
+  type Symbol     = Symbols.Symbol
 
   /** get the location where the def macro is used */
   def location: Location = Location(ctx.compilationUnit.source.file.name, enclosingPosition.line(), enclosingPosition.column())
@@ -1103,10 +1105,10 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def lub(tp1: Type, tp2: Type): Type = ctx.typeComparer.lub(tp1, tp2, false)
 
     /** returning a type referring to a type definition */
-    def typeRef(path: String): Type = ctx.staticRef(path.toTypeName, false).symbol.typeRef
+    def typeRef(path: String): TypeRef = ctx.staticRef(path.toTypeName, false).symbol.typeRef
 
     /** returning a type referring to a term definition */
-    def termRef(path: String): Type = ctx.staticRef(path.toTermName, false).symbol.termRef
+    def termRef(path: String): TermRef = ctx.staticRef(path.toTermName, false).symbol.termRef
 
     def isCaseClass(tp: Type): Boolean = tp.classSymbol.is(Flags.Case)
 
@@ -1189,6 +1191,16 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def appliedTo(tp: Type, args: List[Type]): Type = new TypeApplications(tp).appliedTo(args)(ctx)
 
     def toTree(tp: Type): tpd.Tree = t.TypeTree(tp)
+
+    /** Infer an implicit instance of the given type */
+    def infer(tp: Type): Option[tpd.Tree] = {
+      var hasError = false
+      def implicitArgError(msg: String => String) = hasError = true
+
+      val res = ctx.typer.inferImplicitArg(tp, implicitArgError, enclosingPosition)
+      if (hasError) None
+      else Some(res)
+    }
   }
 
   object ByNameType extends ByNameTypeImpl {
