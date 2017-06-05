@@ -8,12 +8,14 @@ object api extends Toolbox {
   def meta(body: Tree): Nothing = ???
 
   /**------------------------------------------------*/
-  private val toolbox: ThreadLocal[Toolbox] = new ThreadLocal[Toolbox]
+  private val toolboxStore: ThreadLocal[Toolbox] = new ThreadLocal[Toolbox]
+
+  @inline private def toolbox = toolboxStore.get
 
   def withToolbox[T](tb: Toolbox)(f: => T): T = {
-    toolbox.set(tb)
+    toolboxStore.set(tb)
     val res = f
-    toolbox.remove()
+    toolboxStore.remove()
 
     res
   }
@@ -22,26 +24,26 @@ object api extends Toolbox {
   type Unsafe >: Null
   type Location = core.Location
 
-  def emptyMods: Mods = toolbox.get.emptyMods.asInstanceOf[Mods]
+  def emptyMods: Mods = toolbox.emptyMods.asInstanceOf[Mods]
 
   /**------------------------------------------------*/
   // diagnostics
-  def location: Location = toolbox.get.location
+  def location: Location = toolbox.location
 
   def error(message: String, pos: Pos) = {
-    val tb = toolbox.get
+    val tb = toolbox
     tb.error(message, pos.asInstanceOf[tb.Pos])
   }
 
   /** stop macro transform */
   def abort(message: String, pos: Pos): Nothing = {
-    val tb = toolbox.get
+    val tb = toolbox
     tb.abort(message, pos.asInstanceOf[tb.Pos])
   }
 
   /**------------------------------------------------*/
   /** generate fresh unique name */
-  def fresh(prefix: String = "$local"): String  = toolbox.get.fresh(prefix)
+  def fresh(prefix: String = "$local"): String  = toolbox.fresh(prefix)
 
   /** The root package
    *
@@ -61,77 +63,77 @@ object api extends Toolbox {
 
   /**------------------------------------------------*/
   // definitions
-  def NewAnonymClass = toolbox.get.NewAnonymClass.asInstanceOf[NewAnonymClassImpl]
-  def TypeDecl       = toolbox.get.TypeDecl.asInstanceOf[TypeDeclImpl]
-  def TypeAlias      = toolbox.get.TypeAlias.asInstanceOf[TypeAliasImpl]
-  def PatDef         = toolbox.get.PatDef.asInstanceOf[PatDefImpl]
-  def SeqDef         = toolbox.get.SeqDef.asInstanceOf[SeqDefImpl]
-  def SeqDecl        = toolbox.get.SeqDecl.asInstanceOf[SeqDeclImpl]
-  def InitCall       = toolbox.get.InitCall.asInstanceOf[InitCallImpl]
-  def NewInstance    = toolbox.get.NewInstance.asInstanceOf[NewInstanceImpl]
-  def SecondaryCtor  = toolbox.get.SecondaryCtor.asInstanceOf[SecondaryCtorImpl]
-  def Self           = toolbox.get.Self.asInstanceOf[SelfImpl]
+  def NewAnonymClass = toolbox.NewAnonymClass.asInstanceOf[NewAnonymClassImpl]
+  def TypeDecl       = toolbox.TypeDecl.asInstanceOf[TypeDeclImpl]
+  def TypeAlias      = toolbox.TypeAlias.asInstanceOf[TypeAliasImpl]
+  def PatDef         = toolbox.PatDef.asInstanceOf[PatDefImpl]
+  def SeqDef         = toolbox.SeqDef.asInstanceOf[SeqDefImpl]
+  def SeqDecl        = toolbox.SeqDecl.asInstanceOf[SeqDeclImpl]
+  def InitCall       = toolbox.InitCall.asInstanceOf[InitCallImpl]
+  def NewInstance    = toolbox.NewInstance.asInstanceOf[NewInstanceImpl]
+  def SecondaryCtor  = toolbox.SecondaryCtor.asInstanceOf[SecondaryCtorImpl]
+  def Self           = toolbox.Self.asInstanceOf[SelfImpl]
 
   // type trees
-  def TypeIdent      = toolbox.get.TypeIdent.asInstanceOf[TypeIdentImpl]
-  def TypeSelect     = toolbox.get.TypeSelect.asInstanceOf[TypeSelectImpl]
-  def PathType       = toolbox.get.PathType.asInstanceOf[PathTypeImpl]
-  def TypeSingleton  = toolbox.get.TypeSingleton.asInstanceOf[TypeSingletonImpl]
-  def TypeApply      = toolbox.get.TypeApply.asInstanceOf[TypeApplyImpl]
-  def TypeInfix      = toolbox.get.TypeInfix.asInstanceOf[TypeInfixImpl]
-  def TypeFunction   = toolbox.get.TypeFunction.asInstanceOf[TypeFunctionImpl]
-  def TypeTuple      = toolbox.get.TypeTuple.asInstanceOf[TypeTupleImpl]
-  def TypeAnd        = toolbox.get.TypeAnd.asInstanceOf[TypeAndImpl]
-  def TypeOr         = toolbox.get.TypeOr.asInstanceOf[TypeOrImpl]
-  def TypeRefine     = toolbox.get.TypeRefine.asInstanceOf[TypeRefineImpl]
-  def TypeBounds     = toolbox.get.TypeBounds.asInstanceOf[TypeBoundsImpl]
-  def TypeRepeated   = toolbox.get.TypeRepeated.asInstanceOf[TypeRepeatedImpl]
-  def TypeByName     = toolbox.get.TypeByName.asInstanceOf[TypeByNameImpl]
-  def TypeAnnotated  = toolbox.get.TypeAnnotated.asInstanceOf[TypeAnnotatedImpl]
+  def TypeIdent      = toolbox.TypeIdent.asInstanceOf[TypeIdentImpl]
+  def TypeSelect     = toolbox.TypeSelect.asInstanceOf[TypeSelectImpl]
+  def PathType       = toolbox.PathType.asInstanceOf[PathTypeImpl]
+  def TypeSingleton  = toolbox.TypeSingleton.asInstanceOf[TypeSingletonImpl]
+  def TypeApply      = toolbox.TypeApply.asInstanceOf[TypeApplyImpl]
+  def TypeInfix      = toolbox.TypeInfix.asInstanceOf[TypeInfixImpl]
+  def TypeFunction   = toolbox.TypeFunction.asInstanceOf[TypeFunctionImpl]
+  def TypeTuple      = toolbox.TypeTuple.asInstanceOf[TypeTupleImpl]
+  def TypeAnd        = toolbox.TypeAnd.asInstanceOf[TypeAndImpl]
+  def TypeOr         = toolbox.TypeOr.asInstanceOf[TypeOrImpl]
+  def TypeRefine     = toolbox.TypeRefine.asInstanceOf[TypeRefineImpl]
+  def TypeBounds     = toolbox.TypeBounds.asInstanceOf[TypeBoundsImpl]
+  def TypeRepeated   = toolbox.TypeRepeated.asInstanceOf[TypeRepeatedImpl]
+  def TypeByName     = toolbox.TypeByName.asInstanceOf[TypeByNameImpl]
+  def TypeAnnotated  = toolbox.TypeAnnotated.asInstanceOf[TypeAnnotatedImpl]
 
   // terms
-  def Infix           = toolbox.get.Infix.asInstanceOf[InfixImpl]
-  def Prefix          = toolbox.get.Prefix.asInstanceOf[PrefixImpl]
-  def Postfix         = toolbox.get.Postfix.asInstanceOf[PostfixImpl]
-  def Throw           = toolbox.get.Throw.asInstanceOf[ThrowImpl]
-  def Annotated       = toolbox.get.Annotated.asInstanceOf[AnnotatedImpl]
-  def If              = toolbox.get.If.asInstanceOf[IfImpl]
-  def Try             = toolbox.get.Try.asInstanceOf[TryImpl]
-  def Function        = toolbox.get.Function.asInstanceOf[FunctionImpl]
-  def While           = toolbox.get.While.asInstanceOf[WhileImpl]
-  def DoWhile         = toolbox.get.DoWhile.asInstanceOf[DoWhileImpl]
-  def For             = toolbox.get.For.asInstanceOf[ForImpl]
-  def Named           = toolbox.get.Named.asInstanceOf[NamedImpl]
-  def Repeated        = toolbox.get.Repeated.asInstanceOf[RepeatedImpl]
-  def Lit             = toolbox.get.Lit.asInstanceOf[LitImpl]
-  def Apply           = toolbox.get.Apply.asInstanceOf[ApplyImpl]
-  def ApplyType       = toolbox.get.ApplyType.asInstanceOf[ApplyTypeImpl]
-  def Ident           = toolbox.get.Ident.asInstanceOf[IdentImpl]
-  def This            = toolbox.get.This.asInstanceOf[ThisImpl]
-  def Super           = toolbox.get.Super.asInstanceOf[SuperImpl]
-  def Select          = toolbox.get.Select.asInstanceOf[SelectImpl]
-  def Ascribe         = toolbox.get.Ascribe.asInstanceOf[AscribeImpl]
-  def Assign          = toolbox.get.Assign.asInstanceOf[AssignImpl]
-  def Update          = toolbox.get.Update.asInstanceOf[UpdateImpl]
-  def Return          = toolbox.get.Return.asInstanceOf[ReturnImpl]
-  def Block           = toolbox.get.Block.asInstanceOf[BlockImpl]
-  def PartialFunction = toolbox.get.PartialFunction.asInstanceOf[PartialFunctionImpl]
-  def Match           = toolbox.get.Match.asInstanceOf[MatchImpl]
-  def Case            = toolbox.get.Case.asInstanceOf[CaseImpl]
-  def Tuple           = toolbox.get.Tuple.asInstanceOf[TupleImpl]
-  def Interpolate     = toolbox.get.Interpolate.asInstanceOf[InterpolateImpl]
-  def SeqLiteral      = toolbox.get.SeqLiteral.asInstanceOf[SeqLiteralImpl]
-  def TypedSplice     = toolbox.get.TypedSplice.asInstanceOf[TypedSpliceImpl]
+  def Infix           = toolbox.Infix.asInstanceOf[InfixImpl]
+  def Prefix          = toolbox.Prefix.asInstanceOf[PrefixImpl]
+  def Postfix         = toolbox.Postfix.asInstanceOf[PostfixImpl]
+  def Throw           = toolbox.Throw.asInstanceOf[ThrowImpl]
+  def Annotated       = toolbox.Annotated.asInstanceOf[AnnotatedImpl]
+  def If              = toolbox.If.asInstanceOf[IfImpl]
+  def Try             = toolbox.Try.asInstanceOf[TryImpl]
+  def Function        = toolbox.Function.asInstanceOf[FunctionImpl]
+  def While           = toolbox.While.asInstanceOf[WhileImpl]
+  def DoWhile         = toolbox.DoWhile.asInstanceOf[DoWhileImpl]
+  def For             = toolbox.For.asInstanceOf[ForImpl]
+  def Named           = toolbox.Named.asInstanceOf[NamedImpl]
+  def Repeated        = toolbox.Repeated.asInstanceOf[RepeatedImpl]
+  def Lit             = toolbox.Lit.asInstanceOf[LitImpl]
+  def Apply           = toolbox.Apply.asInstanceOf[ApplyImpl]
+  def ApplyType       = toolbox.ApplyType.asInstanceOf[ApplyTypeImpl]
+  def Ident           = toolbox.Ident.asInstanceOf[IdentImpl]
+  def This            = toolbox.This.asInstanceOf[ThisImpl]
+  def Super           = toolbox.Super.asInstanceOf[SuperImpl]
+  def Select          = toolbox.Select.asInstanceOf[SelectImpl]
+  def Ascribe         = toolbox.Ascribe.asInstanceOf[AscribeImpl]
+  def Assign          = toolbox.Assign.asInstanceOf[AssignImpl]
+  def Update          = toolbox.Update.asInstanceOf[UpdateImpl]
+  def Return          = toolbox.Return.asInstanceOf[ReturnImpl]
+  def Block           = toolbox.Block.asInstanceOf[BlockImpl]
+  def PartialFunction = toolbox.PartialFunction.asInstanceOf[PartialFunctionImpl]
+  def Match           = toolbox.Match.asInstanceOf[MatchImpl]
+  def Case            = toolbox.Case.asInstanceOf[CaseImpl]
+  def Tuple           = toolbox.Tuple.asInstanceOf[TupleImpl]
+  def Interpolate     = toolbox.Interpolate.asInstanceOf[InterpolateImpl]
+  def SeqLiteral      = toolbox.SeqLiteral.asInstanceOf[SeqLiteralImpl]
+  def TypedSplice     = toolbox.TypedSplice.asInstanceOf[TypedSpliceImpl]
 
 
-  def Import         = toolbox.get.Import.asInstanceOf[ImportImpl]
-  def Pat            = toolbox.get.Pat.asInstanceOf[PatImpl]
+  def Import         = toolbox.Import.asInstanceOf[ImportImpl]
+  def Pat            = toolbox.Pat.asInstanceOf[PatImpl]
 
   /**--------------------- Positions ---------------------------------*/
-  def Pos            = toolbox.get.Pos.asInstanceOf[PosImpl]
+  def Pos            = toolbox.Pos.asInstanceOf[PosImpl]
 
   /**--------------------- TreeOps ---------------------------------*/
-  def untpd          = toolbox.get.untpd.asInstanceOf[untpdImpl]
+  def untpd          = toolbox.untpd.asInstanceOf[untpdImpl]
 
   implicit class UntypedTreeOps(tree: Tree) {
     def pos: Pos = Pos.pos(tree)
@@ -168,12 +170,12 @@ object api extends Toolbox {
 
   object tpd extends tpdImpl {
     def typeOf(tree: Tree): Type = {
-      val tb = toolbox.get
+      val tb = toolbox
       tb.tpd.typeOf(tree.asInstanceOf[tb.tpd.Tree]).asInstanceOf[Type]
     }
 
     def subst(tree: Tree)(from: List[Symbol], to: List[Symbol]): Tree = {
-      val tb = toolbox.get
+      val tb = toolbox
       tb.tpd.subst(tree.asInstanceOf[tb.tpd.Tree])(
         from.asInstanceOf[List[tb.Symbol]],
         to.asInstanceOf[List[tb.Symbol]]
@@ -181,21 +183,21 @@ object api extends Toolbox {
     }
 
     def traverse(tree: Tree)(pf: PartialFunction[Tree, Unit]): Unit = {
-      val tb = toolbox.get
+      val tb = toolbox
       tb.tpd.traverse(tree.asInstanceOf[tb.tpd.Tree])(
         pf.asInstanceOf[PartialFunction[tb.tpd.Tree, Unit]]
       )
     }
 
     def exists(tree: Tree)(pf: PartialFunction[Tree, Boolean]): Boolean = {
-      val tb = toolbox.get
+      val tb = toolbox
       tb.tpd.exists(tree.asInstanceOf[tb.tpd.Tree])(
         pf.asInstanceOf[PartialFunction[tb.tpd.Tree, Boolean]]
       )
     }
 
     def transform(tree: Tree)(pf: PartialFunction[Tree, Tree]): Tree = {
-      val tb = toolbox.get
+      val tb = toolbox
       tb.tpd.transform(tree.asInstanceOf[tb.tpd.Tree])(
         pf.asInstanceOf[PartialFunction[tb.tpd.Tree, tb.tpd.Tree]]
       ).asInstanceOf[Tree]
@@ -224,7 +226,7 @@ object api extends Toolbox {
   }
 
   /**--------------------- ValDefs ---------------------------------*/
-  def ValDef             = toolbox.get.ValDef.asInstanceOf[ValDefImpl]
+  def ValDef             = toolbox.ValDef.asInstanceOf[ValDefImpl]
 
   implicit class ValDefOps(tree: ValDef) {
     def mods: Mods = ValDef.mods(tree)
@@ -248,7 +250,7 @@ object api extends Toolbox {
   }
 
   /**--------------------- ValDecls ---------------------------------*/
-  def ValDecl             = toolbox.get.ValDecl.asInstanceOf[ValDeclImpl]
+  def ValDecl             = toolbox.ValDecl.asInstanceOf[ValDeclImpl]
 
   implicit class ValDeclOps(tree: ValDecl) {
     def mods: Mods = ValDecl.mods(tree)
@@ -261,7 +263,7 @@ object api extends Toolbox {
   }
 
   /**--------------------- DefDefs ---------------------------------*/
-  def DefDef              = toolbox.get.DefDef.asInstanceOf[DefDefImpl]
+  def DefDef              = toolbox.DefDef.asInstanceOf[DefDefImpl]
 
   implicit class DefDefOps(tree: DefDef) {
     def mods: Mods = DefDef.mods(tree)
@@ -278,7 +280,7 @@ object api extends Toolbox {
   }
 
   /**--------------------- DefDefs ---------------------------------*/
-  def DefDecl              = toolbox.get.DefDecl.asInstanceOf[DefDeclImpl]
+  def DefDecl              = toolbox.DefDecl.asInstanceOf[DefDeclImpl]
 
   implicit class DefDeclOps(tree: DefDecl) {
     def mods: Mods = DefDecl.mods(tree)
@@ -293,7 +295,7 @@ object api extends Toolbox {
   }
 
   /**--------------------- Param ---------------------------------*/
-  def Param               = toolbox.get.Param.asInstanceOf[ParamImpl]
+  def Param               = toolbox.Param.asInstanceOf[ParamImpl]
 
   implicit class ParamOps(tree: Param) {
     def mods: Mods = Param.mods(tree)
@@ -310,7 +312,7 @@ object api extends Toolbox {
   }
 
   /**--------------------- TypeParam ---------------------------------*/
-  def TypeParam            = toolbox.get.TypeParam.asInstanceOf[TypeParamImpl]
+  def TypeParam            = toolbox.TypeParam.asInstanceOf[TypeParamImpl]
 
   implicit class TypeParamOps(tree: TypeParam) {
     def mods: Mods = TypeParam.mods(tree)
@@ -319,7 +321,7 @@ object api extends Toolbox {
   }
 
   /**--------------------- Classes ---------------------------------*/
-  def Class              = toolbox.get.Class.asInstanceOf[ClassImpl]
+  def Class              = toolbox.Class.asInstanceOf[ClassImpl]
 
   implicit class ClassOps(tree: Class) {
     def mods: Mods = Class.mods(tree)
@@ -344,7 +346,7 @@ object api extends Toolbox {
   }
 
   /**--------------------- Traits ---------------------------------*/
-  def Trait            = toolbox.get.Trait.asInstanceOf[TraitImpl]
+  def Trait            = toolbox.Trait.asInstanceOf[TraitImpl]
 
   implicit class TraitOps(tree: Trait) {
     def mods: Mods = Trait.mods(tree)
@@ -363,7 +365,7 @@ object api extends Toolbox {
   }
 
   /**--------------------- Objects ---------------------------------*/
-  def Object            = toolbox.get.Object.asInstanceOf[ObjectImpl]
+  def Object            = toolbox.Object.asInstanceOf[ObjectImpl]
 
   implicit class ObjectOps(tree: Object) {
     def mods: Mods = Object.mods(tree)
@@ -400,7 +402,7 @@ object api extends Toolbox {
   implicit def tpd2untpd(tree: tpd.Tree): Splice = TypedSplice(tree)
 
   /**--------------------- Types ---------------------------------*/
-  def Type           = toolbox.get.Type.asInstanceOf[TypeImpl]
+  def Type           = toolbox.Type.asInstanceOf[TypeImpl]
 
   implicit class TypeOps(tp: Type) {
     def =:=(tp2: Type) = Type.=:=(tp, tp2)
@@ -425,8 +427,8 @@ object api extends Toolbox {
     def toTree: tpd.Tree = Type.toTree(tp)
   }
 
-  def ByNameType     = toolbox.get.ByNameType.asInstanceOf[ByNameTypeImpl]
-  def MethodType     = toolbox.get.MethodType.asInstanceOf[MethodTypeImpl]
+  def ByNameType     = toolbox.ByNameType.asInstanceOf[ByNameTypeImpl]
+  def MethodType     = toolbox.MethodType.asInstanceOf[MethodTypeImpl]
 
   implicit class MethodTypeOps(tp: MethodType) {
     def paramInfos: List[Type] = MethodType.paramInfos(tp)
@@ -439,7 +441,7 @@ object api extends Toolbox {
   }
 
   /**--------------------- Symbols ---------------------------------*/
-  def Symbol         = toolbox.get.Symbol.asInstanceOf[SymbolImpl]
+  def Symbol         = toolbox.Symbol.asInstanceOf[SymbolImpl]
 
   implicit class SymbolOps(sym: Symbol) {
     def name: String = Symbol.name(sym)
@@ -458,7 +460,7 @@ object api extends Toolbox {
   }
 
   /**--------------------- Denotations ---------------------------------*/
-  def Denotation     = toolbox.get.Denotation.asInstanceOf[DenotationImpl]
+  def Denotation     = toolbox.Denotation.asInstanceOf[DenotationImpl]
 
   implicit class DenotationOps(denot: Denotation) {
     def name: String = Denotation.name(denot)
