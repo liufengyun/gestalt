@@ -1,6 +1,6 @@
 package scala.gestalt.core
 
-trait Positions { this: Trees =>
+trait Positions { this: Toolbox =>
   // it's safe to assume type trees and untyped trees use the same modelling of position
   type Pos
 
@@ -519,7 +519,7 @@ trait ValDefs { this: Toolbox =>
   }
 }
 
-trait ValDecls { this: Trees =>
+trait ValDecls { this: Toolbox =>
 
   def ValDecl: ValDeclImpl
   trait ValDeclImpl {
@@ -533,7 +533,7 @@ trait ValDecls { this: Trees =>
 
 }
 
-trait DefDefs { this: Trees =>
+trait DefDefs { this: Toolbox =>
 
   def DefDef: DefDefImpl
   trait DefDefImpl {
@@ -551,7 +551,7 @@ trait DefDefs { this: Trees =>
 
 }
 
-trait DefDecls { this: Trees =>
+trait DefDecls { this: Toolbox =>
 
   def DefDecl: DefDeclImpl
   trait DefDeclImpl {
@@ -586,7 +586,7 @@ trait Params { self : Toolbox =>
   }
 }
 
-trait TypeParams { this: Trees =>
+trait TypeParams { this: Toolbox =>
 
   def TypeParam: TypeParamImpl
   trait TypeParamImpl {
@@ -598,7 +598,7 @@ trait TypeParams { this: Trees =>
   }
 }
 
-trait Classes { this: Trees =>
+trait Classes { this: Toolbox =>
 
   def Class: ClassImpl
   trait ClassImpl {
@@ -619,7 +619,7 @@ trait Classes { this: Trees =>
   }
 }
 
-trait Traits { this: Trees =>
+trait Traits { this: Toolbox =>
 
   def Trait: TraitImpl
   trait TraitImpl {
@@ -637,7 +637,7 @@ trait Traits { this: Trees =>
   }
 }
 
-trait Objects { this: Trees =>
+trait Objects { this: Toolbox =>
   def Object: ObjectImpl
   trait ObjectImpl {
     def apply(mods: Mods, name: String, parents: List[InitCall], selfOpt: Option[Self], stats: List[Tree]): Object

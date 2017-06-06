@@ -49,16 +49,17 @@ object api extends Toolbox {
    *
    *  For hygiene, by default only fully-qualified names are allowed, unless
    *  `scala.gestalt.options.unsafe` is imported.
-   *
-   *  Ideally, literal types fit best here after it's supported in scalac:
-   *
-   *      def Ident(name: "_root_"): Tree
-   *      def Ident(name: "scala"): Tree
-   *
    */
-  def root: TermTree = {
+  def root: TermTree = Ident("_root_")
+
+  def Ident(name: "_root_"): TermTree = {
     import options.unsafe
-    Ident("_root_")
+    Ident.apply("_root_")
+  }
+
+  def Ident(name: "scala")(implicit dummy: Cap): TermTree = {
+    import options.unsafe
+    Ident.apply("scala")
   }
 
   /**------------------------------------------------*/

@@ -19,7 +19,7 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
   private def selectPath(path: String): TermTree = {
     val parts = path.split('.')
 
-    parts.tail.foldLeft[TermTree](Ident(parts.head)) { (prefix, name) =>
+    parts.tail.foldLeft[TermTree](Ident.apply(parts.head)) { (prefix, name) =>
       prefix.select(name)
     }
   }
