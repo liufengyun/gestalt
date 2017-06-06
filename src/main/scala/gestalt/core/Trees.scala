@@ -15,17 +15,7 @@ trait Trees extends Params with TypeParams with
   ValDefs with ValDecls with DefDefs with DefDecls with
   Classes with Traits with Objects with Positions { toolbox: Toolbox =>
 
-  trait Dummy
-  implicit val dummy: Dummy = null
-
-  trait Dummy1
-  implicit val dummy1: Dummy1 = null
-
-  // An Unsafe capability is required to call the untyped Ident(name) and TypeIdent
-  // in order to achieve hygiene
-  type Unsafe
-
-  // safety by construction -- implementation can have TypeTree = Tree
+ // safety by construction -- implementation can have TypeTree = Tree
   type Tree     >: Null <: AnyRef
   type TypeTree >: Null <: Tree
   type TermTree >: Null <: Tree
