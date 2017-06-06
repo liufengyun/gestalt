@@ -79,7 +79,7 @@ trait Types extends MethodTypes { this: Toolbox =>
   }
 }
 
-trait MethodTypes { this: Types =>
+trait MethodTypes { this: Toolbox =>
   type MethodType >: Null <: Type
 
   def MethodType: MethodTypeImpl
