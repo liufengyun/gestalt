@@ -57,9 +57,14 @@ object api extends Toolbox {
     Ident.apply("_root_")
   }
 
-  def Ident(name: "scala")(implicit dummy: Cap): TermTree = {
+  def Ident(name: "scala")(implicit dummy: Dummy): TermTree = {
     import options.unsafe
     Ident.apply("scala")
+  }
+
+  def Ident(name: "java")(implicit dummy: Dummy1): TermTree = {
+    import options.unsafe
+    Ident.apply("java")
   }
 
   /**------------------------------------------------*/
@@ -247,7 +252,7 @@ object api extends Toolbox {
 
   object OfValDef {
     def unapply(tree: Tree): Option[ValDef] = ValDef.get(tree)
-    def unapply(tree: tpd.Tree)(implicit c: Cap): Option[tpd.ValDef] = ValDef.get(tree)(c)
+    def unapply(tree: tpd.Tree)(implicit c: Dummy): Option[tpd.ValDef] = ValDef.get(tree)(c)
   }
 
   /**--------------------- ValDecls ---------------------------------*/
@@ -396,7 +401,7 @@ object api extends Toolbox {
       Some(recur(Nil, call))
     }
 
-    def unapply(call: tpd.Tree)(implicit c: Cap): Option[(tpd.Tree, List[List[tpd.Tree]])] =
+    def unapply(call: tpd.Tree)(implicit c: Dummy): Option[(tpd.Tree, List[List[tpd.Tree]])] =
       unapply(call.asInstanceOf[TermTree]).asInstanceOf[Option[(tpd.Tree, List[List[tpd.Tree]])]]
   }
 
