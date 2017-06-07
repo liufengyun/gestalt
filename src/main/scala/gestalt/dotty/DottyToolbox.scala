@@ -202,8 +202,15 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   // new qual.T[A, B](x, y)(z)
   object NewInstance extends NewInstanceImpl {
-    def apply(qual: Option[Tree], name: String, targs: List[TypeTree], argss: List[List[TermTree]]): TermTree = {
-      ApplySeq(d.Select(d.New(PathType(qual, name, targs)), nme.CONSTRUCTOR), argss).withPosition
+    def apply(typeTree: TypeTree, argss: List[List[TermTree]]): TermTree = {
+      ApplySeq(d.Select(d.New(typeTree), nme.CONSTRUCTOR), argss).withPosition
+    }
+
+    def apply(tp: Type, argss: List[List[tpd.Tree]])(implicit cap: Dummy): tpd.Tree = {
+      argss match {
+        case head :: tail => tail.foldLeft[tpd.Tree](t.New(tp, head)) { (acc, args) => Apply(acc, args) }
+        case Nil => t.New(tp)
+      }
     }
   }
 
@@ -222,28 +229,6 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   object TypeSelect extends TypeSelectImpl {
     def apply(qual: Tree, name: String): TypeTree = d.Select(qual, name.toTypeName).withPosition
-  }
-
-  object PathType extends PathTypeImpl {
-    def apply(qual: Option[Tree], name: String, targs: List[TypeTree]) = {
-      val select = if (qual.isEmpty) d.Ident(name.toTypeName) else d.Select(qual.get, name.toTypeName)
-      if (targs.isEmpty) select else TypeApply(select, targs)
-    }
-    def unapply(tpe: TypeTree) = {
-      val withoutTypedSplice = tpe match {
-        case TypedSplice(tree) => tree
-        case _ => tpe
-      }
-      val (select, targs) = withoutTypedSplice match {
-        case c.AppliedTypeTree(tpe, targs) => tpe -> targs
-        case other => other -> Nil
-      }
-      select match {
-        case c.Select(qual, name) if name.isTypeName => Some((Some(qual), name.show, targs))
-        case c.Ident(name) if name.isTypeName => Some((None, name.show, targs))
-        case _ => None
-      }
-    }
   }
 
   object TypeSingleton extends TypeSingletonImpl {
