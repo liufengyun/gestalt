@@ -50,7 +50,7 @@ class Quasiquotes extends StaticAnnotation {
     test("new 2") {
       val expr = q"new X with T { def m = 42 }"
       val anonymClass = NewAnonymClass(
-        InitCall(None, "X", Nil, Nil) :: InitCall(None, "T", Nil, Nil) :: Nil,
+        InitCall(TypeIdent("X"), Nil) :: InitCall(TypeIdent("T"), Nil) :: Nil,
         None,
         DefDef(emptyMods, "m", Nil, Nil, None, Lit(42)) :: Nil
       )
