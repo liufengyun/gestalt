@@ -124,11 +124,9 @@ trait Trees extends Params with TypeParams with
 
   def NewInstance: NewInstanceImpl
   trait NewInstanceImpl {
-    def apply(qual: Option[Tree], name: String, targs: List[TypeTree], argss: List[List[TermTree]]): TermTree
-    def apply(tpe: TypeTree, argss: List[List[TermTree]]): TermTree = {
-      val Trees.this.PathType(qual, name, targs) = tpe
-      apply(qual, name, targs, argss)
-    }
+    def apply(typeTree: TypeTree, argss: List[List[TermTree]]): TermTree
+
+    def apply(tp: Type, argss: List[List[tpd.Tree]])(implicit cap: Dummy): tpd.Tree
   }
 
   def SecondaryCtor: SecondaryCtorImpl
@@ -151,12 +149,6 @@ trait Trees extends Params with TypeParams with
   def TypeSelect: TypeSelectImpl
   trait TypeSelectImpl {
     def apply(qual: Tree, name: String): TypeTree
-  }
-
-  def PathType: PathTypeImpl
-  trait PathTypeImpl {
-    def apply(qual: Option[Tree], name: String, targs: List[TypeTree]): TypeTree
-    def unapply(tpe: TypeTree) : Option[(Option[Tree], String, List[TypeTree])]
   }
 
   def TypeSingleton: TypeSingletonImpl

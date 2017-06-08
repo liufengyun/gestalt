@@ -44,7 +44,7 @@ class Quasiquotes extends StaticAnnotation {
     test("new") {
       val file = Lit("path")
       val expr = q"new xsd($file)"
-      assert(expr.toString === NewInstance(None, "xsd", Nil, (Lit("path") :: Nil) :: Nil).toString)
+      assert(expr.toString === NewInstance(TypeIdent("xsd"), (Lit("path") :: Nil) :: Nil).toString)
     }
 
     test("new 2") {

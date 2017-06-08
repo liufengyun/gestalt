@@ -9,6 +9,9 @@ trait Toolbox extends Trees with Types with Denotations with Symbols with TypeTa
   trait Dummy1
   implicit val dummy1: Dummy1 = null
 
+  trait Dummy2
+  implicit val dummy2: Dummy2 = null
+
   // An Unsafe capability is required to call the untyped Ident(name) and TypeIdent
   // in order to achieve hygiene
   type Unsafe

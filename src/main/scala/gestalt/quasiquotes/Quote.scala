@@ -160,7 +160,8 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
 
   def liftNewInstance(tree: m.Tree): TermTree = {
     val Argss(TypeArguments(Qualifier(m.Ctor.Ref.Name(name), qualOpt), targs), argss) = tree
-    Ident("NewInstance").appliedTo(liftOpt(qualOpt), Lit(name), liftSeq(targs), liftSeqSeq(argss))
+    val tp = composeType(qualOpt, name, targs)
+    Ident("NewInstance").appliedTo(tp, liftSeqSeq(argss))
   }
 
   /** {{{(trees: Seq[Tree[Tree[A]]]) => Tree[Seq[Tree[A]]]}}} */
