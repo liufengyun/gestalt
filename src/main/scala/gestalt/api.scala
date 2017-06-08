@@ -51,6 +51,7 @@ object api extends Toolbox {
    *  `scala.gestalt.options.unsafe` is imported.
    */
   def root: TermTree = Ident("_root_")
+  def empty: TermTree = Ident("_empty_")
 
   def Ident(name: "_root_"): TermTree = {
     import options.unsafe
@@ -65,6 +66,11 @@ object api extends Toolbox {
   def Ident(name: "java")(implicit dummy: Dummy1): TermTree = {
     import options.unsafe
     Ident.apply("java")
+  }
+
+  def Ident(name: "_empty_")(implicit dummy: Dummy2): TermTree = {
+    import options.unsafe
+    Ident.apply("<empty>")
   }
 
   /**------------------------------------------------*/
