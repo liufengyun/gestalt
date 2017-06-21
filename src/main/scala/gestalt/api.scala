@@ -411,7 +411,6 @@ object api extends Toolbox {
   }
 
   implicit def tpd2untpd(tree: tpd.Tree): Splice = TypedSplice(tree)
-  // implicit def tpds2untpds(ts: List[tpd.Tree]): List[Tree] = ts.map(_.wrap)
 
   /**--------------------- Types ---------------------------------*/
   def Type           = toolbox.Type.asInstanceOf[TypeImpl]
