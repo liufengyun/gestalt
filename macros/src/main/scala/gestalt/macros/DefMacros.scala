@@ -202,3 +202,9 @@ object MultiParamBlocks {
     q"$a + $b - $c"
   }
 }
+
+object Whitebox {
+  def gimmelist(x: Int): Seq[Int] = meta {
+    q"List(${x.wrap})"
+  }
+}

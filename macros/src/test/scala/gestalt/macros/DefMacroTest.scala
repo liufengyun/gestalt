@@ -211,4 +211,9 @@ class DefMacroTest extends TestSuite {
     assert(trees.some3Explicit() == Some(3))
     assert(trees.some3ExplicitTyped() == Some(3))
   }
+
+  test("white box") {
+    val x = Whitebox.gimmelist(2)
+    1 :: x
+  }
 }
