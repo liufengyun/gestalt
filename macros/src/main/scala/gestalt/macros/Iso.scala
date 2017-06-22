@@ -12,8 +12,7 @@ object Iso {
 
     val tupleVal = {
         val args = fields.map(d => q"o.${d.name}")
-        if (fields.length == 0) q"()"
-        else q"(..$args)"
+        q"(..$args)"
     }
 
     val tupleTp = Type.typeRef("scala.Tuple" + fields.length).appliedTo(fieldTps: _*)
