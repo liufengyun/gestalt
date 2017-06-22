@@ -3,7 +3,7 @@ import Decorators._
 
 class IsoTest extends TestSuite {
   case class Foo(i: Int, s: String, b: Boolean)
-  def foo[C, L](c: C)(implicit iso: Iso[C, L]): L = iso.to(c)
+  def conv[C, L](c: C)(implicit iso: Iso[C, L]): L = iso.to(c)
   type T = (Int, String, Boolean)
 
   test("iso explicit") {
@@ -12,7 +12,7 @@ class IsoTest extends TestSuite {
   }
 
   test("iso") {
-    val equiv: T = foo(Foo(23, "foo", true))
+    val equiv: T = conv(Foo(23, "foo", true))
     assert(equiv == (23, "foo", true))
   }
 }
