@@ -12,6 +12,7 @@ object Driver {
     new TypeToolboxTest
     new MonadlessOptionTest
     new OptionalTest
+    new IsoTest
 
     var success = false
     var total = 0
