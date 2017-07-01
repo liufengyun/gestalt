@@ -208,3 +208,12 @@ object Whitebox {
     q"List(${x.wrap})"
   }
 }
+
+object Hygiene {
+  def f(x: Int): Int = meta {
+    q"""
+    val x = 4
+    $x
+    """
+  }
+}

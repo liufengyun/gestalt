@@ -216,4 +216,9 @@ class DefMacroTest extends TestSuite {
     val x = Whitebox.gimmelist(2)
     1 :: x
   }
+
+  test("hygiene") {
+    val x = 5
+    assert(Hygiene.f(x) == 5)
+  }
 }
