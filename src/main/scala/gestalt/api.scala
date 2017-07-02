@@ -73,6 +73,8 @@ object api extends Toolbox {
     Ident.apply("<empty>")
   }
 
+  def Ident(tp: TermRef)(implicit c: Dummy): tpd.Tree = Ident(Denotation.symbol(Type.denot(tp).get))
+
   /**------------------------------------------------*/
   // definitions
   def NewAnonymClass = toolbox.NewAnonymClass.asInstanceOf[NewAnonymClassImpl]

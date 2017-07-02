@@ -399,6 +399,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
 
     def unapply(tree: tpd.Tree): Option[(List[Symbol], tpd.Tree)] = tree match {
+      case c.Block(Nil, body) => unapply(body)
       case c.Block((meth : t.DefDef) :: Nil, _ : t.Closure) if meth.name == nme.ANON_FUN =>
         Some((meth.vparamss.head.map(_.symbol), meth.rhs))
       case _ => None
@@ -478,6 +479,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   // extractors
   object Lit extends LitImpl {
     def apply(value: Any): Lit = d.Literal(Constant(value)).withPosition
+    def typed(value: Any): tpd.Tree = t.Literal(Constant(value))
     def unapply(tree: Tree): Option[Any] = tree match {
       case c.Literal(Constant(v)) => Some(v)
       case _ => None
@@ -1051,8 +1053,10 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
     def transform(tree: tpd.Tree)(pf: PartialFunction[tpd.Tree, tpd.Tree]): tpd.Tree = {
       new t.TreeMap() {
-        override def transform(tree: tpd.Tree)(implicit ctx: Context) =
-          pf.lift(tree).getOrElse(super.transform(tree))
+        override def transform(tree: tpd.Tree)(implicit ctx: Context) = {
+          def updateOwner(subtree: tpd.Tree) = ensureOwner(subtree, ctx.owner)
+          pf.lift(tree).map(updateOwner(_)).getOrElse(super.transform(tree))
+        }
       }.transform(tree)
     }
 

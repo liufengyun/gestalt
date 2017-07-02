@@ -221,4 +221,12 @@ class DefMacroTest extends TestSuite {
     val x = 5
     assert(Hygiene.f(x) == 5)
   }
+
+  test("transform with owner change") {
+    val res = Transform.log(5) { x =>
+      3 + x
+    }
+
+    assert(res == 8)
+  }
 }
