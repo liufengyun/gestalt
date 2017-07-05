@@ -322,6 +322,7 @@ trait Trees extends Params with TypeParams with
   def Lit: LitImpl
   trait LitImpl {
     def apply(value: Any): Lit
+    def typed(value: Any): tpd.Tree
     def unapply(tree: Tree): Option[Any]
     def unapply(tree: tpd.Tree)(implicit c: Dummy): Option[Any]
   }
@@ -347,7 +348,6 @@ trait Trees extends Params with TypeParams with
   trait IdentImpl {
     def apply(name: String)(implicit unsafe: Unsafe): Ident
     def apply(symbol: Symbol): tpd.Tree
-    def apply(tp: TermRef)(implicit c: Dummy): tpd.Tree = Ident(Denotation.symbol(Type.denot(tp).get))
     def unapply(tree: Tree): Option[String]
     def unapply(tree: tpd.Tree)(implicit c: Dummy): Option[String]
   }
