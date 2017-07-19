@@ -378,7 +378,7 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
     case m.Term.Block(stats) =>
       Ident("Block").appliedTo(liftSeq(stats))
     case m.Term.If(cond, thenp, elsep) =>
-      Ident("If").appliedTo(lift(cond), lift(thenp), scalaSome.appliedTo(lift(elsep)))
+      Ident("If").appliedTo(lift(cond), lift(thenp), lift(elsep))
     case m.Term.Match(expr, cases) =>
       Ident("Match").appliedTo(lift(expr), liftSeq(cases))
     case m.Term.TryWithCases(expr, catchp, finallyp) =>
