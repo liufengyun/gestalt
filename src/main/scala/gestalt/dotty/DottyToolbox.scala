@@ -497,8 +497,10 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     }
 
     def apply(symbol: Symbol): tpd.Tree = t.ref(symbol)
-    def unapply(tree: tpd.Tree)(implicit c: Dummy): Option[String] =
-      unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[String]]
+    def unapply(tree: tpd.Tree)(implicit c: Dummy): Option[Symbol] = tree match {
+      case id: t.Ident if id.name.isTermName => Some(id.symbol)
+      case _ => None
+    }
   }
 
   object This extends ThisImpl {

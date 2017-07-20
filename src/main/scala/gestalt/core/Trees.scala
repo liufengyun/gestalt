@@ -349,7 +349,7 @@ trait Trees extends Params with TypeParams with
     def apply(name: String)(implicit unsafe: Unsafe): Ident
     def apply(symbol: Symbol): tpd.Tree
     def unapply(tree: Tree): Option[String]
-    def unapply(tree: tpd.Tree)(implicit c: Dummy): Option[String]
+    def unapply(tree: tpd.Tree)(implicit c: Dummy): Option[Symbol]
   }
 
   def This: ThisImpl
