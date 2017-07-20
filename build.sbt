@@ -12,7 +12,7 @@ lazy val common = Seq(
 
 lazy val gestaltSetting = Seq(
   name := "gestalt",
-  version := "0.1.1",
+  version := "0.1.2",
   organization := "me.fengy",
 
   scalaOrganization := dottyOrg,
