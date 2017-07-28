@@ -224,7 +224,7 @@ object Transform {
       case call @ ApplySeq(f, args) if args.size > 0 =>
         val name = f.symbol.get.name
         val print = Ident(Type.termRef("scala.Predef")).select("print").appliedTo(Lit.typed(s"calling $name\n"))
-        val vdef = ValDef("temp", call)
+        val vdef = ValDef(call)
         val res = Ident(vdef.symbol)
         Block(print :: vdef :: Nil, res)
     }

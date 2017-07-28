@@ -7,7 +7,7 @@ final class Optional[+A >: Null](val value: A) extends AnyVal {
   def isEmpty = value == null
 
   def getOrElse[B >: A](alt: => B)(implicit m: WeakTypeTag[A] @uncheckVar): B = meta {
-    val tempValDef = ValDef(fresh("_temp"), prefix)
+    val tempValDef = ValDef(prefix)
     val tempIdent = Ident(tempValDef.symbol)
 
     q"""
@@ -18,7 +18,7 @@ final class Optional[+A >: Null](val value: A) extends AnyVal {
 
   def map[B >: Null](f: A => B)(implicit m: WeakTypeTag[A] @uncheckVar): Optional[B] = meta {
     val Function(param :: Nil, body) = f
-    val tempValDef = ValDef(fresh("_temp"), prefix)
+    val tempValDef = ValDef(prefix)
     val tempIdent = Ident(tempValDef.symbol)
 
     val newBody = body.transform {
