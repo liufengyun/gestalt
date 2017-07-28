@@ -367,6 +367,12 @@ class Quasiquotes extends StaticAnnotation {
 
     }
 
+    test("var def") {
+      val term = q"var x = 3"
+      val res = ValDef(emptyMods.setMutable, "x", None, Lit(3))
+      assert(term.toString === res.toString)
+    }
+
     test("pat def") {
       val expr = q"val f(x) = a"
       val res = PatDef(emptyMods, Pat.Unapply(Ident("f"), Pat.Var("x") :: Nil), None, Ident("a"))

@@ -532,10 +532,15 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
       require(pats.size > 0)
       val modifiers = liftMods(mods)
       liftValDef(modifiers, pats, liftOpt(tpe), lift(rhs), isDecl = false)
-    case m.Defn.Var(mods, pats, tpe, rhs) =>
+    case m.Defn.Var(mods, pats, tpe, rhsOpt) =>
+      val rhs: m.Tree = rhsOpt match {
+        case Some(t) => t
+        case _       => abort("only var definitions with right-hand side supported", enclosingTree.pos)
+      }
+
       require(pats.size > 0)
       val modifiers = Select(liftMods(mods), "setMutable")
-      liftValDef(modifiers, pats, liftOpt(tpe), liftOpt(rhs), isDecl = false)
+      liftValDef(modifiers, pats, liftOpt(tpe), lift(rhs), isDecl = false)
     case m.Defn.Def(mods, name, tparams, paramss, tpe, body) =>
       Ident("DefDef").appliedTo(liftMods(mods), liftName(name), liftSeq(tparams), liftSeqSeq(paramss), liftOpt(tpe), lift(body))
     // case m.Defn.Macro(mods, name, tparams, paramss, tpe, body) =>
