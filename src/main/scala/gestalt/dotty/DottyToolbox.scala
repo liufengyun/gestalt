@@ -497,8 +497,10 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     }
 
     def apply(symbol: Symbol): tpd.Tree = t.ref(symbol)
-    def unapply(tree: tpd.Tree)(implicit c: Dummy): Option[String] =
-      unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[String]]
+    def unapply(tree: tpd.Tree)(implicit c: Dummy): Option[Symbol] = tree match {
+      case id: t.Ident if id.name.isTermName => Some(id.symbol)
+      case _ => None
+    }
   }
 
   object This extends ThisImpl {
@@ -902,8 +904,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case _ => None
     }
 
-    def apply(name: String, rhs: tpd.Tree): tpd.ValDef = {
-      val vsym = ctx.newSymbol(ctx.owner, name.toTermName, Flags.EmptyFlags, rhs.tpe)
+    def apply(rhs: tpd.Tree): tpd.ValDef = {
+      val vsym = ctx.newSymbol(ctx.owner, "_temp".toTermName, Flags.EmptyFlags, rhs.tpe)
       t.ValDef(vsym, rhs)
     }
 

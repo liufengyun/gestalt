@@ -203,8 +203,7 @@ object Transformer {
           val newTree =
             tree.transform {
               case tree @ q"$fun[$tp]($v)" if isUnlift(fun.tpe) =>
-                val name = fresh()
-                val dummy = ValDef(name, tree).symbol
+                val dummy = ValDef(tree).symbol
                 unlifts += ((v, dummy, tp))
                 Ident(dummy)
             }
@@ -228,10 +227,10 @@ object Transformer {
 
               val tp = Type.typeRef("scala.List").appliedTo(types.head.tpe)
               val fun = Function((list, tp) :: Nil, newTree.tpe) { refs =>
-                val iter = ValDef(fresh("iter"), refs.head.select("iterator"))
+                val iter = ValDef(refs.head.select("iterator"))
                 val elements = unlifts.map { case (tree, dummy, tpe) =>
                   val rhs = Ident(iter.symbol).select("next").appliedTo().select("asInstanceOf").appliedToTypes(tpe)
-                  ValDef(dummy.name, rhs)
+                  ValDef(rhs)
                 }
 
                 val froms   = dummies

@@ -205,7 +205,7 @@ class Quasiquotes extends StaticAnnotation {
       val q"if ($expr1) $expr2 else $expr3" = q"if (1 > 2) a else b"
       assert(expr1.toString === Infix(Lit(1), ">", Lit(2)).toString)
       assert(expr2.toString === Ident("a").toString)
-      assert(expr3.toString === Ident("b").toString)
+      assert(expr3.toString === Some(Ident("b")).toString)
     }
 
     test("if2") {
@@ -365,6 +365,12 @@ class Quasiquotes extends StaticAnnotation {
       )
       assert(expr.toString === res.toString)
 
+    }
+
+    test("var def") {
+      val term = q"var x = 3"
+      val res = ValDef(emptyMods.setMutable, "x", None, Lit(3))
+      assert(term.toString === res.toString)
     }
 
     test("pat def") {

@@ -349,7 +349,7 @@ trait Trees extends Params with TypeParams with
     def apply(name: String)(implicit unsafe: Unsafe): Ident
     def apply(symbol: Symbol): tpd.Tree
     def unapply(tree: Tree): Option[String]
-    def unapply(tree: tpd.Tree)(implicit c: Dummy): Option[String]
+    def unapply(tree: tpd.Tree)(implicit c: Dummy): Option[Symbol]
   }
 
   def This: ThisImpl
@@ -493,7 +493,7 @@ trait ValDefs { this: Toolbox =>
     def get(tree: Tree): Option[ValDef]
     def unapply(tree: Tree): Option[(String, Option[TypeTree], TermTree)]
 
-    def apply(name: String, rhs: tpd.Tree): tpd.ValDef
+    def apply(rhs: tpd.Tree): tpd.ValDef
     def symbol(tree: tpd.ValDef)(implicit c: Dummy): Symbol
     def name(tree: tpd.ValDef)(implicit c: Dummy): String
     def rhs(tree: tpd.ValDef)(implicit c: Dummy): TermTree
