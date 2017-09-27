@@ -12,7 +12,7 @@ Design Goals:
 ## Examples
 
 ```Scala
-import scala.gestalt.api_
+import scala.gestalt.api._
 
 object Test {
   def plus(a: Int, b: Int): Int = meta {
