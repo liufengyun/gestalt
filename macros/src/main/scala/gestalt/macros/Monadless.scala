@@ -219,10 +219,9 @@ object Transformer {
             case unlifts =>
               val (trees, dummies, types) = unlifts.unzip3
               val list = fresh("list")
-              val scalaList = Ident(Type.termRef("scala.collection.immutable.List.apply"))
-              val seqLiteral = SeqLiteral(trees, trees.head.tpe.widen)
-              val arg = scalaList.appliedToTypes(trees.head.tpe.widen.toTree).appliedTo(seqLiteral)
-              val collect = Resolve.collect(tree.pos).appliedToTypes(types.head.tpe.toTree).appliedTo(arg)
+              val scalaList = Ident(Type.termRef("scala.collection.immutable.List"))
+              val arg = scalaList.appliedTo(trees : _*)
+              val collect = Resolve.collect(tree.pos).appliedTo(arg)
 
 
               val tp = Type.typeRef("scala.List").appliedTo(types.head.tpe)

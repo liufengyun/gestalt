@@ -1,16 +1,16 @@
 package scala.gestalt.dotty
 
-import scala.gestalt.core.{ Toolbox => Tbox, Location }
-
+import scala.gestalt.core.{Location, Toolbox => Tbox}
 import dotty.tools.dotc._
 import core._
-import ast.{ untpd => d, Trees => c, tpd => t }
+import ast.{Trees => c, tpd => t, untpd => d}
 import StdNames._
 import NameOps._
 import Contexts._
 import Decorators._
 import Constants._
 import d.modsDeco
+import typer.ProtoTypes._
 import util.Positions.Position
 
 import scala.collection.mutable.Set
@@ -538,10 +538,42 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case _ => None
     }
 
-    def apply(fun: tpd.Tree, args: List[tpd.Tree])(implicit c: Dummy): tpd.Tree = t.Apply(fun, args)
+    def apply(fun: tpd.Tree, args: List[tpd.Tree])(implicit c: Dummy): tpd.Tree = typedApply(fun, args)
 
     def unapply(tree: tpd.Tree)(implicit c: Dummy): Option[(tpd.Tree, List[tpd.Tree])] =
       unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[(tpd.Tree, List[tpd.Tree])]]
+
+    def typedApply(fun: tpd.Tree, args: List[tpd.Tree])(implicit ctx: Context): tpd.Tree = {
+      val tree = d.Apply(fun, args)
+      val typr = ctx.typer
+
+      val proto = new FunProtoTyped(args, Types.WildcardType, typr)
+      val fun1 = typr.adapt(fun, proto)
+
+      /** Type application where arguments come from prototype, and no implicits are inserted */
+      def simpleApply(fun1: tpd.Tree, proto: FunProtoTyped)(implicit ctx: Context): tpd.Tree =
+        t.methPart(fun1).tpe match {
+          case funRef: TermRef =>
+            val app = new typr.ApplyToTyped(tree, fun1, funRef, args, Types.WildcardType)
+            typr.convertNewGenericArray(typer.ConstFold(app.result))
+          case _ =>
+            throw new Error(i"unexpected type.\n fun = $fun,\n methPart(fun) = ${t.methPart(fun)},\n methPart(fun).tpe = ${t.methPart(fun).tpe},\n tpe = ${fun.tpe}")
+        }
+
+      fun1.tpe match {
+        case err: Types.ErrorType => d.cpy.Apply(tree)(fun1, args).withType(err)
+        case _ =>
+          if (proto.isDropped) fun1
+          else
+            typr.tryEither {
+              implicit ctx => simpleApply(fun1, proto)
+            } {
+              (failedVal, failedState) => failedState.commit(); failedVal
+            }
+      }
+
+    }
+
   }
 
   object Ascribe extends AscribeImpl {
@@ -688,8 +720,13 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case _ => Some((tree, Nil))
     }
 
-    def apply(fun: tpd.Tree, args: List[tpd.Tree])(implicit c: Dummy): tpd.Tree =
-      t.TypeApply(fun, args)
+    def apply(fun: tpd.Tree, args: List[tpd.Tree])(implicit c: Dummy): tpd.Tree = {
+      val typr = ctx.typer
+      val proto = new PolyProto(args.map(_.tpe), Types.WildcardType)
+      val fun1 = typr.adapt(fun, proto)
+
+      t.TypeApply(fun1, args)
+    }
 
     def unapply(tree: tpd.Tree)(implicit c: Dummy): Option[(tpd.Tree, List[tpd.Tree])] =
       unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[(tpd.Tree, List[tpd.Tree])]]
