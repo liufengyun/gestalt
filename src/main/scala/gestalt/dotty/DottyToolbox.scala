@@ -941,8 +941,9 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case _ => None
     }
 
-    def apply(rhs: tpd.Tree): tpd.ValDef = {
-      val vsym = ctx.newSymbol(ctx.owner, "_temp".toTermName, Flags.EmptyFlags, rhs.tpe)
+    def apply(rhs: tpd.Tree, mutable: Boolean): tpd.ValDef = {
+      val flags = if (mutable) Flags.Mutable else Flags.EmptyFlags
+      val vsym = ctx.newSymbol(ctx.owner, "_temp".toTermName, flags, rhs.tpe)
       t.ValDef(vsym, rhs)
     }
 
