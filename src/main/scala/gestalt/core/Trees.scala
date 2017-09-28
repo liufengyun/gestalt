@@ -386,6 +386,8 @@ trait Trees extends Params with TypeParams with
   trait AssignImpl {
     def apply(lhs: TermTree, rhs: TermTree): TermTree
     def unapply(tree: Tree): Option[(TermTree, TermTree)]
+
+    def apply(lhs: tpd.Tree, rhs: tpd.Tree)(implicit c: Dummy): tpd.Tree
     def unapply(tree: tpd.Tree)(implicit c: Dummy): Option[(tpd.Tree, tpd.Tree)]
   }
 

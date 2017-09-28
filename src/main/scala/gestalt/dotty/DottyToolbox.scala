@@ -599,6 +599,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case _ => None
     }
 
+    def apply(lhs: tpd.Tree, rhs: tpd.Tree)(implicit c: Dummy): tpd.Tree = t.Assign(lhs, rhs)
+
     def unapply(tree: tpd.Tree)(implicit c: Dummy): Option[(tpd.Tree, tpd.Tree)] =
       unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[(tpd.Tree, tpd.Tree)]]
   }
