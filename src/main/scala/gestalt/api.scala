@@ -398,6 +398,9 @@ object api extends Toolbox {
   def ApplySeq(fun: TermTree, argss: List[List[TermTree]]): TermTree =
     argss.foldLeft(fun) { (acc, args) => Apply(acc, args) }
 
+  def ApplySeq(fun: tpd.Tree, argss: List[List[tpd.Tree]])(implicit c: Dummy): tpd.Tree =
+    argss.foldLeft(fun) { (acc, args) => Apply(acc, args) }
+
   object ApplySeq {
     def unapply(call: TermTree): Option[(Tree, List[List[TermTree]])] = {
       def recur(acc: List[List[TermTree]], term: TermTree): (TermTree, List[List[TermTree]]) = term match {
