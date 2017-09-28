@@ -949,6 +949,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       t.ValDef(vsym, rhs)
     }
 
+    def apply(sym: Symbol, rhs: tpd.Tree): tpd.ValDef = t.ValDef(sym.asTerm, rhs)
+
     def symbol(tree: tpd.ValDef)(implicit c: Dummy): Symbol = tree.symbol
     def name(tree: tpd.ValDef)(implicit c: Dummy): String = tree.name.show
     def rhs(tree: tpd.ValDef)(implicit c: Dummy): TermTree = tree.forceIfLazy
