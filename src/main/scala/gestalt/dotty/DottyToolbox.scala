@@ -953,7 +953,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def name(tree: tpd.ValDef)(implicit c: Dummy): String = tree.name.show
     def rhs(tree: tpd.ValDef)(implicit c: Dummy): TermTree = tree.forceIfLazy
     def tptOpt(tree: tpd.ValDef)(implicit c: Dummy): Option[TypeTree] = Some(tree.tpt)
-    def copyRhs(tree: tpd.ValDef)(rhs: tpd.Tree)(implicit c: Dummy): tpd.ValDef = t.cpy.ValDef(tree)(rhs = rhs)
+    def copyRhs(tree: tpd.ValDef)(rhs: tpd.Tree)(implicit c: Dummy): tpd.ValDef =
+      t.ValDef(tree.symbol.asTerm, rhs)
     def get(tree: tpd.Tree)(implicit c: Dummy): Option[tpd.ValDef] =
       get(tree).asInstanceOf[Option[tpd.ValDef]]
     def unapply(tree: tpd.Tree)(implicit c: Dummy): Option[(Symbol, tpd.Tree)] = tree match {
