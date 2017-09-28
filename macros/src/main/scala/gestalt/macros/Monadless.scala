@@ -106,14 +106,14 @@ object Transformer {
     object TransformBlock {
       def unapply(trees: List[tpd.Tree])(implicit blockTp: Type): Option[tpd.Tree] =
         trees match {
-          case (tree @ ValDef(name, _, Transform(monad))) :: TransformBlock(body) =>
-            val res = rewrite(monad, name, tree.tpe.widen, body.tpe, flat = true, flatTp = blockTp) { refs =>
+          case (tree @ ValDef(sym, Transform(monad))) :: TransformBlock(body) =>
+            val res = rewrite(monad, sym.name, tree.tpe.widen, body.tpe, flat = true, flatTp = blockTp) { refs =>
               body.subst(tree.symbol.get :: Nil, refs.head.symbol.get :: Nil)
             }
             Some(res)
 
-          case (tree @ ValDef(name, _, Transform(monad))) :: tail =>       // tail cannot be empty
-            Some(rewrite(monad, name, tree.tpe.widen, blockTp, flat = false) { refs =>
+          case (tree @ ValDef(sym, Transform(monad))) :: tail =>       // tail cannot be empty
+            Some(rewrite(monad, sym.name, tree.tpe.widen, blockTp, flat = false) { refs =>
               Block(tail.init, tail.last).subst(tree.symbol.get :: Nil, refs.head.symbol.get :: Nil)
             })
 

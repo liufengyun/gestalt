@@ -955,9 +955,12 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def tptOpt(tree: tpd.ValDef)(implicit c: Dummy): Option[TypeTree] = Some(tree.tpt)
     def copyRhs(tree: tpd.ValDef)(rhs: tpd.Tree)(implicit c: Dummy): tpd.ValDef = t.cpy.ValDef(tree)(rhs = rhs)
     def get(tree: tpd.Tree)(implicit c: Dummy): Option[tpd.ValDef] =
-      get(tree.asInstanceOf[Tree]).asInstanceOf[Option[tpd.ValDef]]
-    def unapply(tree: tpd.Tree)(implicit c: Dummy): Option[(String, Option[TypeTree], TermTree)] =
-      unapply(tree.asInstanceOf[Tree]).asInstanceOf[Option[(String, Option[TypeTree], TermTree)]]
+      get(tree).asInstanceOf[Option[tpd.ValDef]]
+    def unapply(tree: tpd.Tree)(implicit c: Dummy): Option[(Symbol, tpd.Tree)] = tree match {
+      case vdef : t.ValDef =>
+        Some((vdef.symbol, vdef.rhs))
+      case _ => None
+    }
   }
 
   object ValDecl extends ValDeclImpl {

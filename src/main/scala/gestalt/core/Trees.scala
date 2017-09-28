@@ -502,7 +502,7 @@ trait ValDefs { this: Toolbox =>
     def tptOpt(tree: tpd.ValDef)(implicit c: Dummy): Option[TypeTree]
     def copyRhs(tree: tpd.ValDef)(rhs: tpd.Tree)(implicit c: Dummy): tpd.ValDef
     def get(tree: tpd.Tree)(implicit c: Dummy): Option[tpd.ValDef]
-    def unapply(tree: tpd.Tree)(implicit c: Dummy): Option[(String, Option[TypeTree], TermTree)]
+    def unapply(tree: tpd.Tree)(implicit c: Dummy): Option[(Symbol, tpd.Tree)]
   }
 }
 
