@@ -49,7 +49,7 @@ object Transformer {
     def rewrite(monad: tpd.Tree, name: String, tp: Type, resTp: Type, flat: Boolean, flatTp: Type = null)
                (bodyFn: Seq[tpd.Tree] => tpd.Tree): tpd.Tree =
     {
-      val fun = Function((name, tp) :: Nil, resTp)(bodyFn)
+      val fun = Function(tp :: Nil, resTp)(bodyFn)
       if (flat)
         Resolve.flatMap(monad.pos, monad).appliedToTypes(flatTp.toTree).appliedTo(fun)
       else
@@ -225,7 +225,7 @@ object Transformer {
 
 
               val tp = Type.typeRef("scala.List").appliedTo(types.head.tpe)
-              val fun = Function((list, tp) :: Nil, newTree.tpe) { refs =>
+              val fun = Function(tp :: Nil, newTree.tpe) { refs =>
                 val iter = ValDef(refs.head.select("iterator"))
                 val elements = unlifts.map { case (tree, dummy, tpe) =>
                   val rhs = Ident(iter.symbol).select("next").appliedTo().select("asInstanceOf").appliedToTypes(tpe)

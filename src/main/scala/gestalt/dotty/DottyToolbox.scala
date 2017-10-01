@@ -386,17 +386,16 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def apply(params: List[Param], body: TermTree): TermTree =
       d.Function(params, body).withPosition
 
-    def apply(params: List[(String, Type)], resTp: Type)(bodyFn: List[tpd.Tree] => tpd.Tree): tpd.Tree = {
+    def apply(params: List[Type], resTp: Type)(bodyFn: List[tpd.Tree] => tpd.Tree): tpd.Tree = {
       val meth = ctx.newSymbol(
         ctx.owner, nme.ANON_FUN,
         Flags.Synthetic | Flags.Method,
-        Types.MethodType(params.map(_._1.toTermName), params.map(_._2), resTp)
+        Types.MethodType(params.map(p => NameKinds.UniqueName.fresh("param".toTermName)), params, resTp)
       )
       t.Closure(meth, paramss => {
         ensureOwner(bodyFn(paramss.head), meth)
       })
     }
-
 
     def unapply(tree: tpd.Tree): Option[(List[Symbol], tpd.Tree)] = tree match {
       case c.Block(Nil, body) => unapply(body)
