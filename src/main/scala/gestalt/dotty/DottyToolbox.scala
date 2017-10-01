@@ -397,6 +397,12 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       })
     }
 
+    def apply(params: List[Symbol], body: tpd.Tree)(implicit c: Dummy): tpd.Tree = {
+      apply(params.map(_.info), body.tpe) { args =>
+        tpd.subst(body)(params, args.map(_.symbol))
+      }
+    }
+
     def unapply(tree: tpd.Tree): Option[(List[Symbol], tpd.Tree)] = tree match {
       case c.Block(Nil, body) => unapply(body)
       case c.Block((meth : t.DefDef) :: Nil, _ : t.Closure) if meth.name == nme.ANON_FUN =>

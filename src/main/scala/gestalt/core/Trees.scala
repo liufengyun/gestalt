@@ -262,6 +262,7 @@ trait Trees extends Params with TypeParams with
   trait FunctionImpl {
     def apply(params: List[Param], body: TermTree): TermTree
     def apply(params: List[Type], resTp: Type)(bodyFn: List[tpd.Tree] => tpd.Tree): tpd.Tree
+    def apply(params: List[Symbol], body: tpd.Tree)(implicit c: Dummy): tpd.Tree
     def unapply(tree: tpd.Tree): Option[(List[Symbol], tpd.Tree)]
   }
 
