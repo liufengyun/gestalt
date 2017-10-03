@@ -6,7 +6,7 @@ final class Optional[+A >: Null](val value: A) extends AnyVal {
   def get: A = value
   def isEmpty = value == null
 
-  def getOrElse[B >: A](alt: => B)(implicit m: WeakTypeTag[A] @uncheckVar): B = meta {
+  def getOrElse[B >: A](alt: => B): B = meta {
     val tempValDef = ValDef(prefix)
     val tempIdent = Ident(tempValDef.symbol)
 
@@ -16,7 +16,7 @@ final class Optional[+A >: Null](val value: A) extends AnyVal {
     """
   }
 
-  def map[B >: Null](f: A => B)(implicit m: WeakTypeTag[A] @uncheckVar): Optional[B] = meta {
+  def map[B >: Null](f: A => B): Optional[B] = meta {
     val Function(param :: Nil, body) = f
     val tempValDef = ValDef(prefix)
     val tempIdent = Ident(tempValDef.symbol)
