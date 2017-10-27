@@ -337,7 +337,7 @@ object Transformer {
 
       private def companionMethod(pos: Pos, name: String) =
         method(prefix, prefix.tpe, name)
-          .orElse(method(Ident(m.tpe.companion.get.symbol.get), m.tpe.companion.get, name))
+          .orElse(method(Ident(m.tpe.companion.get.termSymbol.get), m.tpe.companion.get, name))
 
       private def method(instance: tpd.Tree, tpe: Type, name: String) =
         find(tpe, name).map(_ => Select(instance, name))

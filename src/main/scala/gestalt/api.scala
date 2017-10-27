@@ -151,6 +151,8 @@ object api extends Toolbox {
   implicit class UntypedTreeOps(tree: Tree) {
     def pos: Pos = Pos.pos(tree)
 
+    def show: String = untpd.show(tree)
+
     def traverse(pf: PartialFunction[Tree, Unit]): Unit =
       untpd.traverse(tree)(pf)
 
@@ -187,6 +189,11 @@ object api extends Toolbox {
       tb.tpd.typeOf(tree.asInstanceOf[tb.tpd.Tree]).asInstanceOf[Type]
     }
 
+    def show(tree: Tree): String = {
+      val tb = toolbox
+      tb.tpd.show(tree.asInstanceOf[tb.tpd.Tree])
+    }
+
     def subst(tree: Tree)(from: List[Symbol], to: List[Symbol]): Tree = {
       val tb = toolbox
       tb.tpd.subst(tree.asInstanceOf[tb.tpd.Tree])(
@@ -220,6 +227,7 @@ object api extends Toolbox {
   implicit class TypedTreeOps(tree: tpd.Tree) {
     def pos: Pos = Pos.pos(tree)
     def tpe: Type = tpd.typeOf(tree)
+    def show: String = tpd.show(tree)
     def wrap: Splice = TypedSplice(tree)
     def subst(from: List[Symbol], to: List[Symbol]): tpd.Tree = tpd.subst(tree)(from, to)
     def symbol: Option[Symbol] = tree.tpe.denot.map(_.symbol)
@@ -438,7 +446,8 @@ object api extends Toolbox {
     def show: String = Type.show(tp)
     def widen: Type = Type.widen(tp)
     def denot: Option[Denotation] = Type.denot(tp)
-    def symbol: Option[Symbol] = denot.map(_.symbol)
+    def termSymbol: Option[Symbol] = denot.map(_.symbol)
+    def classSymbol: Option[Symbol] = Type.classSymbol(tp)
     def appliedTo(args: Type*): Type = Type.appliedTo(tp, args.toList)
     def toTree: tpd.Tree = Type.toTree(tp)
   }
@@ -462,6 +471,8 @@ object api extends Toolbox {
   implicit class SymbolOps(sym: Symbol) {
     def name: String = Symbol.name(sym)
     def asSeenFrom(prefix: Type): Type = Symbol.asSeenFrom(sym, prefix)
+    def termRef: TermRef = Symbol.termRef(sym)
+    def typeRef: TypeRef = Symbol.typeRef(sym)
     def isCase: Boolean = Symbol.isCase(sym)
     def isTrait: Boolean = Symbol.isTrait(sym)
     def isPrivate: Boolean = Symbol.isPrivate(sym)

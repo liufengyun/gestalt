@@ -1,7 +1,5 @@
 import scala.gestalt.api._
 
-import scala.annotation.unchecked.{ uncheckedVariance => uncheckVar }
-
 final class Optional[+A >: Null](val value: A) extends AnyVal {
   def get: A = value
   def isEmpty = value == null

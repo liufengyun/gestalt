@@ -6,6 +6,7 @@ import core._
 import ast.{Trees => c, tpd => t, untpd => d}
 import StdNames._
 import NameOps._
+import Names.TermName
 import Contexts._
 import Decorators._
 import Constants._
@@ -152,6 +153,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       val self = if (selfOpt.isEmpty) d.EmptyValDef else selfOpt.get.asInstanceOf[d.ValDef]
       d.New(d.Template(init, parents, self, stats).withPosition)
     }
+
+    def apply(parents: List[tpd.Tree], stats: List[tpd.Tree]): tpd.Tree = ???
   }
 
   object TypeDecl extends TypeDeclImpl {
@@ -724,7 +727,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def apply(fun: Tree, args: List[TypeTree]): TermTree = d.TypeApply(fun, args).withPosition
     def unapply(tree: Tree): Option[(TermTree, List[TypeTree])] = tree match {
       case c.TypeApply(fun, args) => Some((fun, args))
-      case _ => Some((tree, Nil))
+      case _ => None
     }
 
     def apply(fun: tpd.Tree, args: List[tpd.Tree])(implicit c: Dummy): tpd.Tree = {
@@ -1014,6 +1017,18 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
         Some((mods(ddef), name(ddef), ddef.tparams, ddef.vparamss, tptOpt(ddef), rhs(ddef)))
       case _ => None
     }
+
+    def apply(name: String, tp: MethodType)(bodyFn: List[List[tpd.Tree]] => tpd.Tree): tpd.Tree = {
+      val meth = ctx.newSymbol(
+        ctx.owner, name.toTermName,
+        Flags.Synthetic | Flags.Method,
+        tp
+      )
+
+      t.DefDef(meth, paramss => {
+        ensureOwner(bodyFn(paramss), meth)
+      })
+    }
   }
 
   object DefDecl extends DefDeclImpl {
@@ -1060,6 +1075,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   /*------------------------------- TreeOps-------------------------------------*/
 
   object untpd extends untpdImpl {
+    def show(tree: Tree): String = tree.show
+
     def traverse(tree: Tree)(pf: PartialFunction[Tree, Unit]): Unit =
       new d.UntypedTreeMap() {
         override def transform(tree: Tree)(implicit ctx: Context) = {
@@ -1089,6 +1106,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     type Tree    = t.Tree
     type ValDef  = t.ValDef
     type Param   = t.ValDef
+
+    def show(tree: Tree): String = tree.show
 
     def traverse(tree: tpd.Tree)(pf: PartialFunction[tpd.Tree, Unit]): Unit =
       new t.TreeTraverser {
@@ -1123,6 +1142,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   /*------------------------------- types -------------------------------------*/
 
   type Type       = Types.Type
+  type ParamRef   = Types.ParamRef
   type TermRef    = Types.TermRef
   type TypeRef    = Types.TypeRef
   type MethodType = Types.MethodType
@@ -1259,6 +1279,16 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       case tp: Types.MethodType => Some(tp)
       case _ => None
     }
+
+    def apply(paramNames: List[String])
+             (paramInfosExp: List[ParamRef] => List[Type],
+              resultTypeExp: List[ParamRef] => Type): MethodType = {
+      val names: List[TermName] = paramNames.map(_.toTermName)
+      Types.MethodType(names)(
+        mt => paramInfosExp(mt.paramRefs),
+        mt => resultTypeExp(mt.paramRefs)
+      )
+    }
   }
 
   /*------------------------------- symbols -------------------------------------*/
@@ -1268,6 +1298,9 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
     /** type of a member with respect to a prefix */
     def asSeenFrom(mem: Symbol, prefix: Type): Type = mem.asSeenFrom(prefix).info
+
+    def typeRef(sym: Symbol): TypeRef = sym.typeRef
+    def termRef(sym: Symbol): TermRef = sym.termRef
 
     def isCase(sym: Symbol): Boolean = sym.is(Flags.Case)
     def isTrait(sym: Symbol): Boolean = sym.is(Flags.Trait)
@@ -1294,8 +1327,10 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     val owners = Set.empty[Symbol]
     new t.TreeTraverser {
       def traverse(tree: t.Tree)(implicit ctx: Context): Unit = tree match {
-        case tree: t.DefTree => owners += tree.symbol.owner
-        case _               => traverseChildren(tree)
+        case tree: t.DefTree if tree.symbol.exists =>
+          owners += tree.symbol.owner
+        case _ =>
+          traverseChildren(tree)
       }
     }.traverse(tree)
 

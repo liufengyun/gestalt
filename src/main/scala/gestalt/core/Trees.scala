@@ -89,6 +89,7 @@ trait Trees extends Params with TypeParams with
   def NewAnonymClass: NewAnonymClassImpl
   trait NewAnonymClassImpl {
     def apply(parents: List[InitCall], self: Option[Self], stats: List[Tree]): DefTree
+    def apply(parents: List[tpd.Tree], stats: List[tpd.Tree]): tpd.Tree
   }
 
   def TypeDecl: TypeDeclImpl
@@ -460,6 +461,8 @@ trait Trees extends Params with TypeParams with
 
   def untpd: untpdImpl
   trait untpdImpl {
+    def show(tree: Tree): String
+
     def traverse(tree: Tree)(pf: PartialFunction[Tree, Unit]): Unit
     def exists(tree: Tree)(pf: PartialFunction[Tree, Boolean]): Boolean
     def transform(tree: Tree)(pf: PartialFunction[Tree, Tree]): Tree
@@ -473,6 +476,8 @@ trait Trees extends Params with TypeParams with
 
     /** type associated with the tree */
     def typeOf(tree: Tree): Type
+
+    def show(tree: Tree): String
 
     /** subst symbols in tree */
     def subst(tree: Tree)(from: List[Symbol], to: List[Symbol]): Tree
@@ -536,6 +541,8 @@ trait DefDefs { this: Toolbox =>
     def copyRhs(tree: DefDef)(rhs: TermTree): DefDef
     def get(tree: Tree): Option[DefDef]
     def unapply(tree: Tree): Option[(Mods, String, List[TypeParam], List[List[Param]], Option[TypeTree], TermTree)]
+
+    def apply(name: String, tp: MethodType)(body: List[List[tpd.Tree]] => tpd.Tree): tpd.Tree
   }
 
 }

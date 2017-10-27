@@ -116,7 +116,7 @@ object Expander {
   /** Expand def macros */
   def expandDefMacro(tree: tpd.Tree)(implicit ctx: Context): untpd.Tree = tree match {
     case ExtractApply(methodSelect @ MethodSelect(prefix, method), targs, argss) =>
-      // println("expanding {" + tree.show + "}")
+      println("expanding \n" + tree.show)
       val methodOwner = methodSelect.symbol.owner
       val className = if (methodOwner.isPackageObject) {
         // if macro is defined in a package object
@@ -141,7 +141,7 @@ object Expander {
         val res = api.withToolbox(tb) {
           impl.invoke(null, trees: _*).asInstanceOf[untpd.Tree]
         }
-        // println(" => {" + res.show + "}")
+        println(" => \n" + res.show)
         res
       }
       catch {

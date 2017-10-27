@@ -81,11 +81,16 @@ trait Types extends MethodTypes { this: Toolbox =>
 
 trait MethodTypes { this: Toolbox =>
   type MethodType >: Null <: Type
+  type ParamRef   >: Null <: Type
 
   def MethodType: MethodTypeImpl
   trait MethodTypeImpl {
     def paramInfos(tp: MethodType): List[Type]
     def instantiate(tp: MethodType)(params: List[Type]): Type
     def unapply(tp: Type): Option[MethodType]
+
+    def apply(paramNames: List[String])
+             (paramInfosExp: List[ParamRef] => List[Type],
+              resultTypeExp: List[ParamRef] => Type): MethodType
   }
 }

@@ -229,4 +229,15 @@ class DefMacroTest extends TestSuite {
 
     assert(res == 8)
   }
+
+  test("typed method") {
+    val x = TypedDef.double {
+      val n = 5 + 5
+      n + n
+    }
+
+    println("x = " + x)
+
+    assert(x == 20)
+  }
 }

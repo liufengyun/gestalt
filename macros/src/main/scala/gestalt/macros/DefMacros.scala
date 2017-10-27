@@ -232,3 +232,17 @@ object Transform {
     newfun.appliedTo(x)
   }
 }
+
+object TypedDef {
+  def double(x: Int): Int = meta {
+    val mt = MethodType(List("n"))(_ => Type.typeRef("scala.Int") :: Nil, _ => Type.typeRef("scala.Int"))
+    val meth = DefDef("double", mt) { case params :: Nil =>
+      Block(
+        x :: Nil,     // test nested definition
+        params(0).select("+").appliedTo(params(0))
+      )
+    }
+    val v = ValDef(Lit.typed(10))
+    Block(meth :: v :: Nil, Ident(meth.symbol.get).appliedTo(Ident(v.symbol)))
+  }
+}

@@ -107,9 +107,8 @@ class Quasiquotes extends StaticAnnotation {
     }
 
     test("apply") {
-      val q"$ref[..$tpes](..$apats)" = q"x(Q, W)"
+      val q"$ref(..$apats)" = q"x(Q, W)"
       assert(ref.toString === Ident("x").toString)
-      assert(tpes.toString === List().toString)
       assert(apats.toString === List(Ident("Q"), Ident("W")).toString)
     }
 

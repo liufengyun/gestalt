@@ -11,6 +11,9 @@ trait Symbols { this: Toolbox =>
     /** type of a member with respect to a prefix */
     def asSeenFrom(mem: Symbol, prefix: Type): Type
 
+    def typeRef(sym: Symbol): TypeRef
+    def termRef(sym: Symbol): TermRef
+
     def isCase(sym: Symbol): Boolean
     def isTrait(sym: Symbol): Boolean
     def isPrivate(sym: Symbol): Boolean
