@@ -416,6 +416,21 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
 
   object While extends WhileImpl {
     def apply(expr: TermTree, body: TermTree): TermTree = d.WhileDo(expr, body).withPosition
+
+    def apply(expr: tpd.Tree, body: tpd.Tree)(implicit c: Dummy): tpd.Tree =
+      t.WhileDo(ctx.owner, expr, body :: Nil)
+
+    def unapply(tree: tpd.Tree): Option[(tpd.Tree, tpd.Tree)] = tree match {
+      case t.Block((ddef : t.DefDef) :: Nil, t.Apply(f, Nil))
+      if f.symbol.name == nme.WHILE_PREFIX =>
+        ddef.rhs match {
+          case t.If(cond, t.Block(body :: Nil, _), _) =>
+            Some ((cond, body) )
+          case t.If(cond, t.Block (body :+ expr, _), _) =>
+            Some ((cond, t.Block(body, expr)) )
+        }
+      case _ => None
+    }
   }
 
   object DoWhile extends DoWhileImpl {

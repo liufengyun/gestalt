@@ -270,6 +270,9 @@ trait Trees extends Params with TypeParams with
   def While: WhileImpl
   trait WhileImpl {
     def apply(expr: TermTree, body: TermTree): TermTree
+
+    def apply(expr: tpd.Tree, body: tpd.Tree)(implicit c: Dummy): tpd.Tree
+    def unapply(tree: tpd.Tree): Option[(tpd.Tree, tpd.Tree)]
   }
 
   def DoWhile: DoWhileImpl
