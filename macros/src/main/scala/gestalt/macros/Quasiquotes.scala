@@ -57,12 +57,13 @@ class Quasiquotes extends StaticAnnotation {
       assert(expr.toString === anonymClass.toString)
     }
 
+    /*
     test("apply") {
       val q"foo($term1, ..$terms, $term2)" = q"foo(x, y, z, q)"
       assert(term1.toString === Ident("x").toString)
       assert(terms.toString === List(Ident("y"), Ident("z")).toString)
       assert(term2.toString === Ident("q").toString)
-    }
+    } */
 
     test("apply") {
       val term = q"x"
@@ -71,12 +72,13 @@ class Quasiquotes extends StaticAnnotation {
       assert(q"foo($term, ..$terms, $term)".toString === res.toString)
     }
 
+    /*
     test("apply") {
       val q"foo($x, ..$ys, $z)" = q"foo(1, 2, 3)"
       assert(x.toString === Lit(1).toString)
       assert(ys.toString === List(Lit(2)).toString)
       assert(z.toString === Lit(3).toString)
-    }
+    } */
 
     test("apply") {
       val x = q"1"
@@ -87,11 +89,12 @@ class Quasiquotes extends StaticAnnotation {
       assert(q"foo($x, ..$ys, $z, ..$ts)".toString === res.toString)
     }
 
+    /*
     test("apply") {
       val q"$expr($name)" = q"foo(bar)"
       assert(expr.toString === Ident("foo").toString)
       assert(name.toString === Ident("bar").toString)
-    }
+    } */
 
     test("apply") {
       val expr = q"foo"
@@ -99,6 +102,7 @@ class Quasiquotes extends StaticAnnotation {
       assert(q"$expr($name)".toString === Apply(Ident("foo"), Ident("bar") :: Nil).toString)
     }
 
+    /*
     test("apply") {
       val q"$ref[..$tpes](..$apats)" = q"x[A, B](Q, W)"
       assert(ref.toString === Ident("x").toString)
@@ -116,7 +120,7 @@ class Quasiquotes extends StaticAnnotation {
       val q"$expr.$name" = q"foo.bar"
       assert(expr.toString === Ident("foo").toString)
       assert(name === "bar")
-    }
+    } */
 
     test("select") {
       val expr = q"foo"
@@ -124,10 +128,11 @@ class Quasiquotes extends StaticAnnotation {
       assert(q"$expr.$name".toString === Select(Ident("foo"), "bar").toString)
     }
 
+    /*
     test("tuple") {
       val q"(..$terms)" = q"(y, z)"
       assert(terms.toString === List(Ident("y"), Ident("z")).toString)
-    }
+    } */
 
     test("tuple") {
       val terms = List(q"y", q"z")
@@ -140,11 +145,12 @@ class Quasiquotes extends StaticAnnotation {
       assert(q"$exp: $tpe".toString === Ascribe(Lit(1), TypeIdent("Double")).toString)
     }
 
+    /*
     test("ascribe") {
       val q"$exp: $tpe" = q"1: Double"
       assert(exp.toString === Lit(1).toString)
       assert(tpe.toString === TypeIdent("Double").toString)
-    }
+    } */
 
     test("assign") {
       val q"$expr1 = $expr2" = q"foo = bar"
@@ -178,6 +184,7 @@ class Quasiquotes extends StaticAnnotation {
       assert(q"f($q, y: Y) = $r".toString === res.toString)
     }
 
+    /*
     test("block") {
       val q"{foo; ..$statz; $astat}" = q"{ foo; val a = x; val b = y; val c = z }"
       assert(statz.toString ===
@@ -188,7 +195,7 @@ class Quasiquotes extends StaticAnnotation {
       )
 
       assert(astat.toString === ValDef(emptyMods, "c", None, Ident("z")).toString)
-    }
+    } */
 
 
     test("block 2") {
@@ -200,12 +207,13 @@ class Quasiquotes extends StaticAnnotation {
       )
     }
 
+    /*
     test("if") {
       val q"if ($expr1) $expr2 else $expr3" = q"if (1 > 2) a else b"
       assert(expr1.toString === Infix(Lit(1), ">", Lit(2)).toString)
       assert(expr2.toString === Ident("a").toString)
       assert(expr3.toString === Some(Ident("b")).toString)
-    }
+    } */
 
     test("if2") {
       val expr1 = q"1 > 2"
@@ -378,12 +386,13 @@ class Quasiquotes extends StaticAnnotation {
       assert(expr.toString === res.toString)
     }
 
+    /*
     test("seq def") {
       val expr = q"val x, y : Int = 3"
       val res = SeqDef(emptyMods, "x" :: "y" :: Nil, Some(TypeIdent("Int")), Lit(3))
 
       assert(expr.toString === res.toString)
-    }
+    } */
 
     test("type def") {
       val expr = q"type T = Int"

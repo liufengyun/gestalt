@@ -188,7 +188,7 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
       //left: Tree[AnyTree[?]] | Tree[String]
       var isPatDef = false
 
-      val left = pats(0) match {
+      val left: TermTree = pats(0) match {
         case quasi: Quasi =>
           liftQuasi(quasi)
         case m.Term.Name(name) =>
@@ -209,7 +209,7 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
     }
     else {
       if (isDecl)
-        Ident("SeqDecl").appliedTo(mods, liftSeq(pats), tpe)
+        abort("SeqDecl not supported", enclosingTree.pos)
       else {
         val names = pats.flatMap {
           case m.Pat.Var.Term(m.Term.Name(name)) => List(name)
@@ -219,7 +219,7 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
         if (names.length != pats.length)
           error("Patterns not supported in seqence definition", enclosingTree.pos)
 
-        Ident("SeqDef").appliedTo(mods, scalaList.appliedTo(names.map(Lit(_)) : _*), tpe, rhs)
+        abort("SeqDef not supported", enclosingTree.pos)
       }
     }
   }

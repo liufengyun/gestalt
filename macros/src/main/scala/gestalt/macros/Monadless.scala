@@ -19,15 +19,6 @@ trait Monadless[Monad[_]] {
     val unliftSym = this.tpe.method("unlift").headOption.map(_.symbol)
     def isUnlift(tp: Type) = tp.denot.map(_.symbol) == unliftSym
 
-
-    tree.traverse {
-      case TypedSplice(tree) =>
-        tree.traverse {
-          case tree @ q"$fun[$tp]($v)" if isUnlift(fun.tpe) =>
-            error("Unsupported unlift position", tree.pos)
-        }
-    }
-
     tree
   }
 
@@ -56,7 +47,7 @@ object Transformer {
         Resolve.map(monad.pos, monad).appliedToTypes(resTp.toTree).appliedTo(fun)
     }
 
-    def validate(tree: tpd.Tree): tpd.Tree = {
+    def validate(tree: tpd.Tree): Unit = {
       tree.traverse {
         case t @ Match(_, cases) =>
           cases.foreach {
@@ -74,7 +65,7 @@ object Transformer {
 
         case t @ ApplySeq(method, argss) if argss.size > 0 =>
           var methodTp: MethodType = method.tpe.widen.asInstanceOf[MethodType]
-          argss.map { args =>
+          argss.foreach { args =>
             val paramTypes = methodTp.paramInfos
             paramTypes.zip(args).map {
               case (ByNameType(_), Transform(_)) =>
@@ -87,7 +78,7 @@ object Transformer {
               case _ => methodTp = null   // last param block
             }
           }
-          argss.flatten.foreach(validate(_))
+          argss.foreach(_.foreach(validate(_)))
       }
       tree
     }
@@ -349,7 +340,9 @@ object Transformer {
         }
     }
 
-    validate(tree) match {
+    validate(tree)
+
+    tree match {
       case PureTree(tree: tpd.Tree) => Apply(Resolve.apply(tree.pos), List(tree.wrap))
       case tree => Transform(tree)
     }

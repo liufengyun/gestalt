@@ -168,7 +168,7 @@ object Inheritance {
 object Materializer {
   implicit def defaultOpt[T]: Option[T] = meta { q"None" }
   implicit def defaultSome[T](implicit x: T): Some[T] = meta {
-    q"Some(${x.wrap})"
+    q"Some($x)"
   }
 }
 
@@ -205,7 +205,7 @@ object MultiParamBlocks {
 
 object Whitebox {
   def gimmelist(x: Int): Seq[Int] = meta {
-    q"List(${x.wrap})"
+    q"List($x)"
   }
 }
 
@@ -223,7 +223,7 @@ object Transform {
     val newfun = f.transform {
       case call @ ApplySeq(f, args) if args.size > 0 =>
         val name = f.symbol.get.name
-        val print = Ident(Type.termRef("scala.Predef")).select("println").appliedTo(Lit.typed(s"calling $name\n"))
+        val print = Ident(Type.termRef("scala.Predef")).select("println").appliedTo(Lit(s"calling $name\n"))
         val vdef = ValDef(call)
         val res = Ident(vdef.symbol)
         Block(print :: vdef :: Nil, res)
@@ -242,7 +242,7 @@ object TypedDef {
         params(0).select("+").appliedTo(params(0))
       )
     }
-    val v = ValDef(Lit.typed(10))
+    val v = ValDef(Lit(10))
     Block(meth :: v :: Nil, Ident(meth.symbol.get).appliedTo(Ident(v.symbol)))
   }
 }

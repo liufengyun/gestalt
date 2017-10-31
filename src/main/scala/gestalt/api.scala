@@ -81,8 +81,6 @@ object api extends Toolbox {
   def TypeDecl       = toolbox.TypeDecl.asInstanceOf[TypeDeclImpl]
   def TypeAlias      = toolbox.TypeAlias.asInstanceOf[TypeAliasImpl]
   def PatDef         = toolbox.PatDef.asInstanceOf[PatDefImpl]
-  def SeqDef         = toolbox.SeqDef.asInstanceOf[SeqDefImpl]
-  def SeqDecl        = toolbox.SeqDecl.asInstanceOf[SeqDeclImpl]
   def InitCall       = toolbox.InitCall.asInstanceOf[InitCallImpl]
   def NewInstance    = toolbox.NewInstance.asInstanceOf[NewInstanceImpl]
   def SecondaryCtor  = toolbox.SecondaryCtor.asInstanceOf[SecondaryCtorImpl]
@@ -410,20 +408,19 @@ object api extends Toolbox {
     argss.foldLeft(fun) { (acc, args) => Apply(acc, args) }
 
   object ApplySeq {
-    def unapply(call: TermTree): Option[(Tree, List[List[TermTree]])] = {
-      def recur(acc: List[List[TermTree]], term: TermTree): (TermTree, List[List[TermTree]]) = term match {
+    def unapply(call: tpd.Tree): Option[(tpd.Tree, List[List[tpd.Tree]])] = {
+      def recur(acc: List[List[tpd.Tree]], term: tpd.Tree): (tpd.Tree, List[List[tpd.Tree]]) = term match {
         case api.Apply(fun, args) => recur(args +: acc, fun) // inner-most is in the front
         case fun => (fun, acc)
       }
 
       Some(recur(Nil, call))
     }
-
-    def unapply(call: tpd.Tree)(implicit c: Dummy): Option[(tpd.Tree, List[List[tpd.Tree]])] =
-      unapply(call.asInstanceOf[TermTree]).asInstanceOf[Option[(tpd.Tree, List[List[tpd.Tree]])]]
   }
 
   implicit def tpd2untpd(tree: tpd.Tree): Splice = TypedSplice(tree)
+  implicit def tpd2untpdList(trees: List[tpd.Tree]): List[TermTree] = trees.map(TypedSplice.apply)
+  implicit def tpd2untpdListList(treess: List[List[tpd.Tree]]): List[List[TermTree]] = treess.map(_.map(TypedSplice.apply))
 
   /**--------------------- Types ---------------------------------*/
   def Type           = toolbox.Type.asInstanceOf[TypeImpl]
