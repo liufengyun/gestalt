@@ -1,6 +1,7 @@
 import scala.annotation.StaticAnnotation
 import scala.collection.immutable.Seq
 
+/*
 import scala.gestalt.api._
 import scala.gestalt.options.unsafe
 
@@ -39,7 +40,6 @@ class replace extends StaticAnnotation {
 }
 
 
-/*
 class data extends StaticAnnotation {
   inline def apply(defn: Any): Any = meta {
     defn match {

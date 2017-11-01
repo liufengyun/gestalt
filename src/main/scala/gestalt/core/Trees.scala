@@ -11,9 +11,7 @@ trait Positions { this: Toolbox =>
   }
 }
 
-trait Trees extends Params with TypeParams with
-  ValDefs with ValDecls with DefDefs with DefDecls with
-  Classes with Traits with Objects with Positions { toolbox: Toolbox =>
+trait Trees extends Positions { toolbox: Toolbox =>
 
  // safety by construction -- implementation can have TypeTree = Tree
   type Tree     >: Null <: AnyRef
@@ -36,7 +34,6 @@ trait Trees extends Params with TypeParams with
   type DefDecl   <: DefTree
   type Self      <: DefTree
   type InitCall  <: Tree
-
 
   type Mods >: Null <: Modifiers
 
@@ -335,7 +332,7 @@ trait Trees extends Params with TypeParams with
   def Ident: IdentImpl
   trait IdentImpl {
     def apply(name: String)(implicit unsafe: Unsafe): Ident
-    def apply(symbol: Symbol): tpd.Tree
+    def apply(symbol: Symbol): tpd.RefTree
     def unapply(tree: tpd.Tree): Option[Symbol]
   }
 
@@ -353,7 +350,7 @@ trait Trees extends Params with TypeParams with
   trait SelectImpl {
     def apply(qual: TermTree, name: String): TermTree
 
-    def apply(qual: tpd.Tree, name: String)(implicit c: Dummy): tpd.Tree
+    def apply(qual: tpd.Tree, name: String)(implicit c: Dummy): tpd.RefTree
     def unapply(tree: tpd.Tree): Option[(tpd.Tree, Symbol)]
   }
 
@@ -432,6 +429,61 @@ trait Trees extends Params with TypeParams with
     def apply(tree: tpd.Tree): Splice
   }
 
+  def ValDef: ValDefImpl
+  trait ValDefImpl {
+    def apply(mods: Mods, name: String, tpe: Option[TypeTree], rhs: Tree): ValDef
+
+    def apply(rhs: tpd.Tree, tpOpt: Option[Type] = None, mutable: Boolean = false): tpd.DefTree
+    def apply(sym: Symbol, rhs: tpd.Tree): tpd.DefTree
+    def unapply(tree: tpd.Tree): Option[(Symbol, tpd.Tree)]
+  }
+
+  def ValDecl: ValDeclImpl
+  trait ValDeclImpl {
+    def apply(mods: Mods, name: String, tpe: TypeTree): ValDecl
+  }
+
+
+  def DefDef: DefDefImpl
+  trait DefDefImpl {
+    def apply(mods: Mods, name: String, tparams: List[TypeParam], paramss: List[List[Param]], tpe: Option[TypeTree], rhs: Tree): DefDef
+
+    def apply(name: String, tp: MethodType)(body: List[List[tpd.Tree]] => tpd.Tree): tpd.DefTree
+  }
+
+  def DefDecl: DefDeclImpl
+  trait DefDeclImpl {
+    def apply(mods: Mods, name: String, tparams: List[TypeParam], paramss: List[List[Param]], tpe: TypeTree): DefDecl
+  }
+
+  def Param: ParamImpl
+  trait ParamImpl {
+    def apply(mods: Mods, name: String, tpe: Option[TypeTree], default: Option[TermTree]): Param
+    def apply(name: String): Param = apply(emptyMods, name, None, None)
+    def apply(name: String, tpe: TypeTree): Param = apply(emptyMods, name, Some(tpe), None)
+  }
+
+  def TypeParam: TypeParamImpl
+  trait TypeParamImpl {
+    def apply(name: String, tbounds: TypeTree): TypeParam = apply(emptyMods, name, Nil, Some(tbounds), Nil)
+    def apply(mods: Mods, name: String, tparams: List[TypeParam], tbounds: Option[TypeTree], cbounds: List[TypeTree]): TypeParam
+  }
+
+  def Class: ClassImpl
+  trait ClassImpl {
+    def apply(mods: Mods, name: String, tparams: List[TypeParam], ctorMods: Mods, paramss: List[List[Param]], parents: List[InitCall], self: Option[Self], stats: List[Tree]): Class
+  }
+
+  def Trait: TraitImpl
+  trait TraitImpl {
+    def apply(mods: Mods, name: String, tparams: List[TypeParam], ctorMods: Mods, paramss: List[List[Param]], parents: List[InitCall], self: Option[Self], stats: List[Tree]): Trait
+  }
+
+  def Object: ObjectImpl
+  trait ObjectImpl {
+    def apply(mods: Mods, name: String, parents: List[InitCall], selfOpt: Option[Self], stats: List[Tree]): Object
+  }
+
   def untpd: untpdImpl
   trait untpdImpl {
     def show(tree: Tree): String
@@ -444,13 +496,15 @@ trait Trees extends Params with TypeParams with
   val tpd: tpdImpl
   trait tpdImpl {
     type Tree      >: Null <: AnyRef
-    type Param     <: Tree
-    type ValDef    <: Tree
+    type DefTree   <: Tree
+    type RefTree   <: Tree
 
     /** type associated with the tree */
     def typeOf(tree: Tree): Type
 
     def show(tree: Tree): String
+
+    def symbol(tree: DefTree): Symbol
 
     /** subst symbols in tree */
     def subst(tree: Tree)(from: List[Symbol], to: List[Symbol]): Tree
@@ -462,162 +516,3 @@ trait Trees extends Params with TypeParams with
 }
 
 
-trait ValDefs { this: Toolbox =>
-  def ValDef: ValDefImpl
-  trait ValDefImpl {
-    def apply(mods: Mods, name: String, tpe: Option[TypeTree], rhs: Tree): ValDef
-    def mods(tree: ValDef): Mods
-    def name(tree: ValDef): String
-    def rhs(tree: ValDef): TermTree
-    def tptOpt(tree: ValDef): Option[TypeTree]
-    def copyRhs(tree: ValDef)(rhs: TermTree): ValDef
-    def get(tree: Tree): Option[ValDef]
-    def unapply(tree: Tree): Option[(String, Option[TypeTree], TermTree)]
-
-    def apply(rhs: tpd.Tree, tpOpt: Option[Type] = None, mutable: Boolean = false): tpd.ValDef
-    def apply(sym: Symbol, rhs: tpd.Tree): tpd.ValDef
-    def symbol(tree: tpd.ValDef)(implicit c: Dummy): Symbol
-    def name(tree: tpd.ValDef)(implicit c: Dummy): String
-    def rhs(tree: tpd.ValDef)(implicit c: Dummy): TermTree
-    def tptOpt(tree: tpd.ValDef)(implicit c: Dummy): Option[TypeTree]
-    def copyRhs(tree: tpd.ValDef)(rhs: tpd.Tree)(implicit c: Dummy): tpd.ValDef
-    def get(tree: tpd.Tree)(implicit c: Dummy): Option[tpd.ValDef]
-    def unapply(tree: tpd.Tree)(implicit c: Dummy): Option[(Symbol, tpd.Tree)]
-  }
-}
-
-trait ValDecls { this: Toolbox =>
-
-  def ValDecl: ValDeclImpl
-  trait ValDeclImpl {
-    def apply(mods: Mods, name: String, tpe: TypeTree): ValDecl
-    def mods(tree: ValDecl): Mods
-    def name(tree: ValDecl): String
-    def tpt(tree: ValDecl): TypeTree
-    def get(tree: Tree): Option[ValDecl]
-    def unapply(tree: Tree): Option[(Mods, String, TypeTree)]
-  }
-
-}
-
-trait DefDefs { this: Toolbox =>
-
-  def DefDef: DefDefImpl
-  trait DefDefImpl {
-    def apply(mods: Mods, name: String, tparams: List[TypeParam], paramss: List[List[Param]], tpe: Option[TypeTree], rhs: Tree): DefDef
-    def mods(tree: DefDef): Mods
-    def tparams(tree: DefDef): List[TypeParam]
-    def paramss(tree: DefDef): List[List[Param]]
-    def name(tree: DefDef): String
-    def tptOpt(tree: DefDef): Option[TypeTree]
-    def rhs(tree: DefDef): TermTree
-    def copyRhs(tree: DefDef)(rhs: TermTree): DefDef
-    def get(tree: Tree): Option[DefDef]
-    def unapply(tree: Tree): Option[(Mods, String, List[TypeParam], List[List[Param]], Option[TypeTree], TermTree)]
-
-    def apply(name: String, tp: MethodType)(body: List[List[tpd.Tree]] => tpd.Tree): tpd.Tree
-  }
-
-}
-
-trait DefDecls { this: Toolbox =>
-
-  def DefDecl: DefDeclImpl
-  trait DefDeclImpl {
-    def apply(mods: Mods, name: String, tparams: List[TypeParam], paramss: List[List[Param]], tpe: TypeTree): DefDecl
-    def mods(tree: DefDecl): Mods
-    def tparams(tree: DefDecl): List[TypeParam]
-    def paramss(tree: DefDecl): List[List[Param]]
-    def name(tree: DefDecl): String
-    def tpt(tree: DefDecl): TypeTree
-    def get(tree: Tree): Option[DefDecl]
-    def unapply(tree: Tree): Option[(Mods, String, List[TypeParam], List[List[Param]], TypeTree)]
-  }
-
-}
-
-trait Params { self : Toolbox =>
-  def Param: ParamImpl
-  trait ParamImpl {
-    def apply(name: String): Param = apply(emptyMods, name, None, None)
-    def apply(name: String, tpe: TypeTree): Param = apply(emptyMods, name, Some(tpe), None)
-
-    def apply(mods: Mods, name: String, tpe: Option[TypeTree], default: Option[TermTree]): Param
-    def mods(tree: Param): Mods
-    def name(tree: Param): String
-    def tptOpt(tree: Param): Option[TypeTree]
-    def defaultOpt(tree: Param): Option[TermTree]
-    def copyMods(tree: Param)(mods: Mods): Param
-
-    def symbol(tree: tpd.Param)(implicit c: Dummy): Symbol
-    def name(tree: tpd.Param)(implicit c: Dummy): String
-    def tpt(tree: tpd.Param)(implicit c: Dummy): tpd.Tree
-  }
-}
-
-trait TypeParams { this: Toolbox =>
-
-  def TypeParam: TypeParamImpl
-  trait TypeParamImpl {
-    def apply(name: String, tbounds: TypeTree): TypeParam = apply(emptyMods, name, Nil, Some(tbounds), Nil)
-    def apply(mods: Mods, name: String, tparams: List[TypeParam], tbounds: Option[TypeTree], cbounds: List[TypeTree]): TypeParam
-    def mods(tree: TypeParam): Mods
-    def name(tree: TypeParam): String
-    def tparams(tree: TypeParam): List[TypeParam]
-  }
-}
-
-trait Classes { this: Toolbox =>
-
-  def Class: ClassImpl
-  trait ClassImpl {
-    def apply(mods: Mods, name: String, tparams: List[TypeParam], ctorMods: Mods, paramss: List[List[Param]], parents: List[InitCall], self: Option[Self], stats: List[Tree]): Class
-    def mods(tree: Class): Mods
-    def name(tree: Class): String
-    def ctorMods(tree: Class): Mods
-    def tparams(tree: Class): List[TypeParam]
-    def paramss(tree: Class): List[List[Param]]
-    def parents(tree: Class): List[InitCall]
-    def selfOpt(tree: Class): Option[Self]
-    def stats(tree: Class): List[Tree]
-    def copyMods(tree: Class)(mods: Mods): Class
-    def copyParamss(tree: Class)(paramss: List[List[Param]]): Class
-    def copyStats(tree: Class)(stats: List[Tree]): Class
-    def get(tree: Tree): Option[Class]
-    def unapply(tree: Tree): Option[(Mods, String, List[TypeParam], Mods, List[List[Param]], List[InitCall], Option[Self], List[Tree])]
-  }
-}
-
-trait Traits { this: Toolbox =>
-
-  def Trait: TraitImpl
-  trait TraitImpl {
-    def apply(mods: Mods, name: String, tparams: List[TypeParam], ctorMods: Mods, paramss: List[List[Param]], parents: List[InitCall], self: Option[Self], stats: List[Tree]): Trait
-    def mods(tree: Trait): Mods
-    def name(tree: Trait): String
-    def tparams(tree: Trait): List[TypeParam]
-    def paramss(tree: Trait): List[List[Param]]
-    def parents(tree: Trait): List[InitCall]
-    def selfOpt(tree: Trait): Option[Self]
-    def stats(tree: Trait): List[Tree]
-    def copyStats(tree: Trait)(stats: List[Tree]): Trait
-    def get(tree: Tree): Option[Trait]
-    def unapply(tree: Tree): Option[(Mods, String, List[TypeParam], Mods, List[List[Param]], List[InitCall], Option[Self], List[Tree])]
-  }
-}
-
-trait Objects { this: Toolbox =>
-  def Object: ObjectImpl
-  trait ObjectImpl {
-    def apply(mods: Mods, name: String, parents: List[InitCall], selfOpt: Option[Self], stats: List[Tree]): Object
-    def mods(tree: Object): Mods
-    def name(tree: Object): String
-    def parents(tree: Object): List[InitCall]
-    def selfOpt(tree: Object): Option[Self]
-    def stats(tree: Object): List[Tree]
-    // separate copy for better versioning compatibility
-    def copyStats(tree: Object)(stats: List[Tree]): Object
-    def get(tree: Tree): Option[Object]
-    def unapply(tree: Tree): Option[(Mods, String, List[InitCall], Option[Self], List[Tree])]
-  }
-}

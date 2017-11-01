@@ -1,8 +1,9 @@
 package pack {
-  @addFields object Nice
+  // @addFields object Nice
 }
 
 class AnnotationMacroTest extends TestSuite {
+  /*
   test("main") {
     @main object Test {
       "hello world!"
@@ -23,7 +24,6 @@ class AnnotationMacroTest extends TestSuite {
   }
 
 
-  /*
   test("data") {
     @data class Point(x: Int, y: Int)
 

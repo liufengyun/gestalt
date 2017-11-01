@@ -243,6 +243,6 @@ object TypedDef {
       )
     }
     val v = ValDef(Lit(10))
-    Block(meth :: v :: Nil, Ident(meth.symbol.get).appliedTo(Ident(v.symbol)))
+    Block(meth :: v :: Nil, Ident(meth.symbol).appliedTo(Ident(v.symbol)))
   }
 }

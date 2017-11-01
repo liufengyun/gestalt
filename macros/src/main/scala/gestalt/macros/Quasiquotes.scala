@@ -24,17 +24,21 @@ class Quasiquotes extends StaticAnnotation {
 
   def apply(defn: Any): Any = meta {
 
+    /*
     test("modifiers") {
       val q"$mods object $name" = q"private object A"
       assert(mods.isPrivate)
     }
+    */
 
+    /*
     test("modifiers of class constructor") {
       val q"$mods1 class $name2 $mods2 ($params)" = q"case class A private[core](x: Int)"
       assert(mods1.isCase)
       assert(mods2.isPrivate)
       assert(mods2.privateWithin === "core")
     }
+    */
 
     test("select") {
       val sel = "hello"
