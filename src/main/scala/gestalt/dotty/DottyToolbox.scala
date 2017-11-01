@@ -7,7 +7,6 @@ import ast.{Trees => c, tpd => t, untpd => d}
 import StdNames._
 import NameOps._
 import Names.TermName
-import Contexts._
 import Decorators._
 import Constants._
 import d.modsDeco
@@ -17,7 +16,7 @@ import util.Positions.Position
 import scala.collection.mutable.Set
 
 
-class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
+class Toolbox(enclosingPosition: Position)(implicit ctx: Contexts.Context) extends Tbox {
 
   type Tree = d.Tree
   type TypeTree = d.Tree
@@ -42,6 +41,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
   type DefDecl = d.DefDef
   type Self = d.ValDef
   type InitCall = d.Tree
+
+  type Context = Contexts.Context
 
   /*------------------------------ positions ------------------------------*/
   type Pos = Position
@@ -154,7 +155,27 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       d.New(d.Template(init, parents, self, stats).withPosition)
     }
 
-    def apply(parents: List[tpd.Tree], stats: List[tpd.Tree]): tpd.Tree = ???
+    def apply(parents: List[Type])(bodyFn: Context => List[tpd.Tree])(implicit ctx: Context): tpd.Tree = {
+      val owner = ctx.owner
+      val parents1 =
+        if (parents.head.classSymbol.is(Flags.Trait)) parents.head.parents.head :: parents
+        else parents
+      val cls = ctx.newNormalizedClassSymbol(owner, tpnme.ANON_FUN, Flags.Synthetic, parents1, coord = enclosingPosition)
+      val constr = ctx.newConstructor(cls, Flags.Synthetic, Nil, Nil).entered
+
+      val body = bodyFn(ctx.withOwner(cls)).map {
+        case defTree: t.DefTree =>
+          val tree = ensureOwner(defTree, cls)
+          tree.symbol.entered
+          tree
+        case stat => stat
+      }
+
+      val cdef: tpd.Tree = t.ClassDef(cls, t.DefDef(constr).withPosition, body).withPosition
+      val tdef: tpd.Tree = t.Block(cdef :: Nil, t.New(cls.typeRef, Nil).withPosition).withPosition
+      println(tdef.show)
+      tdef
+    }
   }
 
   object TypeDecl extends TypeDeclImpl {
@@ -374,19 +395,19 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def apply(params: List[Param], body: TermTree): TermTree =
       d.Function(params, body).withPosition
 
-    def apply(params: List[Type], resTp: Type)(bodyFn: List[tpd.Tree] => tpd.Tree): tpd.Tree = {
+    def apply(params: List[Type], resTp: Type)(bodyFn: Context => List[tpd.Tree] => tpd.Tree)(implicit ctx: Context): tpd.Tree = {
       val meth = ctx.newSymbol(
         ctx.owner, nme.ANON_FUN,
         Flags.Synthetic | Flags.Method,
         Types.MethodType(params.map(p => NameKinds.UniqueName.fresh("param".toTermName)), params, resTp)
       )
       t.Closure(meth, paramss => {
-        ensureOwner(bodyFn(paramss.head), meth)
+        ensureOwner(bodyFn(ctx.withOwner(meth))(paramss.head), meth)
       })
     }
 
     def apply(params: List[Symbol], body: tpd.Tree)(implicit c: Dummy): tpd.Tree = {
-      apply(params.map(_.info), body.tpe) { args =>
+      apply(params.map(_.info), body.tpe) { implicit ctx => args =>
         tpd.subst(body)(params, args.map(_.symbol))
       }
     }
@@ -740,7 +761,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
     def apply(mods: Mods, name: String, tpe: Option[TypeTree], rhs: TermTree): ValDef =
       d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), rhs).withMods(mods).withPosition
 
-    def apply(rhs: tpd.Tree, tpOpt: Option[Type], mutable: Boolean): tpd.DefTree = {
+    def apply(rhs: tpd.Tree, tpOpt: Option[Type], mutable: Boolean)(implicit ctx: Context): tpd.DefTree = {
       val flags = if (mutable) Flags.Mutable else Flags.EmptyFlags
       val vsym = ctx.newSymbol(ctx.owner, NameKinds.UniqueName.fresh("temp".toTermName), flags, tpOpt.getOrElse(rhs.tpe))
       t.ValDef(vsym, rhs)
@@ -765,7 +786,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       d.DefDef(name.toTermName, tparams, paramss, tpe.getOrElse(d.TypeTree()), rhs).withMods(mods).withPosition
     }
 
-    def apply(name: String, tp: MethodType)(bodyFn: List[List[tpd.Tree]] => tpd.Tree): tpd.DefTree = {
+    def apply(name: String, tp: MethodType)(bodyFn: Context => List[List[tpd.Tree]] => tpd.Tree)(implicit ctx: Context): tpd.DefTree = {
       val meth = ctx.newSymbol(
         ctx.owner, name.toTermName,
         Flags.Synthetic | Flags.Method,
@@ -773,8 +794,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Context) extends Tbox {
       )
 
       t.DefDef(meth, paramss => {
-        ensureOwner(bodyFn(paramss), meth)
-      })
+        ensureOwner(bodyFn(ctx.withOwner(meth))(paramss), meth)
+      }).withPosition
     }
   }
 

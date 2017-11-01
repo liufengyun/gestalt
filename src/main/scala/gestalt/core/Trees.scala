@@ -35,6 +35,8 @@ trait Trees extends Positions { toolbox: Toolbox =>
   type Self      <: DefTree
   type InitCall  <: Tree
 
+  type Context
+
   type Mods >: Null <: Modifiers
 
   trait Modifiers {
@@ -85,7 +87,7 @@ trait Trees extends Positions { toolbox: Toolbox =>
   def NewAnonymClass: NewAnonymClassImpl
   trait NewAnonymClassImpl {
     def apply(parents: List[InitCall], self: Option[Self], stats: List[Tree]): DefTree
-    def apply(parents: List[tpd.Tree], stats: List[tpd.Tree]): tpd.Tree
+    def apply(parents: List[Type])(stats: Context => List[tpd.Tree])(implicit ctx: Context): tpd.Tree
   }
 
   def TypeDecl: TypeDeclImpl
@@ -246,7 +248,7 @@ trait Trees extends Positions { toolbox: Toolbox =>
   def Function: FunctionImpl
   trait FunctionImpl {
     def apply(params: List[Param], body: TermTree): TermTree
-    def apply(params: List[Type], resTp: Type)(bodyFn: List[tpd.Tree] => tpd.Tree): tpd.Tree
+    def apply(params: List[Type], resTp: Type)(bodyFn: Context => List[tpd.Tree] => tpd.Tree)(implicit ctx: Context): tpd.Tree
     def apply(params: List[Symbol], body: tpd.Tree)(implicit c: Dummy): tpd.Tree
     def unapply(tree: tpd.Tree): Option[(List[Symbol], tpd.Tree)]
   }
@@ -433,7 +435,7 @@ trait Trees extends Positions { toolbox: Toolbox =>
   trait ValDefImpl {
     def apply(mods: Mods, name: String, tpe: Option[TypeTree], rhs: Tree): ValDef
 
-    def apply(rhs: tpd.Tree, tpOpt: Option[Type] = None, mutable: Boolean = false): tpd.DefTree
+    def apply(rhs: tpd.Tree, tpOpt: Option[Type] = None, mutable: Boolean = false)(implicit ctx: Context): tpd.DefTree
     def apply(sym: Symbol, rhs: tpd.Tree): tpd.DefTree
     def unapply(tree: tpd.Tree): Option[(Symbol, tpd.Tree)]
   }
@@ -448,7 +450,7 @@ trait Trees extends Positions { toolbox: Toolbox =>
   trait DefDefImpl {
     def apply(mods: Mods, name: String, tparams: List[TypeParam], paramss: List[List[Param]], tpe: Option[TypeTree], rhs: Tree): DefDef
 
-    def apply(name: String, tp: MethodType)(body: List[List[tpd.Tree]] => tpd.Tree): tpd.DefTree
+    def apply(name: String, tp: MethodType)(body: Context => List[List[tpd.Tree]] => tpd.Tree)(implicit ctx: Context): tpd.DefTree
   }
 
   def DefDecl: DefDeclImpl

@@ -78,7 +78,7 @@ object Expander {
         }
 
         api.withToolbox(new Toolbox(ann.pos)) {
-          val result = impl.invoke(null, ann, expandee).asInstanceOf[untpd.Tree]
+          val result = impl.invoke(null, ann, expandee, ctx).asInstanceOf[untpd.Tree]
           Some(result)
         }
       case _ =>
@@ -136,7 +136,7 @@ object Expander {
       val prefix2 =
         if (prefix == null) tpd.ref(methodSelect.tpe.asInstanceOf[TermRef].prefix.asInstanceOf[NamedType])
         else prefix
-      val trees  = prefix2 :: targs ++ argss2.flatten
+      val trees  = (prefix2 :: targs ++ argss2.flatten) :+ ctx
       try {
         val res = api.withToolbox(tb) {
           impl.invoke(null, trees: _*).asInstanceOf[untpd.Tree]

@@ -236,13 +236,28 @@ object Transform {
 object TypedDef {
   def double(x: Int): Int = meta {
     val mt = MethodType(List("n"))(_ => Type.typeRef("scala.Int") :: Nil, _ => Type.typeRef("scala.Int"))
-    val meth = DefDef("double", mt) { case params :: Nil =>
+    val meth = DefDef("double", mt)(ctx => { case params :: Nil =>
       Block(
         x :: Nil,     // test nested definition
         params(0).select("+").appliedTo(params(0))
       )
-    }
+    })
     val v = ValDef(Lit(10))
     Block(meth :: v :: Nil, Ident(meth.symbol).appliedTo(Ident(v.symbol)))
+  }
+
+  def annoyAdd(x: Int): Int => Int = meta {
+    val scalaInt = Type.typeRef("scala.Int")
+    val mt = MethodType(List("v"))(_ => scalaInt :: Nil, _ => scalaInt)
+
+    val parent = Type.typeRef("scala.Function1").appliedTo(scalaInt, scalaInt)
+    NewAnonymClass(parent :: Nil) { implicit ctx =>
+      val meth = DefDef("apply", mt)(implicit ctx => {
+        case params :: Nil =>
+          params(0).select("+").appliedTo(x)
+      })
+
+      meth :: Nil
+    }
   }
 }
