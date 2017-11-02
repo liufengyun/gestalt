@@ -786,7 +786,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Contexts.Context) exten
       d.DefDef(name.toTermName, tparams, paramss, tpe.getOrElse(d.TypeTree()), rhs).withMods(mods).withPosition
     }
 
-    def apply(name: String, tp: MethodType)(bodyFn: Context => List[List[tpd.RefTree]] => tpd.Tree)(implicit ctx: Context): tpd.DefTree = {
+    def apply(name: String, tp: MethodType)(bodyFn: Context => (Symbol, List[List[tpd.RefTree]]) => tpd.Tree)(implicit ctx: Context): tpd.DefTree = {
       val meth = ctx.newSymbol(
         ctx.owner, name.toTermName,
         Flags.Synthetic | Flags.Method,
@@ -794,7 +794,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Contexts.Context) exten
       )
 
       t.DefDef(meth, paramss => {
-        ensureOwner(bodyFn(ctx.withOwner(meth))(paramss), meth)
+        ensureOwner(bodyFn(ctx.withOwner(meth))(meth, paramss), meth)
       }).withPosition
     }
   }

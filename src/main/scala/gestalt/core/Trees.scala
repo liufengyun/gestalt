@@ -450,7 +450,7 @@ trait Trees extends Positions { toolbox: Toolbox =>
   trait DefDefImpl {
     def apply(mods: Mods, name: String, tparams: List[TypeParam], paramss: List[List[Param]], tpe: Option[TypeTree], rhs: Tree): DefDef
 
-    def apply(name: String, tp: MethodType)(body: Context => List[List[tpd.RefTree]] => tpd.Tree)(implicit ctx: Context): tpd.DefTree
+    def apply(name: String, tp: MethodType)(body: Context => (Symbol, List[List[tpd.RefTree]]) => tpd.Tree)(implicit ctx: Context): tpd.DefTree
   }
 
   def DefDecl: DefDeclImpl

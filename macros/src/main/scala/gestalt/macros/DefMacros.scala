@@ -236,7 +236,7 @@ object Transform {
 object TypedDef {
   def double(x: Int): Int = meta {
     val mt = MethodType(List("n"))(_ => Type.typeRef("scala.Int") :: Nil, _ => Type.typeRef("scala.Int"))
-    val meth = DefDef("double", mt)(ctx => { case params :: Nil =>
+    val meth = DefDef("double", mt)(ctx => { case (_, params :: Nil) =>
       Block(
         x :: Nil,     // test nested definition
         params(0).select("+").appliedTo(params(0))
@@ -253,7 +253,7 @@ object TypedDef {
     val parent = Type.typeRef("scala.Function1").appliedTo(scalaInt, scalaInt)
     NewAnonymClass(parent :: Nil) { implicit ctx =>
       val meth = DefDef("apply", mt)(implicit ctx => {
-        case params :: Nil =>
+        case (_, params :: Nil) =>
           params(0).select("+").appliedTo(x)
       })
 
