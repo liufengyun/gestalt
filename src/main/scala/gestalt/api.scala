@@ -221,6 +221,10 @@ object api extends Toolbox {
     def symbol: Symbol = tpdOps.symbol(tree)
   }
 
+  implicit class TpdRefTreeOps(tree: tpd.RefTree) {
+    def symbol: Symbol = tpdOps.symbol(tree)
+  }
+
   /**--------------------- helpers ---------------------------------*/
   def ApplySeq(fun: TermTree, argss: List[List[TermTree]]): TermTree =
     argss.foldLeft(fun) { (acc, args) => Apply(acc, args) }

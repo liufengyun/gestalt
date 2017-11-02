@@ -877,7 +877,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Contexts.Context) exten
 
     def show(tree: Tree): String = tree.show
 
-    def symbol(tree: DefTree): Symbol = tree.symbol
+    def symbol(tree: Tree): Symbol = tree.symbol
 
     def traverse(tree: tpd.Tree)(pf: PartialFunction[tpd.Tree, Unit]): Unit =
       new t.TreeTraverser {
