@@ -172,9 +172,11 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Contexts.Context) exten
       }
 
       val cdef: tpd.Tree = t.ClassDef(cls, t.DefDef(constr).withPosition, body).withPosition
-      val tdef: tpd.Tree = t.Block(cdef :: Nil, t.New(cls.typeRef, Nil).withPosition).withPosition
-      println(tdef.show)
-      tdef
+      val newTree: tpd.Tree = t.New(cls.typeRef, Nil).withPosition
+      val tdef: tpd.Tree = t.Block(cdef :: Nil, newTree).withPosition
+
+      // fix bug in type assigner: it doesn't avoid type symbols
+      tdef.withType(ctx.typeAssigner.avoid(newTree.tpe, t.localSyms(cdef :: Nil)))
     }
   }
 
