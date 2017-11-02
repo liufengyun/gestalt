@@ -248,7 +248,7 @@ trait Trees extends Positions { toolbox: Toolbox =>
   def Function: FunctionImpl
   trait FunctionImpl {
     def apply(params: List[Param], body: TermTree): TermTree
-    def apply(params: List[Type], resTp: Type)(bodyFn: Context => List[tpd.Tree] => tpd.Tree)(implicit ctx: Context): tpd.Tree
+    def apply(params: List[Type], resTp: Type)(bodyFn: Context => List[tpd.RefTree] => tpd.Tree)(implicit ctx: Context): tpd.Tree
     def apply(params: List[Symbol], body: tpd.Tree)(implicit c: Dummy): tpd.Tree
     def unapply(tree: tpd.Tree): Option[(List[Symbol], tpd.Tree)]
   }
@@ -450,7 +450,7 @@ trait Trees extends Positions { toolbox: Toolbox =>
   trait DefDefImpl {
     def apply(mods: Mods, name: String, tparams: List[TypeParam], paramss: List[List[Param]], tpe: Option[TypeTree], rhs: Tree): DefDef
 
-    def apply(name: String, tp: MethodType)(body: Context => List[List[tpd.Tree]] => tpd.Tree)(implicit ctx: Context): tpd.DefTree
+    def apply(name: String, tp: MethodType)(body: Context => List[List[tpd.RefTree]] => tpd.Tree)(implicit ctx: Context): tpd.DefTree
   }
 
   def DefDecl: DefDeclImpl
