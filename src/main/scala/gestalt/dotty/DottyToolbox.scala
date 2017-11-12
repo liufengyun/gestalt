@@ -1011,7 +1011,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Contexts.Context) exten
       else None
     }
 
-    def widen(tp: Type): Type = tp.widen
+    def widen(tp: Type): Type = tp.deconst.widen
 
     def denot(tp: Type): Option[Denotation] = tp match {
       case tp: Types.NamedType => Some(tp.denot)
