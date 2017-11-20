@@ -327,7 +327,7 @@ trait Trees extends Positions { toolbox: Toolbox =>
   trait ApplyTypeImpl {
     def apply(fun: TermTree, args: List[TypeTree]): TermTree
 
-    def apply(fun: tpd.Tree, args: List[tpd.Tree])(implicit c: Dummy): tpd.Tree
+    def apply(fun: tpd.Tree, args: List[Type])(implicit c: Dummy): tpd.Tree
     def unapply(tree: tpd.Tree): Option[(tpd.Tree, List[Type])]
   }
 

@@ -204,8 +204,8 @@ object api extends Toolbox {
     def symbol: Option[Symbol] = tree.tpe.denot.map(_.symbol)
 
     def select(name: String): tpd.Tree = Select(tree, name)
-    def appliedTo(args: tpd.Tree*): tpd.Tree = Apply(tree, args.toList)
-    def appliedToTypes(args: tpd.Tree*): tpd.Tree = ApplyType(tree, args.toList)
+    def appliedTo(args: List[tpd.Tree]): tpd.Tree = Apply(tree, args.toList)
+    def appliedToTypes(args: List[Type]): tpd.Tree = ApplyType(tree, args.toList)
 
     def traverse(pf: PartialFunction[tpd.Tree, Unit]): Unit =
       tpdOps.traverse(tree)(pf)

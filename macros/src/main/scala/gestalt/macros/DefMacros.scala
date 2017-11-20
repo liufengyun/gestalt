@@ -81,11 +81,11 @@ object ImplicitBigInt {
 
 object scope {
   def is[T](a: Any): Boolean = meta {
-    q"$a.isInstanceOf[$T]"
+    q"$a.isInstanceOf[${T.tpe}]"
   }
 
   def both[S, T](a: Any): Boolean = meta {
-    q"$a.isInstanceOf[$S] && $a.isInstanceOf[$T]"
+    q"$a.isInstanceOf[${S.tpe}] && $a.isInstanceOf[${T.tpe}]"
   }
 
   // test nested method inside macro def -- used to be a problem with @static implementation
@@ -223,13 +223,13 @@ object Transform {
     val newfun = f.transform {
       case call @ ApplySeq(f, args) if args.size > 0 =>
         val name = f.symbol.get.name
-        val print = Ident(Type.termRef("scala.Predef")).select("println").appliedTo(Lit(s"calling $name\n"))
+        val print = Ident(Type.termRef("scala.Predef")).select("println").appliedTo(Lit(s"calling $name\n") :: Nil)
         val vdef = ValDef(call)
         val res = Ident(vdef.symbol)
         Block(print :: vdef :: Nil, res)
     }
 
-    newfun.appliedTo(x)
+    newfun.appliedTo(x :: Nil)
   }
 }
 
@@ -239,11 +239,11 @@ object TypedDef {
     val meth = DefDef("double", mt)(ctx => { case (_, params :: Nil) =>
       Block(
         x :: Nil,     // test nested definition
-        params(0).select("+").appliedTo(params(0))
+        params(0).select("+").appliedTo(params(0) :: Nil)
       )
     })
     val v = ValDef(Lit(10))
-    Block(meth :: v :: Nil, Ident(meth.symbol).appliedTo(Ident(v.symbol)))
+    Block(meth :: v :: Nil, Ident(meth.symbol).appliedTo(Ident(v.symbol) :: Nil))
   }
 
   def annoyAdd(x: Int): Int => Int = meta {
@@ -254,7 +254,7 @@ object TypedDef {
     NewAnonymClass(parent :: Nil) { implicit ctx =>
       val meth = DefDef("apply", mt)(implicit ctx => {
         case (_, params :: Nil) =>
-          params(0).select("+").appliedTo(x)
+          params(0).select("+").appliedTo(x :: Nil)
       })
 
       meth :: Nil

@@ -42,9 +42,9 @@ object Transformer {
     {
       val fun = Function(tp :: Nil, resTp)(ctx => bodyFn)
       if (flat)
-        Resolve.flatMap(monad.pos, monad).appliedToTypes(flatTp.toTree).appliedTo(fun)
+        Resolve.flatMap(monad.pos, monad).appliedToTypes(flatTp :: Nil).appliedTo(fun :: Nil)
       else
-        Resolve.map(monad.pos, monad).appliedToTypes(resTp.toTree).appliedTo(fun)
+        Resolve.map(monad.pos, monad).appliedToTypes(resTp :: Nil).appliedTo(fun :: Nil)
     }
 
     def validate(tree: tpd.Tree): Unit = {
@@ -190,19 +190,19 @@ object Transformer {
         case q"$fun[$tp]($v)" if isUnlift(fun.tpe) => Some(v)
 
         case tree =>
-          val unlifts = collection.mutable.ListBuffer.empty[(tpd.Tree, Symbol, tpd.Tree)]
+          val unlifts = collection.mutable.ListBuffer.empty[(tpd.Tree, Symbol, Type)]
           val newTree =
             tree.transform {
               case tree @ q"$fun[$tp]($v)" if isUnlift(fun.tpe) =>
                 val dummy = ValDef(tree).symbol
-                unlifts += ((v, dummy, tp.toTree))
+                unlifts += ((v, dummy, tp))
                 Ident(dummy)
             }
 
           unlifts.toList match {
             case List() => None
-            case List((tree, dummy, tpt)) =>
-              val res = rewrite(tree, dummy.name, tpt.tpe, newTree.tpe, flat = false) { refs =>
+            case List((tree, dummy, tpe)) =>
+              val res = rewrite(tree, dummy.name, tpe, newTree.tpe, flat = false) { refs =>
                 newTree.subst(dummy :: Nil, refs.head.symbol.get :: Nil)
               }
 
@@ -211,15 +211,15 @@ object Transformer {
               val (trees, dummies, types) = unlifts.unzip3
               val list = fresh("list")
               val scalaList = Ident(Type.termRef("scala.collection.immutable.List"))
-              val arg = scalaList.appliedTo(trees : _*)
-              val collect = Resolve.collect(tree.pos).appliedTo(arg)
+              val arg = scalaList.appliedTo(trees)
+              val collect = Resolve.collect(tree.pos).appliedTo(arg :: Nil)
 
 
-              val tp = Type.typeRef("scala.List").appliedTo(types.head.tpe)
+              val tp = Type.typeRef("scala.List").appliedTo(types.head)
               val fun = Function(tp :: Nil, newTree.tpe) { implicit ctx => refs =>
                 val iter = ValDef(refs.head.select("iterator"))
                 val elements = unlifts.map { case (tree, dummy, tpe) =>
-                  val rhs = Ident(iter.symbol).select("next").appliedTo().select("asInstanceOf").appliedToTypes(tpe)
+                  val rhs = Ident(iter.symbol).select("next").appliedTo(Nil).select("asInstanceOf").appliedToTypes(tpe :: Nil)
                   ValDef(rhs)
                 }
 
@@ -229,7 +229,7 @@ object Transformer {
 
                 Block(iter +: elements, content)
               }
-              Some(Resolve.map(tree.pos, collect).appliedToTypes(types.head.tpe.toTree).appliedTo(fun))
+              Some(Resolve.map(tree.pos, collect).appliedToTypes(types.head :: Nil).appliedTo(fun :: Nil))
           }
       }
     }

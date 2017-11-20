@@ -693,12 +693,12 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Contexts.Context) exten
   object ApplyType extends ApplyTypeImpl {
     def apply(fun: Tree, args: List[TypeTree]): TermTree = d.TypeApply(fun, args).withPosition
 
-    def apply(fun: tpd.Tree, args: List[tpd.Tree])(implicit c: Dummy): tpd.Tree = {
+    def apply(fun: tpd.Tree, args: List[Type])(implicit c: Dummy): tpd.Tree = {
       val typr = ctx.typer
-      val proto = new PolyProto(args.map(_.tpe), Types.WildcardType)
+      val proto = new PolyProto(args, Types.WildcardType)
       val fun1 = typr.adapt(fun, proto)
 
-      t.TypeApply(fun1, args)
+      t.TypeApply(fun1, args.map(arg => t.TypeTree(arg)))
     }
 
     def unapply(tree: tpd.Tree): Option[(tpd.Tree, List[Type])] = tree match {
@@ -740,7 +740,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Contexts.Context) exten
   object Param extends ParamImpl {
     def apply(mods: Mods, name: String, tpe: Option[TypeTree], default: Option[TermTree]): Param = {
       d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), getOrEmpty(default))
-        .withMods(mods.dottyMods | Flags.TermParam).withPosition.asInstanceOf[Param]
+        .withMods(mods.dottyMods | Flags.TermParam).withPosition
     }
   }
 
