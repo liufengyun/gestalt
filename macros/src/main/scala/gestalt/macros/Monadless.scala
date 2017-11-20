@@ -195,7 +195,7 @@ object Transformer {
             tree.transform {
               case tree @ q"$fun[$tp]($v)" if isUnlift(fun.tpe) =>
                 val dummy = ValDef(tree).symbol
-                unlifts += ((v, dummy, tp))
+                unlifts += ((v, dummy, tp.toTree))
                 Ident(dummy)
             }
 

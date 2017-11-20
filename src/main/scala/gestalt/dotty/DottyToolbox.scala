@@ -593,11 +593,11 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Contexts.Context) exten
   object Ascribe extends AscribeImpl {
     def apply(expr: TermTree, tpe: TypeTree): TermTree = d.Typed(expr, tpe).withPosition
 
-    def apply(expr: tpd.Tree, tpe: tpd.Tree)(implicit c: Dummy): tpd.Tree =
-      t.Typed(expr, tpe)
+    def apply(expr: tpd.Tree, tpe: Type)(implicit c: Dummy): tpd.Tree =
+      t.Typed(expr, t.TypeTree(tpe))
 
-    def unapply(tree: tpd.Tree): Option[(tpd.Tree, tpd.Tree)] = tree match {
-      case t.Typed(expr, tpe) => Some((expr, tpe))
+    def unapply(tree: tpd.Tree): Option[(tpd.Tree, Type)] = tree match {
+      case t.Typed(expr, tpt) => Some((expr, tpt.tpe))
       case _ => None
     }
   }
@@ -701,8 +701,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Contexts.Context) exten
       t.TypeApply(fun1, args)
     }
 
-    def unapply(tree: tpd.Tree): Option[(tpd.Tree, List[tpd.Tree])] = tree match {
-      case t.TypeApply(fun, args) => Some((fun, args))
+    def unapply(tree: tpd.Tree): Option[(tpd.Tree, List[Type])] = tree match {
+      case t.TypeApply(fun, targs) => Some((fun, targs.map(_.tpe)))
       case _ => None
     }
   }

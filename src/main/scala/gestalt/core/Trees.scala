@@ -328,7 +328,7 @@ trait Trees extends Positions { toolbox: Toolbox =>
     def apply(fun: TermTree, args: List[TypeTree]): TermTree
 
     def apply(fun: tpd.Tree, args: List[tpd.Tree])(implicit c: Dummy): tpd.Tree
-    def unapply(tree: tpd.Tree): Option[(tpd.Tree, List[tpd.Tree])]
+    def unapply(tree: tpd.Tree): Option[(tpd.Tree, List[Type])]
   }
 
   def Ident: IdentImpl
@@ -360,8 +360,8 @@ trait Trees extends Positions { toolbox: Toolbox =>
   trait AscribeImpl {
     def apply(expr: TermTree, tpe: TypeTree): TermTree
 
-    def apply(expr: tpd.Tree, tpe: tpd.Tree)(implicit c: Dummy): tpd.Tree
-    def unapply(tree: tpd.Tree): Option[(tpd.Tree, tpd.Tree)]
+    def apply(expr: tpd.Tree, tpe: Type)(implicit c: Dummy): tpd.Tree
+    def unapply(tree: tpd.Tree): Option[(tpd.Tree, Type)]
   }
 
   def Assign: AssignImpl
