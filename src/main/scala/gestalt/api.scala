@@ -202,6 +202,7 @@ object api extends Toolbox {
     def wrap: Splice = TypedSplice(tree)
     def subst(from: List[Symbol], to: List[Symbol]): tpd.Tree = tpdOps.subst(tree)(from, to)
     def symbol: Option[Symbol] = tree.tpe.denot.map(_.symbol)
+    def isDef: Boolean = tpdOps.isDef(tree)
 
     def select(name: String): tpd.Tree = Select(tree, name)
     def appliedTo(args: List[tpd.Tree]): tpd.Tree = Apply(tree, args.toList)

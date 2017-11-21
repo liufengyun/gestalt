@@ -508,6 +508,8 @@ trait Trees extends Positions { toolbox: Toolbox =>
 
     def symbol(tree: Tree): Symbol
 
+    def isDef(tree: Tree): Boolean
+
     /** subst symbols in tree */
     def subst(tree: Tree)(from: List[Symbol], to: List[Symbol]): Tree
 

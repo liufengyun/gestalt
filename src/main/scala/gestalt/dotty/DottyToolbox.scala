@@ -881,6 +881,8 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Contexts.Context) exten
 
     def symbol(tree: Tree): Symbol = tree.symbol
 
+    def isDef(tree: Tree): Boolean = tree.isDef
+
     def traverse(tree: tpd.Tree)(pf: PartialFunction[tpd.Tree, Unit]): Unit =
       new t.TreeTraverser {
         override def traverse(tree: tpd.Tree)(implicit ctx: Context) =
