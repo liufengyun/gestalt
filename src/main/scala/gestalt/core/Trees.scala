@@ -255,15 +255,18 @@ trait Trees extends Positions { toolbox: Toolbox =>
 
   def While: WhileImpl
   trait WhileImpl {
-    def apply(expr: TermTree, body: TermTree): TermTree
+    def apply(cond: TermTree, body: TermTree): TermTree
 
-    def apply(expr: tpd.Tree, body: tpd.Tree)(implicit c: Dummy): tpd.Tree
+    def apply(cond: tpd.Tree, body: tpd.Tree)(implicit ctx: Context): tpd.Tree
     def unapply(tree: tpd.Tree): Option[(tpd.Tree, tpd.Tree)]
   }
 
   def DoWhile: DoWhileImpl
   trait DoWhileImpl {
-    def apply(body: TermTree, expr: TermTree): TermTree
+    def apply(body: TermTree, cond: TermTree): TermTree
+
+    def apply(body: tpd.Tree, cond: tpd.Tree)(implicit ctx: Context): tpd.Tree
+    def unapply(tree: tpd.Tree): Option[(tpd.Tree, tpd.Tree)]
   }
 
   def For: ForImpl

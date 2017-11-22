@@ -423,26 +423,53 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Contexts.Context) exten
   }
 
   object While extends WhileImpl {
-    def apply(expr: TermTree, body: TermTree): TermTree = d.WhileDo(expr, body).withPosition
+    def apply(cond: TermTree, body: TermTree): TermTree = d.WhileDo(cond, body).withPosition
 
-    def apply(expr: tpd.Tree, body: tpd.Tree)(implicit c: Dummy): tpd.Tree =
-      t.WhileDo(ctx.owner, expr, body :: Nil)
+    // { <label> def while$(): Unit = if (cond) { body; while$() } ; while$() }
+    def apply(cond: tpd.Tree, body: tpd.Tree)(implicit ctx: Context): tpd.Tree = {
+      val sym = ctx.newSymbol(ctx.owner, nme.WHILE_PREFIX, Flags.Label | Flags.Synthetic,
+        Types.MethodType(Nil, ctx.definitions.UnitType), coord = cond.pos)
+
+      ensureOwner(body, sym)
+      val call = t.Apply(t.ref(sym), Nil)
+      val rhs = t.If(cond, t.Block(body :: Nil, call), t.Literal(Constant(())))
+      t.Block(List(t.DefDef(sym, rhs)), call)
+    }
 
     def unapply(tree: tpd.Tree): Option[(tpd.Tree, tpd.Tree)] = tree match {
       case t.Block((ddef : t.DefDef) :: Nil, t.Apply(f, Nil))
       if f.symbol.name == nme.WHILE_PREFIX =>
         ddef.rhs match {
           case t.If(cond, t.Block(body :: Nil, _), _) =>
-            Some ((cond, body) )
-          case t.If(cond, t.Block (body :+ expr, _), _) =>
-            Some ((cond, t.Block(body, expr)) )
+            Some((cond, body))
+          case t.If(cond, t.Block(body :+ expr, _), _) =>
+            Some((cond, t.Block(body, expr)) )
         }
       case _ => None
     }
   }
 
   object DoWhile extends DoWhileImpl {
-    def apply(body: TermTree, expr: TermTree): TermTree = d.DoWhile(body, expr).withPosition
+    def apply(body: TermTree, cond: TermTree): TermTree = d.DoWhile(body, cond).withPosition
+
+    // { label def doWhile$(): Unit = { body; if (cond) doWhile$() } ; doWhile$() }
+    def apply(cond: tpd.Tree, body: tpd.Tree)(implicit ctx: Context): tpd.Tree = {
+      val sym = ctx.newSymbol(ctx.owner, nme.DO_WHILE_PREFIX, Flags.Label | Flags.Synthetic,
+        Types.MethodType(Nil, ctx.definitions.UnitType), coord = cond.pos)
+
+      ensureOwner(body, sym)
+      val call = t.Apply(t.ref(sym), Nil)
+      val rhs = t.Block(body :: Nil, t.If(cond, call, t.Literal(Constant(()))))
+      t.Block(List(t.DefDef(sym, rhs)), call)
+    }
+
+    def unapply(tree: tpd.Tree): Option[(tpd.Tree, tpd.Tree)] = tree match {
+      case t.Block((ddef : t.DefDef) :: Nil, t.Apply(f, Nil))
+      if f.symbol.name == nme.DO_WHILE_PREFIX =>
+        val t.Block(body :: Nil, t.If(cond, _, _)) = ddef.rhs
+        Some((body, cond))
+      case _ => None
+    }
   }
 
   object For extends ForImpl {

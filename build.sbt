@@ -12,7 +12,7 @@ lazy val common = Seq(
 
 lazy val gestaltSetting = Seq(
   name := "gestalt",
-  version := "0.2.4",
+  version := "0.2.5",
   organization := "me.fengy",
 
   scalaOrganization := dottyOrg,
@@ -46,7 +46,7 @@ lazy val gestaltSetting = Seq(
     <url>https://github.com/liufengyun/gestalt</url>
     <scm>
       <url>http://github.com/liufengyun/gestalt</url>
-      <connection>scm:git:git@github.com:liufengyun/eden.git</connection>
+      <connection>scm:git:git@github.com:liufengyun/gestalt.git</connection>
     </scm>
     <developers>
       <developer>
@@ -63,7 +63,7 @@ lazy val gestalt = (project in file(".")).
 
 lazy val macrosSetting = Seq(
   scalacOptions := {
-    Seq("-Xprint:frontend,parser,macrosTransform", "-Ycheck:all") // "-Yplain-printer", "-Xprint:frontend,parser", "-Ylog:frontend",
+    Seq("-Xprint:frontend,parser", "-Ycheck:all") // "-Yplain-printer", "-Xprint:frontend,parser", "-Ylog:frontend",
   },
 
   traceLevel := 0,
