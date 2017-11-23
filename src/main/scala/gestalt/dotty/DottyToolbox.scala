@@ -454,7 +454,7 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Contexts.Context) exten
     def apply(body: TermTree, cond: TermTree): TermTree = d.DoWhile(body, cond).withPosition
 
     // { label def doWhile$(): Unit = { body; if (cond) doWhile$() } ; doWhile$() }
-    def apply(cond: tpd.Tree, body: tpd.Tree)(implicit ctx: Context): tpd.Tree = {
+    def apply(body: tpd.Tree, cond: tpd.Tree)(implicit ctx: Context): tpd.Tree = {
       val sym = ctx.newSymbol(ctx.owner, nme.DO_WHILE_PREFIX, Flags.Label | Flags.Synthetic,
         Types.MethodType(Nil, ctx.definitions.UnitType), coord = cond.pos)
 
