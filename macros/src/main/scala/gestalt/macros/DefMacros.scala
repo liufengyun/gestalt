@@ -261,3 +261,22 @@ object TypedDef {
     }
   }
 }
+
+object Owners {
+  def mywhile(cond: Boolean)(f: Unit): Int  = meta {
+    val vdef = ValDef(Lit(5)) // owner now is the ctx
+    val whileTree = While(cond, Block(vdef :: Nil, f))  // owner now is $while
+
+    val scalaInt = Type.typeRef("scala.Int")
+    val parent = Type.typeRef("scala.Function1").appliedTo(scalaInt, scalaInt)
+    val mt = MethodType(List("v"))(_ => scalaInt :: Nil, _ => scalaInt)
+    val anonTree = NewAnonymClass(parent :: Nil) { implicit ctx =>
+      val meth = DefDef("apply", mt)(implicit ctx => {
+        case (_, params :: Nil) => params(0).select("+").appliedTo(params(0) :: Nil)
+      })
+
+      meth :: whileTree :: Nil
+    }
+    Block(anonTree :: Nil, Lit(5))
+  }
+}

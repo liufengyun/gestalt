@@ -163,12 +163,13 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Contexts.Context) exten
       val cls = ctx.newNormalizedClassSymbol(owner, tpnme.ANON_FUN, Flags.Synthetic, parents1, coord = enclosingPosition)
       val constr = ctx.newConstructor(cls, Flags.Synthetic, Nil, Nil).entered
 
-      val body = bodyFn(ctx.withOwner(cls)).map {
-        case defTree: t.DefTree =>
-          val tree = ensureOwner(defTree, cls)
-          tree.symbol.entered
-          tree
-        case stat => stat
+      val dummy = ctx.newLocalDummy(cls, enclosingPosition)
+
+      val body = bodyFn(ctx.withOwner(cls)).map { stat =>
+        val owner = if (stat.isDef) cls else dummy
+        val tree = ensureOwner(stat, owner)
+        if (tree.isDef) tree.symbol.entered
+        tree
       }
 
       val cdef: tpd.Tree = t.ClassDef(cls, t.DefDef(constr).withPosition, body).withPosition
@@ -430,9 +431,9 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Contexts.Context) exten
       val sym = ctx.newSymbol(ctx.owner, nme.WHILE_PREFIX, Flags.Label | Flags.Synthetic,
         Types.MethodType(Nil, ctx.definitions.UnitType), coord = cond.pos)
 
-      ensureOwner(body, sym)
+      val body2 = ensureOwner(body, sym)
       val call = t.Apply(t.ref(sym), Nil)
-      val rhs = t.If(cond, t.Block(body :: Nil, call), t.Literal(Constant(())))
+      val rhs = t.If(cond, t.Block(body2 :: Nil, call), t.Literal(Constant(())))
       t.Block(List(t.DefDef(sym, rhs)), call)
     }
 
@@ -457,9 +458,9 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Contexts.Context) exten
       val sym = ctx.newSymbol(ctx.owner, nme.DO_WHILE_PREFIX, Flags.Label | Flags.Synthetic,
         Types.MethodType(Nil, ctx.definitions.UnitType), coord = cond.pos)
 
-      ensureOwner(body, sym)
+      val body2 = ensureOwner(body, sym)
       val call = t.Apply(t.ref(sym), Nil)
-      val rhs = t.Block(body :: Nil, t.If(cond, call, t.Literal(Constant(()))))
+      val rhs = t.Block(body2 :: Nil, t.If(cond, call, t.Literal(Constant(()))))
       t.Block(List(t.DefDef(sym, rhs)), call)
     }
 

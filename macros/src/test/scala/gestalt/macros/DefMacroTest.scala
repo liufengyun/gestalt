@@ -245,4 +245,15 @@ class DefMacroTest extends TestSuite {
     val f = TypedDef.annoyAdd(5)
     assert(f(3) == 8)
   }
+
+  test("owner for while") {
+    import Owners._
+
+    var n = 6
+    val x = mywhile(n > 0) {
+      n -= 1
+    }
+    assert(n == 0)
+    assert(x == 5)
+  }
 }
