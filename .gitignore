@@ -22,3 +22,5 @@ src_managed/
 *.actual
 secrets.yml
 
+.dotty-ide-artifact
+.dotty-ide.json
