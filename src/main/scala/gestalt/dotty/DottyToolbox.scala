@@ -1049,9 +1049,6 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Contexts.Context) exten
       case _ => None
     }
 
-    /** The type representing  T[U1, ..., Un] */
-    def appliedTo(tp: Type, args: List[Type]): Type = new TypeApplications(tp).appliedTo(args)(ctx)
-
     def toTree(tp: Type): tpd.Tree = t.TypeTree(tp)
 
     /** Infer an implicit instance of the given type */
@@ -1068,6 +1065,14 @@ class Toolbox(enclosingPosition: Position)(implicit ctx: Contexts.Context) exten
   object ByNameType extends ByNameTypeImpl {
     def unapply(tp: Type): Option[Type] = tp match {
       case tp: Types.ExprType => Some(tp.underlying)
+      case _ => None
+    }
+  }
+
+  object AppliedType extends AppliedTypeImpl {
+    def apply(tp: Type, args: List[Type]): Type = Types.AppliedType(tp, args)
+    def unapply(tp: Type): Option[(Type, List[Type])] = tp match {
+      case Types.AppliedType(tp, args) => Some(tp -> args)
       case _ => None
     }
   }

@@ -249,7 +249,10 @@ object api extends Toolbox {
   implicit def tpd2untpdListList(treess: List[List[tpd.Tree]]): List[List[TermTree]] = treess.map(_.map(TypedSplice.apply))
 
   /**--------------------- Types ---------------------------------*/
-  def Type           = toolbox.Type.asInstanceOf[TypeImpl]
+  def Type                     = !toolbox.Type
+  def ByNameType               = !toolbox.ByNameType
+  def AppliedType              = !toolbox.AppliedType
+  def MethodType               = !toolbox.MethodType
 
   implicit class TypeOps(tp: Type) {
     def =:=(tp2: Type) = Type.=:=(tp, tp2)
@@ -271,12 +274,9 @@ object api extends Toolbox {
     def denot: Option[Denotation] = Type.denot(tp)
     def termSymbol: Option[Symbol] = denot.map(_.symbol)
     def classSymbol: Option[Symbol] = Type.classSymbol(tp)
-    def appliedTo(args: Type*): Type = Type.appliedTo(tp, args.toList)
+    def appliedTo(args: Type*): Type = AppliedType(tp, args.toList)
     def toTree: tpd.Tree = Type.toTree(tp)
   }
-
-  def ByNameType     = toolbox.ByNameType.asInstanceOf[ByNameTypeImpl]
-  def MethodType     = toolbox.MethodType.asInstanceOf[MethodTypeImpl]
 
   implicit class MethodTypeOps(tp: MethodType) {
     def paramInfos: List[Type] = MethodType.paramInfos(tp)

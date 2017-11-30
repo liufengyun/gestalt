@@ -1,9 +1,11 @@
 package scala.gestalt.core
 
-trait Types extends MethodTypes { this: Toolbox =>
+trait Types  { this: Toolbox =>
   type Type >: Null <: AnyRef
   type TermRef <: Type
   type TypeRef <: Type
+  type MethodType >: Null <: Type
+  type ParamRef   >: Null <: Type
 
   def Type: TypeImpl
   trait TypeImpl {
@@ -60,9 +62,6 @@ trait Types extends MethodTypes { this: Toolbox =>
     /** denotation associated with the type */
     def denot(tp: Type): Option[Denotation]
 
-    /** The type representing  T[U1, ..., Un] */
-    def appliedTo(tp: Type, args: List[Type]): Type
-
     /** Turn a type into a typed tree */
     def toTree(tp: Type): tpd.Tree
 
@@ -70,19 +69,22 @@ trait Types extends MethodTypes { this: Toolbox =>
     def infer(tp: Type): Option[tpd.Tree]
   }
 
-
   /*-------------------- type extractors ---------------------*/
 
+  /** The type representing  =>T */
   def ByNameType: ByNameTypeImpl
   trait ByNameTypeImpl {
     def unapply(tp: Type): Option[Type]
   }
-}
 
-trait MethodTypes { this: Toolbox =>
-  type MethodType >: Null <: Type
-  type ParamRef   >: Null <: Type
+  /** The type representing  T[U1, ..., Un] */
+  def AppliedType: AppliedTypeImpl
+  trait AppliedTypeImpl {
+    def apply(tpcon: Type, args: List[Type]): Type
+    def unapply(tp: Type): Option[(Type, List[Type])]
+  }
 
+  /** The type representing (T1, T2, ...)R */
   def MethodType: MethodTypeImpl
   trait MethodTypeImpl {
     def paramInfos(tp: MethodType): List[Type]
@@ -94,3 +96,4 @@ trait MethodTypes { this: Toolbox =>
               resultTypeExp: List[ParamRef] => Type): MethodType
   }
 }
+
