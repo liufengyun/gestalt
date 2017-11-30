@@ -38,7 +38,7 @@ object Transformer {
     def isUnlift(tp: Type) = tp.denot.map(_.symbol) == unliftSym
 
     def rewrite(monad: tpd.Tree, name: String, tp: Type, resTp: Type, flat: Boolean, flatTp: Type = null)
-               (bodyFn: Seq[tpd.Tree] => tpd.Tree): tpd.Tree =
+               (bodyFn: Seq[tpd.RefTree] => tpd.Tree): tpd.Tree =
     {
       val fun = Function(tp :: Nil, resTp)(bodyFn)
       if (flat)
@@ -99,13 +99,13 @@ object Transformer {
         trees match {
           case (tree @ ValDef(sym, Transform(monad))) :: TransformBlock(body) =>
             val res = rewrite(monad, sym.name, tree.tpe.widen, body.tpe, flat = true, flatTp = blockTp) { refs =>
-              body.subst(tree.symbol.get :: Nil, refs.head.symbol.get :: Nil)
+              body.subst(sym :: Nil, refs.head.symbol :: Nil)
             }
             Some(res)
 
           case (tree @ ValDef(sym, Transform(monad))) :: tail =>       // tail cannot be empty
             Some(rewrite(monad, sym.name, tree.tpe.widen, blockTp, flat = false) { refs =>
-              Block(tail.init, tail.last).subst(tree.symbol.get :: Nil, refs.head.symbol.get :: Nil)
+              Block(tail.init, tail.last).subst(sym :: Nil, refs.head.symbol :: Nil)
             })
 
           case Transform(head) :: Nil =>
@@ -203,7 +203,7 @@ object Transformer {
             case List() => None
             case List((tree, dummy, tpe)) =>
               val res = rewrite(tree, dummy.name, tpe, newTree.tpe, flat = false) { refs =>
-                newTree.subst(dummy :: Nil, refs.head.symbol.get :: Nil)
+                newTree.subst(dummy :: Nil, refs.head.symbol :: Nil)
               }
 
               Some(res)

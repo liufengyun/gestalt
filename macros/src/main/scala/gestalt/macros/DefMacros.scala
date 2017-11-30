@@ -221,8 +221,8 @@ object Hygiene {
 object Transform {
   def log(x: Int)(f: Int => Int): Int = meta {
     val newfun = f.transform {
-      case call @ ApplySeq(f, args) if args.size > 0 =>
-        val name = f.symbol.get.name
+      case call @ ApplySeq(Ident(fsym), args) if args.size > 0 =>
+        val name = fsym.name
         val print = Ident(Type.termRef("scala.Predef")).select("println").appliedTo(Lit(s"calling $name\n") :: Nil)
         val vdef = ValDef(call)
         val res = Ident(vdef.symbol)
