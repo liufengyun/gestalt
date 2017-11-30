@@ -236,12 +236,12 @@ object Transform {
 object TypedDef {
   def double(x: Int): Int = meta {
     val mt = MethodType(List("n"))(_ => Type.typeRef("scala.Int") :: Nil, _ => Type.typeRef("scala.Int"))
-    val meth = DefDef("double", mt)(ctx => { case (_, params :: Nil) =>
+    val meth = DefDef("double", mt) { case (_, params :: Nil) =>
       Block(
         x :: Nil,     // test nested definition
         params(0).select("+").appliedTo(params(0) :: Nil)
       )
-    })
+    }
     val v = ValDef(Lit(10))
     Block(meth :: v :: Nil, Ident(meth.symbol).appliedTo(Ident(v.symbol) :: Nil))
   }
@@ -251,14 +251,11 @@ object TypedDef {
     val mt = MethodType(List("v"))(_ => scalaInt :: Nil, _ => scalaInt)
 
     val parent = Type.typeRef("scala.Function1").appliedTo(scalaInt, scalaInt)
-    NewAnonymClass(parent :: Nil) { implicit ctx =>
-      val meth = DefDef("apply", mt)(implicit ctx => {
-        case (_, params :: Nil) =>
-          params(0).select("+").appliedTo(x :: Nil)
-      })
-
-      meth :: Nil
+    val meth = DefDef("apply", mt) {
+      case (_, params :: Nil) =>
+        params(0).select("+").appliedTo(x :: Nil)
     }
+    NewAnonymClass(parent :: Nil, meth :: Nil)
   }
 }
 
@@ -270,13 +267,11 @@ object Owners {
     val scalaInt = Type.typeRef("scala.Int")
     val parent = Type.typeRef("scala.Function1").appliedTo(scalaInt, scalaInt)
     val mt = MethodType(List("v"))(_ => scalaInt :: Nil, _ => scalaInt)
-    val anonTree = NewAnonymClass(parent :: Nil) { implicit ctx =>
-      val meth = DefDef("apply", mt)(implicit ctx => {
-        case (_, params :: Nil) => params(0).select("+").appliedTo(params(0) :: Nil)
-      })
-
-      meth :: whileTree :: Nil
+    val meth = DefDef("apply", mt) { case (_, params :: Nil) =>
+      params(0).select("+").appliedTo(params(0) :: Nil)
     }
+    val anonTree = NewAnonymClass(parent :: Nil, meth :: whileTree :: Nil)
+
     Block(anonTree :: Nil, Lit(5))
   }
 }

@@ -241,6 +241,7 @@ class DefMacroTest extends TestSuite {
     assert(x == 20)
   }
 
+
   test("test anony class") {
     val f = TypedDef.annoyAdd(5)
     assert(f(3) == 8)
