@@ -1,11 +1,11 @@
 package scala.gestalt
-package helpers
+package decos
 
 import api._
 
 trait Types {
   def MethodType(params: List[(String, Type)], retTp: Type): Type =
-    api.MethodType(params.map(_._1))(_ => params.map(_._2), _ => retTp)
+    Type.MethodType(params.map(_._1))(_ => params.map(_._2), _ => retTp)
 
   implicit class TypeOps(tp: Type) {
     def =:=(tp2: Type) = Type.=:=(tp, tp2)
@@ -27,16 +27,16 @@ trait Types {
     def denot: Option[Denotation] = Type.denot(tp)
     def termSymbol: Option[Symbol] = denot.map(Denotation.symbol)
     def classSymbol: Option[Symbol] = Type.classSymbol(tp)
-    def appliedTo(args: Type*): Type = AppliedType(tp, args.toList)
+    def appliedTo(args: Type*): Type = Type.AppliedType(tp, args.toList)
     def toTree: tpd.Tree = Type.toTree(tp)
   }
 
-  implicit class MethodTypeOps(tp: MethodType) {
-    def paramInfos: List[Type] = api.MethodType.paramInfos(tp)
-    def instantiate(params: List[Type]): Type = api.MethodType.instantiate(tp)(params)
+  implicit class MethodTypeOps(tp: Type.MethodType) {
+    def paramInfos: List[Type] = Type.MethodType.paramInfos(tp)
+    def instantiate(params: List[Type]): Type = Type.MethodType.instantiate(tp)(params)
   }
 
-  implicit class TermRefOps(tp: TermRef) {
+  implicit class TermRefOps(tp: Type.TermRef) {
     def symbol: Symbol    = Denotation.symbol(denot)
     def denot: Denotation = Type.denot(tp).get
   }

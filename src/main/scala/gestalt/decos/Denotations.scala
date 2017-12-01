@@ -1,9 +1,9 @@
 package scala.gestalt
-package helpers
+package decos
+
+import api._
 
 trait Denotations {
-  import api._
-
   implicit class DenotationOps(denot: Denotation) {
     def name: String = Denotation.name(denot)
     def info: Type = Denotation.info(denot)

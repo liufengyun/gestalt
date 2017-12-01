@@ -66,7 +66,7 @@ package object quasiquotes {
    *
    *  This method is intended to be reflectively called by the compiler
    */
-  def expand(label: String, tree: Tree, parts: List[String], unquotes: List[Tree], isPattern: Boolean): Tree = {
+  def expand(label: String, tree: untpd.Tree, parts: List[String], unquotes: List[untpd.Tree], isPattern: Boolean): untpd.Tree = {
     val code = resugar(parts)
     val parser = instantiateParser(parserMap(label))
     val mTree = parser(m.Input.String(code), quasiquoteTermDialect)

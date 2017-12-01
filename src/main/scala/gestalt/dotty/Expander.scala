@@ -55,7 +55,7 @@ object Expander {
     val strs = for(t.Literal(Constant(v: String)) <- parts) yield v
 
     api.withToolbox(new Toolbox(tree.pos)) {
-      quasiquotes.expand(tag, tree.asInstanceOf[api.Tree], strs, args.asInstanceOf[List[api.Tree]], !isTerm).asInstanceOf[untpd.Tree]
+      quasiquotes.expand(tag, tree.asInstanceOf[api.untpd.Tree], strs, args.asInstanceOf[List[api.untpd.Tree]], !isTerm).asInstanceOf[untpd.Tree]
     }
   }
 

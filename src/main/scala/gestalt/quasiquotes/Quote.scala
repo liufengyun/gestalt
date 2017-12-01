@@ -4,6 +4,9 @@ import scala.collection.immutable.Seq
 import scala.{meta => m}
 import scala.compat.Platform.EOL
 import scala.gestalt.api._
+import untpd._
+import Term.{ Ident, Select, Infix }
+import tpd.{ Lit }
 import scala.gestalt.options.unsafe
 
 /** Lift scala.meta trees as trees */

@@ -1,14 +1,14 @@
 package scala.gestalt
-package helpers
+package decos
 
-import gestalt.api._
+import api._
 
 trait Symbols {
   implicit class SymbolOps(sym: Symbol) {
     def name: String = Symbol.name(sym)
     def asSeenFrom(prefix: Type): Type = Symbol.asSeenFrom(sym, prefix)
-    def termRef: TermRef = Symbol.termRef(sym)
-    def typeRef: TypeRef = Symbol.typeRef(sym)
+    def termRef: Type.TermRef = Symbol.termRef(sym)
+    def typeRef: Type.TypeRef = Symbol.typeRef(sym)
     def isCase: Boolean = Symbol.isCase(sym)
     def isTrait: Boolean = Symbol.isTrait(sym)
     def isPrivate: Boolean = Symbol.isPrivate(sym)

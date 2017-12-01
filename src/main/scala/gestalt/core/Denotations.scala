@@ -1,14 +1,15 @@
 package scala.gestalt.core
 
-trait Denotations { this: Toolbox =>
+trait Denotations {
+  val toolbox: Toolbox
+  import toolbox.types.Type
+  import toolbox.symbols.Symbol
+
   type Denotation
 
-  def Denotation: DenotationImpl
-  trait DenotationImpl {
-    def name(denot: Denotation): String
+  def name(denot: Denotation): String
 
-    def info(denot: Denotation): Type
+  def info(denot: Denotation): Type
 
-    def symbol(denot: Denotation): Symbol
-  }
+  def symbol(denot: Denotation): Symbol
 }
