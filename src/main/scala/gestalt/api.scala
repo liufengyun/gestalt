@@ -46,10 +46,6 @@ object api extends decos.Trees
   val untpd: apis.Untpd.type = apis.Untpd
 
   /**------------------------------------------------*/
-  def root: untpd.TermTree = untpd.Term.Ident("_root_")(null)
-  def empty: untpd.TermTree = untpd.Term.Ident("_empty_")(null)
-
-  /**------------------------------------------------*/
   def location: core.Location = toolbox.location
 
   def error(message: String, pos: Position) =

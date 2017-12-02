@@ -2,7 +2,7 @@ package scala.gestalt
 package apis
 
 object Untpd {
-  import api.{ toolbox => impl, XtensionBang, Unsafe, Position }
+  import api.{ toolbox => impl, XtensionBang, Unsafe, Position, dummy, dummy1, dummy2  }
 
   type Tree     >: Null <: AnyRef
   type TypeTree >: Null <: Tree
@@ -32,6 +32,9 @@ object Untpd {
   def emptyMods: Mods = !impl.untpd.emptyMods
 
   /*------------------------------- constructors -------------------------------------*/
+
+  def root: TermTree = Term.Ident("_root_")
+  def empty: TermTree = Term.Ident("_empty_")
 
   def TypedSplice(tree: Tpd.Tree): Splice =
     !impl.untpd.TypedSplice
@@ -172,6 +175,26 @@ object Untpd {
     def Ident(name: String)(implicit unsafe: Unsafe): Ident =
       !impl.untpd.Term.Ident(name)(!unsafe)
 
+    def Ident(name: "_root_"): TermTree = {
+      import options.unsafe
+      Ident("_root_")
+    }
+
+    def Ident(name: "scala")(implicit dummy: core.Dummy): TermTree = {
+      import options.unsafe
+      Ident("scala")
+    }
+
+    def Ident(name: "java")(implicit dummy: core.Dummy1): TermTree = {
+      import options.unsafe
+      Ident("java")
+    }
+
+    def Ident(name: "_empty_")(implicit dummy: core.Dummy2): TermTree = {
+      import options.unsafe
+      Ident("<empty>")
+    }
+
     def This(qual: String): TermTree =
       !impl.untpd.Term.This(qual)
 
@@ -238,9 +261,6 @@ object Untpd {
 
     def TypeParam(name: String, tbounds: TypeTree): TypeParam = TypeParam(emptyMods, name, Nil, Some(tbounds), Nil)
 
-    def PatDef(mods: Mods, lhs: PatTree, tpe: Option[TypeTree], rhs: Tree): DefTree =
-      !impl.untpd.Defn.PatDef(!mods, !lhs, !tpe, !rhs)
-
     // extends qual.T[A, B](x, y)(z)
     def InitCall(tpe: TypeTree, argss: List[List[TermTree]]): InitCall =
       !impl.untpd.Defn.InitCall(!tpe, !argss)
@@ -256,6 +276,9 @@ object Untpd {
 
     def ValDecl(mods: Mods, name: String, tpe: TypeTree): ValDecl =
       !impl.untpd.Defn.ValDecl(!mods, name, !tpe)
+
+    def PatDef(mods: Mods, lhs: PatTree, tpe: Option[TypeTree], rhs: Tree): DefTree =
+      !impl.untpd.Defn.PatDef(!mods, !lhs, !tpe, !rhs)
 
     def DefDef(mods: Mods, name: String, tparams: List[TypeParam], paramss: List[List[Param]], tpe: Option[TypeTree], rhs: Tree): DefDef =
       !impl.untpd.Defn.DefDef(!mods, name, !tparams, !paramss, !tpe, !rhs)
