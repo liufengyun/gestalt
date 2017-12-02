@@ -1,3 +1,5 @@
 package scala.gestalt.api
 
-class WeakTypeTag[T](val tpe: scala.gestalt.Type)
+import scala.gestalt.Type
+
+class WeakTypeTag[T](val tpe: Type)

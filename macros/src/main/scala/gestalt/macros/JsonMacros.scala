@@ -1,4 +1,6 @@
-import scala.gestalt.api._
+import scala.gestalt._
+import untpd.Term.{ Ident, Tuple, Lit, NewInstance }
+import untpd.Defn.{ ValDef }
 
 object JsonMacros {
 
@@ -34,7 +36,7 @@ object JsonMacros {
         f => f-> f.info
       }
 
-      case class JsonItem(name: String, value: Ident, pairOut: TermTree, readOption: ValDef, implicitFormat: Option[ValDef])
+      case class JsonItem(name: String, value: untpd.Ident, pairOut: untpd.TermTree, readOption: untpd.ValDef, implicitFormat: Option[untpd.ValDef])
       val jsonItems: List[JsonItem] = fieldsWithTypes.map {
         case (field, stringType) if stringType =:= Type.typeRef("java.lang.String") =>
           val name = field.name

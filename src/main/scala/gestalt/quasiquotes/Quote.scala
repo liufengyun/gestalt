@@ -418,7 +418,7 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
     case m.Term.Arg.Repeated(expr) =>
       untpd("Term.Repeated").appliedTo(lift(expr))
     case m.Term.Param(mods, m.Term.Name(name), tpe, default) =>
-      untpd("Term.Param").appliedTo(liftMods(mods), Lit(name), liftOpt(tpe), liftOpt(default))
+      untpd("Defn.Param").appliedTo(liftMods(mods), Lit(name), liftOpt(tpe), liftOpt(default))
 
     // types
     case m.Type.Name(name) =>
