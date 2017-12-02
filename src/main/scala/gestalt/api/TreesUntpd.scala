@@ -27,7 +27,7 @@ object Untpd {
 
   /*----------------------------------- modifiers ------------------------------------*/
 
-  type Mods >: Null <: core.Modifiers
+  type Mods = core.Modifiers
   def emptyMods: Mods = !impl.untpd.emptyMods
 
   /*------------------------------- constructors -------------------------------------*/
@@ -112,7 +112,7 @@ object Untpd {
 
     def Try(expr: Tree, cases: List[Tree], finallyp: Option[TermTree]): TermTree = {
       val untpd = impl.untpd
-      !untpd.Term.Try(!expr, cases.asInstanceOf[untpd.Tree], !finallyp)
+      !untpd.Term.Try(!expr, cases.asInstanceOf[List[untpd.Tree]], !finallyp)
     }
 
     def Try(expr: Tree, handler: Tree, finallyp: Option[TermTree]): TermTree = {

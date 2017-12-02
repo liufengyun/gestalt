@@ -1,8 +1,12 @@
 import scala.annotation.StaticAnnotation
 import scala.collection.immutable.Seq
 
-import scala.gestalt.api._
+import scala.gestalt.{ Type => _, _ }
 import scala.gestalt.options.unsafe
+
+import untpd._
+import untpd.Term._
+import untpd.Defn._
 
 object Quasiquotes {
   implicit class TestHelper(lhs: Any) extends AnyVal {
@@ -48,13 +52,13 @@ class Quasiquotes extends StaticAnnotation {
     test("new") {
       val file = Lit("path")
       val expr = q"new xsd($file)"
-      assert(expr.toString === NewInstance(TypeIdent("xsd"), (Lit("path") :: Nil) :: Nil).toString)
+      assert(expr.toString === NewInstance(Type.Ident("xsd"), (Lit("path") :: Nil) :: Nil).toString)
     }
 
     test("new 2") {
       val expr = q"new X with T { def m = 42 }"
       val anonymClass = NewAnonymClass(
-        InitCall(TypeIdent("X"), Nil) :: InitCall(TypeIdent("T"), Nil) :: Nil,
+        InitCall(Type.Ident("X"), Nil) :: InitCall(Type.Ident("T"), Nil) :: Nil,
         None,
         DefDef(emptyMods, "m", Nil, Nil, None, Lit(42)) :: Nil
       )
@@ -110,7 +114,7 @@ class Quasiquotes extends StaticAnnotation {
     test("apply") {
       val q"$ref[..$tpes](..$apats)" = q"x[A, B](Q, W)"
       assert(ref.toString === Ident("x").toString)
-      assert(tpes.toString === List(TypeIdent("A"), TypeIdent("B")).toString)
+      assert(tpes.toString === List(Type.Ident("A"), Type.Ident("B")).toString)
       assert(apats.toString === List(Ident("Q"), Ident("W")).toString)
     }
 
@@ -146,20 +150,18 @@ class Quasiquotes extends StaticAnnotation {
     test("ascribe") {
       val exp = q"1"
       val tpe = t"Double"
-      assert(q"$exp: $tpe".toString === Ascribe(Lit(1), TypeIdent("Double")).toString)
+      assert(q"$exp: $tpe".toString === Ascribe(Lit(1), Type.Ident("Double")).toString)
     }
 
     /*
     test("ascribe") {
       val q"$exp: $tpe" = q"1: Double"
       assert(exp.toString === Lit(1).toString)
-      assert(tpe.toString === TypeIdent("Double").toString)
+      assert(tpe.toString === Type.Ident("Double").toString)
     } */
 
     test("assign") {
-      val q"$expr1 = $expr2" = q"foo = bar"
-      assert(expr1.toString === Ident("foo").toString)
-      assert(expr2.toString === Ident("bar").toString)
+      assert(q"foo = bar".toString === Assign(Ident("foo"), Ident("bar")).toString)
     }
 
     test("update") {
@@ -182,7 +184,7 @@ class Quasiquotes extends StaticAnnotation {
       val r = q"1"
       val res = Update(
         Ident("f"),
-        (Ascribe(Ident("x"), TypeIdent("X")) :: Ascribe(Ident("y"), TypeIdent("Y")) :: Nil) :: Nil,
+        (Ascribe(Ident("x"), Type.Ident("X")) :: Ascribe(Ident("y"), Type.Ident("Y")) :: Nil) :: Nil,
         Lit(1)
       )
       assert(q"f($q, y: Y) = $r".toString === res.toString)
@@ -240,7 +242,7 @@ class Quasiquotes extends StaticAnnotation {
         Ident("foo"),
         List(
           Case(Pat.Unapply(Ident("foo"), Pat.Var("x") :: Pat.Var("y") :: Nil), None, Lit(3)),
-          Case(Pat.Bind("a", Pat.Unapply(Ident("bar"), Pat.Ascribe("x", TypeIdent("T")) :: Nil)), None, Lit(4)),
+          Case(Pat.Bind("a", Pat.Unapply(Ident("bar"), Pat.Ascribe("x", Type.Ident("T")) :: Nil)), None, Lit(4)),
           Case(Pat.Var("bar"), None, Ident("baz")),
           Case(Pat.Var("_"), None, Ident("foo"))
         )
@@ -251,7 +253,7 @@ class Quasiquotes extends StaticAnnotation {
 
     test("function") {
       assert(q"(i: Int) => 42".toString ===
-        Function(Param("i", TypeIdent("Int")) :: Nil, Lit(42)).toString
+        Function(Param("i", Type.Ident("Int")) :: Nil, Lit(42)).toString
       )
     }
 
@@ -259,7 +261,7 @@ class Quasiquotes extends StaticAnnotation {
       val expr = q"(x: Int, y: String) => 42"
       assert(expr.toString ===
         Function(
-          Param("x", TypeIdent("Int")) :: Param("y", TypeIdent("String")) :: Nil,
+          Param("x", Type.Ident("Int")) :: Param("y", Type.Ident("String")) :: Nil,
           Lit(42)
         ).toString
       )
@@ -276,11 +278,11 @@ class Quasiquotes extends StaticAnnotation {
     test("for") {
       val expr = q"for (a <- as; x <- xs; y <- ys; if bar; b <- bs) foo(x, y)"
       val res = For.ForDo(
-        For.GenFrom(Ident("a"), Ident("as")) ::
-          For.GenFrom(Ident("x"), Ident("xs")) ::
-          For.GenFrom(Ident("y"), Ident("ys")) ::
+        For.GenFrom(Pat.Ident("a"), Ident("as")) ::
+          For.GenFrom(Pat.Ident("x"), Ident("xs")) ::
+          For.GenFrom(Pat.Ident("y"), Ident("ys")) ::
           For.Guard(Ident("bar")) ::
-          For.GenFrom(Ident("b"), Ident("bs")) :: Nil,
+          For.GenFrom(Pat.Ident("b"), Ident("bs")) :: Nil,
         Apply(Ident("foo"), List(Ident("x"), Ident("y")))
       )
       assert(expr.toString === res.toString)
@@ -289,10 +291,10 @@ class Quasiquotes extends StaticAnnotation {
     test("for yield") {
       val expr = q"for (a <- as; x <- xs; y <- ys; b <- bs) yield foo(x, y)"
       val res = For.ForYield(
-        For.GenFrom(Ident("a"), Ident("as")) ::
-          For.GenFrom(Ident("x"), Ident("xs")) ::
-          For.GenFrom(Ident("y"), Ident("ys")) ::
-          For.GenFrom(Ident("b"), Ident("bs")) :: Nil,
+        For.GenFrom(Pat.Ident("a"), Ident("as")) ::
+          For.GenFrom(Pat.Ident("x"), Ident("xs")) ::
+          For.GenFrom(Pat.Ident("y"), Ident("ys")) ::
+          For.GenFrom(Pat.Ident("b"), Ident("bs")) :: Nil,
         Apply(Ident("foo"), List(Ident("x"), Ident("y")))
       )
       assert(expr.toString === res.toString)
@@ -302,7 +304,7 @@ class Quasiquotes extends StaticAnnotation {
       val expr = q"try foo catch { case a => b } finally baz"
       val res = Try(
         Ident("foo"),
-        Case(Ident("a"), None, Ident("b")) :: Nil,
+        Case(Pat.Ident("a"), None, Ident("b")) :: Nil,
         Some(Ident("baz"))
       )
       assert(expr.toString === res.toString)
@@ -318,36 +320,36 @@ class Quasiquotes extends StaticAnnotation {
 
     test("type select") {
       val expr = t"x.Y"
-      assert(expr.toString === TypeSelect(Ident("x"), "Y").toString)
+      assert(expr.toString === Type.Select(Ident("x"), "Y").toString)
     }
 
     test("type singleton") {
       val expr = t"x.type"
-      assert(expr.toString === TypeSingleton(Ident("x")).toString)
+      assert(expr.toString === Type.Singleton(Ident("x")).toString)
     }
 
     test("type applied") {
       val expr = t"X[Y, Z]"
-      val res = TypeApply(TypeIdent("X"), List(TypeIdent("Y"), TypeIdent("Z")))
+      val res = Type.Apply(Type.Ident("X"), List(Type.Ident("Y"), Type.Ident("Z")))
       assert(expr.toString === res.toString)
     }
 
 
     test("function type") {
       val expr = t"(X, Y) => Z"
-      val res = TypeFunction(List(TypeIdent("X"), TypeIdent("Y")), TypeIdent("Z"))
+      val res = Type.Function(List(Type.Ident("X"), Type.Ident("Y")), Type.Ident("Z"))
       assert(expr.toString === res.toString)
     }
 
     test("type tuple") {
       val expr = t"(X, Y)"
-      val res = TypeTuple(List(TypeIdent("X"), TypeIdent("Y")))
+      val res = Type.Tuple(List(Type.Ident("X"), Type.Ident("Y")))
       assert(expr.toString === res.toString)
     }
 
     test("type refinement") {
       val expr = t"A { val a: A }"
-      val res = TypeRefine(TypeIdent("A"), List(ValDecl(emptyMods, "a", TypeIdent("A"))))
+      val res = Type.Refine(Type.Ident("A"), List(ValDecl(emptyMods, "a", Type.Ident("A"))))
       assert(expr.toString === res.toString)
     }
 
@@ -360,8 +362,8 @@ class Quasiquotes extends StaticAnnotation {
     test("by name type") {
       val expr = q"def f(x: => Int): Int = 3"
       val res = DefDef(emptyMods, "f", Nil,
-        (Param("x", TypeByName(TypeIdent("Int"))) :: Nil) :: Nil,
-        Some(TypeIdent("Int")),
+        (Param("x", Type.ByName(Type.Ident("Int"))) :: Nil) :: Nil,
+        Some(Type.Ident("Int")),
         Lit(3)
       )
       assert(expr.toString === res.toString)
@@ -370,8 +372,8 @@ class Quasiquotes extends StaticAnnotation {
     test("repeated type") {
       val expr = q"def f(x: Int*): Int = 3"
       val res = DefDef(emptyMods, "f", Nil,
-        (Param("x", TypeRepeated(TypeIdent("Int"))) :: Nil) :: Nil,
-        Some(TypeIdent("Int")),
+        (Param("x", Type.Repeated(Type.Ident("Int"))) :: Nil) :: Nil,
+        Some(Type.Ident("Int")),
         Lit(3)
       )
       assert(expr.toString === res.toString)
@@ -393,20 +395,20 @@ class Quasiquotes extends StaticAnnotation {
     /*
     test("seq def") {
       val expr = q"val x, y : Int = 3"
-      val res = SeqDef(emptyMods, "x" :: "y" :: Nil, Some(TypeIdent("Int")), Lit(3))
+      val res = SeqDef(emptyMods, "x" :: "y" :: Nil, Some(Type.Ident("Int")), Lit(3))
 
       assert(expr.toString === res.toString)
     } */
 
     test("type def") {
       val expr = q"type T = Int"
-      val res = TypeAlias(emptyMods, "T", Nil, TypeIdent("Int"))
+      val res = TypeAlias(emptyMods, "T", Nil, Type.Ident("Int"))
       assert(expr.toString === res.toString)
     }
 
     test("type decl") {
       val expr = q"type T >: A <: B"
-      val bound = TypeBounds(Some(TypeIdent("A")), Some(TypeIdent("B")))
+      val bound = Type.Bounds(Some(Type.Ident("A")), Some(Type.Ident("B")))
       val res = TypeDecl(emptyMods, "T", Nil, Some(bound))
       assert(expr.toString === res.toString)
     }
