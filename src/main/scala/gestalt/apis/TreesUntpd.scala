@@ -230,8 +230,13 @@ object Untpd {
     def Param(mods: Mods, name: String, tpe: Option[TypeTree], default: Option[TermTree]): Param =
       !impl.untpd.Defn.Param(!mods, name, !tpe, !default)
 
+    def Param(name: String): Param = Param(emptyMods, name, None, None)
+    def Param(name: String, tpe: TypeTree): Param = Param(emptyMods, name, Some(tpe), None)
+
     def TypeParam(mods: Mods, name: String, tparams: List[TypeParam], tbounds: Option[TypeTree], cbounds: List[TypeTree]): TypeParam =
       !impl.untpd.Defn.TypeParam(!mods, name, !tparams, !tbounds, !cbounds)
+
+    def TypeParam(name: String, tbounds: TypeTree): TypeParam = TypeParam(emptyMods, name, Nil, Some(tbounds), Nil)
 
     def PatDef(mods: Mods, lhs: PatTree, tpe: Option[TypeTree], rhs: Tree): DefTree =
       !impl.untpd.Defn.PatDef(!mods, !lhs, !tpe, !rhs)
