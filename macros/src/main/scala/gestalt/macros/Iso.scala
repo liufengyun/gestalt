@@ -1,4 +1,4 @@
-import scala.gestalt.api._
+import scala.gestalt._
 import scala.gestalt.options.unsafe
 
 trait Iso[T, U] {
