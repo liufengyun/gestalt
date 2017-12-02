@@ -31,13 +31,15 @@ package object gestalt extends decos.Trees
   type Context
   type Position
 
-  type Type = api.Types.Type
+  type WeakTypeTag = api.WeakTypeTag
+
+  type Type >: Null <: AnyRef
   val Type: api.Types.type = api.Types
 
-  type Symbol = api.Symbols.Symbol
+  type Symbol >: Null <: AnyRef
   val Symbol: api.Symbols.type = api.Symbols
 
-  type Denotation = api.Denotations.Denotation
+  type Denotation >: Null <: AnyRef
   val Denotation: api.Denotations.type = api.Denotations
 
   val tpd: api.Tpd.type = api.Tpd

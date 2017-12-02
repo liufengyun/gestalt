@@ -7,7 +7,7 @@ trait Dummy2
 
 case class Location(fileName: String, line: Int, column: Int)
 
-trait Toolbox extends TypeTags {
+trait Toolbox {
   type Context
   type Position
 

@@ -99,7 +99,7 @@ object Expander {
       val args2 = paramTypes.zip(args).map {
         case (AppliedType(tp, targs), arg) if tp.isRef(defn.WeakTypeTag) =>
           Inferencing.isFullyDefined(targs(0), typer.ForceDegree.noBottom)
-          new tb.WeakTypeTag[Nothing](targs(0).stripTypeVar)
+          new gestalt.WeakTypeTag[Nothing](targs(0).stripTypeVar.asInstanceOf[gestalt.Type])
         case (_, arg) => arg
       }
 

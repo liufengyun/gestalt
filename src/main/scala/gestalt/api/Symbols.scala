@@ -3,8 +3,6 @@ package scala.gestalt.api
 object Symbols {
   import scala.gestalt.{ toolbox => impl, _ }
 
-  type Symbol
-
   /** name of a member */
   def name(mem: Symbol): String = impl.symbols.name(!mem)
 
