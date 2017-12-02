@@ -1,4 +1,5 @@
-import scala.gestalt.api._
+import scala.gestalt._
+import tpd.Lit
 import scala.gestalt.options.unsafe
 
 object TypeToolbox {
