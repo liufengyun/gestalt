@@ -13,8 +13,6 @@ import core.Constants._
 import core.Types._
 import core.TypeApplications._
 
-import scala.gestalt._
-
 object Expander {
   private object ExtractApply {
     def unapply(tree: tpd.Tree): Option[(tpd.Tree, List[tpd.Tree], List[List[tpd.Tree]])] = tree match {
@@ -54,8 +52,8 @@ object Expander {
     }
     val strs = for(t.Literal(Constant(v: String)) <- parts) yield v
 
-    api.withToolbox(new Toolbox(tree.pos)) {
-      quasiquotes.expand(tag, tree.asInstanceOf[api.untpd.Tree], strs, args.asInstanceOf[List[api.untpd.Tree]], !isTerm).asInstanceOf[untpd.Tree]
+    gestalt.withToolbox(new Toolbox(tree.pos)) {
+      gestalt.quasiquotes.expand(tag, tree.asInstanceOf[gestalt.untpd.Tree], strs, args.asInstanceOf[List[gestalt.untpd.Tree]], !isTerm).asInstanceOf[untpd.Tree]
     }
   }
 
@@ -77,7 +75,7 @@ object Expander {
           mdef.withMods(mods1)
         }
 
-        api.withToolbox(new Toolbox(ann.pos)) {
+        gestalt.withToolbox(new Toolbox(ann.pos)) {
           val result = impl.invoke(null, ann, expandee, ctx).asInstanceOf[untpd.Tree]
           Some(result)
         }
@@ -138,7 +136,7 @@ object Expander {
         else prefix
       val trees  = (prefix2 :: targs ++ argss2.flatten) :+ ctx
       try {
-        val res = api.withToolbox(tb) {
+        val res = gestalt.withToolbox(tb) {
           impl.invoke(null, trees: _*).asInstanceOf[untpd.Tree]
         }
         println(" => \n" + res.show)

@@ -1,11 +1,9 @@
-package scala.gestalt
+package scala
 
-import scala.gestalt.core
-
-object api extends decos.Trees
-              with decos.Types
-              with decos.Symbols
-              with decos.Denotations
+package object gestalt extends decos.Trees
+               with decos.Types
+               with decos.Symbols
+               with decos.Denotations
 {
 
   private val toolboxStore: ThreadLocal[core.Toolbox] = new ThreadLocal[core.Toolbox]
@@ -33,17 +31,17 @@ object api extends decos.Trees
   type Context
   type Position
 
-  type Type = apis.Types.Type
-  val Type: apis.Types.type = apis.Types
+  type Type = api.Types.Type
+  val Type: api.Types.type = api.Types
 
-  type Symbol = apis.Symbols.Symbol
-  val Symbol: apis.Symbols.type = apis.Symbols
+  type Symbol = api.Symbols.Symbol
+  val Symbol: api.Symbols.type = api.Symbols
 
-  type Denotation = apis.Denotations.Denotation
-  val Denotation: apis.Denotations.type = apis.Denotations
+  type Denotation = api.Denotations.Denotation
+  val Denotation: api.Denotations.type = api.Denotations
 
-  val tpd: apis.Tpd.type = apis.Tpd
-  val untpd: apis.Untpd.type = apis.Untpd
+  val tpd: api.Tpd.type = api.Tpd
+  val untpd: api.Untpd.type = api.Untpd
 
   /**------------------------------------------------*/
   def location: core.Location = toolbox.location

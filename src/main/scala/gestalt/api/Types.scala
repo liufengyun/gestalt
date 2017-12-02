@@ -1,8 +1,7 @@
-package scala.gestalt
-package apis
+package scala.gestalt.api
 
 object Types  {
-  import api.{ toolbox => impl, XtensionBang, tpd, Symbol, Denotation }
+  import scala.gestalt.{ toolbox => impl, _ }
 
   type Type >: Null <: AnyRef
   type TermRef <: Type

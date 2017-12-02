@@ -3,10 +3,10 @@ package scala.gestalt.quasiquotes
 import scala.collection.immutable.Seq
 import scala.{meta => m}
 import scala.compat.Platform.EOL
-import scala.gestalt.api._
+import scala.gestalt._
 import untpd._
 import Term.{ Ident, Select, Infix }
-import tpd.{ Lit }
+import tpd.Lit
 import scala.gestalt.options.unsafe
 
 /** Lift scala.meta trees as trees */
@@ -19,7 +19,7 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
   lazy val scalaSome      = root.select("scala.Some")
   lazy val scalaNone      = root.select("scala.None")
 
-  private def untpd(path: String): TermTree = Path("scala.gestalt.api.untpd." + path)
+  private def untpd(path: String): TermTree = Path("scala.gestalt.untpd." + path)
 
   private def Path(path: String): TermTree = {
     val parts = path.split('.')

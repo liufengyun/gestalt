@@ -1,8 +1,7 @@
-package scala.gestalt
-package apis
+package scala.gestalt.api
 
 object Symbols {
-  import api.{ toolbox => impl, XtensionBang, Type }
+  import scala.gestalt.{ toolbox => impl, _ }
 
   type Symbol
 

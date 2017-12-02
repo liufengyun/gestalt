@@ -1,8 +1,7 @@
-package scala.gestalt
-package apis
+package scala.gestalt.api
 
 object Untpd {
-  import api.{ toolbox => impl, XtensionBang, Unsafe, Position, dummy, dummy1, dummy2  }
+  import scala.gestalt.{ toolbox => impl, _ }
 
   type Tree     >: Null <: AnyRef
   type TypeTree >: Null <: Tree

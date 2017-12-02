@@ -1,8 +1,7 @@
-package scala.gestalt
-package apis
+package scala.gestalt.api
 
 object Tpd {
-  import api.{ toolbox => impl, XtensionBang, Denotation, Position, Type, Symbol }
+  import scala.gestalt.{ toolbox => impl, _ }
 
   type Tree      >: Null <: AnyRef
   type DefTree   <: Tree
