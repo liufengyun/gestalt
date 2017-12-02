@@ -1,8 +1,6 @@
 package scala.gestalt
 package decos
 
-import api._
-
 trait Types {
   def MethodType(params: List[(String, Type)], retTp: Type): Type =
     Type.MethodType(params.map(_._1))(_ => params.map(_._2), _ => retTp)

@@ -1,8 +1,6 @@
 package scala.gestalt
 package decos
 
-import api._
-
 trait Symbols {
   implicit class SymbolOps(sym: Symbol) {
     def name: String = Symbol.name(sym)

@@ -1,8 +1,6 @@
 package scala.gestalt
 package decos
 
-import api._
-
 trait Trees {
   import untpd.{ Tree, TermTree, Term, Splice, TypeTree }
 
