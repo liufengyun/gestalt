@@ -1,12 +1,12 @@
-import scala.gestalt.api._
+import scala.gestalt._
 
 final class Optional[+A >: Null](val value: A) extends AnyVal {
   def get: A = value
   def isEmpty = value == null
 
   def getOrElse[B >: A](alt: => B): B = meta {
-    val tempValDef = ValDef(prefix)
-    val tempIdent = Ident(tempValDef.symbol)
+    val tempValDef = tpd.ValDef(prefix)
+    val tempIdent = tpd.Ident(tempValDef.symbol)
 
     q"""
        $tempValDef
@@ -15,13 +15,13 @@ final class Optional[+A >: Null](val value: A) extends AnyVal {
   }
 
   def map[B >: Null](f: A => B): Optional[B] = meta {
-    val Function(param :: Nil, body) = f
-    val tempValDef = ValDef(prefix)
-    val tempIdent = Ident(tempValDef.symbol)
+    val tpd.Function(param :: Nil, body) = f
+    val tempValDef = tpd.ValDef(prefix)
+    val tempIdent = tpd.Ident(tempValDef.symbol)
 
     val newBody = body.transform {
-      case Ident(sym) if sym eq param =>
-        Select(tempIdent, "value")
+      case tpd.Ident(sym) if sym eq param =>
+        tpd.Select(tempIdent, "value")
     }
 
     q"""

@@ -36,7 +36,7 @@ object Untpd {
   def empty: TermTree = Term.Ident("_empty_")
 
   def TypedSplice(tree: Tpd.Tree): Splice =
-    !impl.untpd.TypedSplice
+    !impl.untpd.TypedSplice(!tree)
 
   // type trees
   object Type {
@@ -177,25 +177,17 @@ object Untpd {
     def Lit(value: Any): TermTree =
       !impl.untpd.Term.Lit(value)
 
-    def Ident(name: "_root_"): TermTree = {
-      import options.unsafe
-      Ident("_root_")
-    }
+    def Ident(name: "_root_"): TermTree =
+      !impl.untpd.Term.Ident(name)(!options.unsafe)
 
-    def Ident(name: "scala")(implicit dummy: core.Dummy): TermTree = {
-      import options.unsafe
-      Ident("scala")
-    }
+    def Ident(name: "scala")(implicit dummy: core.Dummy): TermTree =
+      !impl.untpd.Term.Ident(name)(!options.unsafe)
 
-    def Ident(name: "java")(implicit dummy: core.Dummy1): TermTree = {
-      import options.unsafe
-      Ident("java")
-    }
+    def Ident(name: "java")(implicit dummy: core.Dummy1): TermTree =
+      !impl.untpd.Term.Ident(name)(!options.unsafe)
 
-    def Ident(name: "_empty_")(implicit dummy: core.Dummy2): TermTree = {
-      import options.unsafe
-      Ident("<empty>")
-    }
+    def Ident(name: "_empty_")(implicit dummy: core.Dummy2): TermTree =
+      !impl.untpd.Term.Ident("<empty>")(!options.unsafe)
 
     def This(qual: String): TermTree =
       !impl.untpd.Term.This(qual)
