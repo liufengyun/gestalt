@@ -55,6 +55,7 @@ object Expander {
     gestalt.withToolbox(new Toolbox(tree.pos)) {
       gestalt.quasiquotes.expand(tag, tree.asInstanceOf[gestalt.untpd.Tree], strs, args.asInstanceOf[List[gestalt.untpd.Tree]], !isTerm).asInstanceOf[untpd.Tree]
     }
+
   }
 
   /** Expand annotation macros */

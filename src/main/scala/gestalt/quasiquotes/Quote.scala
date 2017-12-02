@@ -5,8 +5,7 @@ import scala.{meta => m}
 import scala.compat.Platform.EOL
 import scala.gestalt._
 import untpd._
-import Term.{ Ident, Select, Infix }
-import tpd.Lit
+import Term.{ Ident, Select, Infix, Lit }
 import scala.gestalt.options.unsafe
 
 /** Lift scala.meta trees as trees */

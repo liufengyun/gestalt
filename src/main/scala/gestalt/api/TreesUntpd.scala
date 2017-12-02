@@ -174,6 +174,9 @@ object Untpd {
     def Ident(name: String)(implicit unsafe: Unsafe): Ident =
       !impl.untpd.Term.Ident(name)(!unsafe)
 
+    def Lit(value: Any): TermTree =
+      !impl.untpd.Term.Lit(value)
+
     def Ident(name: "_root_"): TermTree = {
       import options.unsafe
       Ident("_root_")

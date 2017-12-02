@@ -119,6 +119,8 @@ trait Untpd {
 
     def Ident(name: String)(implicit unsafe: Unsafe): Ident
 
+    def Lit(value: Any): TermTree
+
     def This(qual: String): TermTree
 
     def Super(thisp: String, superp: String): TermTree
