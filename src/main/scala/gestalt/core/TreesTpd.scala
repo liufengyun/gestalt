@@ -121,6 +121,11 @@ trait Tpd {
     def unapply(tree: Tree): Option[(Tree, List[Tree])]
   }
 
+  def Case: CaseImpl
+  trait CaseImpl {
+    def unapply(tree: tpd.Tree): Option[(tpd.Tree, Option[tpd.Tree], tpd.Tree)]
+  }
+
   def SeqLiteral: SeqLiteralImpl
   trait SeqLiteralImpl {
     def apply(trees: List[Tree], tp: Type): Tree

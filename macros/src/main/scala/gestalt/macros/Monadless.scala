@@ -1,4 +1,5 @@
-import scala.gestalt.api._
+import scala.gestalt._
+import tpd._
 
 trait Monadless[Monad[_]] {
 
@@ -14,7 +15,7 @@ trait Monadless[Monad[_]] {
   */
 
   def lift[T](body: T)(implicit m: WeakTypeTag[Monad[_]]): Monad[T] = meta {
-    val tree = Transformer(this, body)
+    val tree = Transformer(this, body)(m.asInstanceOf[WeakTypeTag[_]])
 
     val unliftSym = this.tpe.method("unlift").headOption.map(_.symbol)
     def isUnlift(tp: Type) = tp.denot.map(_.symbol) == unliftSym
@@ -33,7 +34,7 @@ object Monadless {
 
 object Transformer {
 
-  def apply(prefix: tpd.Tree, tree: tpd.Tree)(implicit m: WeakTypeTag[_], ctx: Context): Tree = {
+  def apply(prefix: tpd.Tree, tree: tpd.Tree)(implicit m: WeakTypeTag[_]): untpd.Tree = {
     val unliftSym = prefix.tpe.method("unlift").headOption.map(_.symbol)
     def isUnlift(tp: Type) = tp.denot.map(_.symbol) == unliftSym
 
@@ -64,17 +65,17 @@ object Transformer {
         //  abort("Unlift can't be used as a lazy val initializer.", t.pos)
 
         case t @ ApplySeq(method, argss) if argss.size > 0 =>
-          var methodTp: MethodType = method.tpe.widen.asInstanceOf[MethodType]
+          var methodTp: Type.MethodType = method.tpe.widen.asInstanceOf[Type.MethodType]
           argss.foreach { args =>
             val paramTypes = methodTp.paramInfos
             paramTypes.zip(args).map {
-              case (ByNameType(_), Transform(_)) =>
+              case (Type.ByNameType(_), Transform(_)) =>
                 abort("Unlift can't be used as by-name param.", t.pos)
               case other =>
                 ()
             }
             methodTp.instantiate(args.map(_.tpe)) match {
-              case tp: MethodType => methodTp = tp
+              case tp: Type.MethodType => methodTp = tp
               case _ => methodTp = null   // last param block
             }
           }
@@ -86,7 +87,7 @@ object Transformer {
     object PureTree {
       def unapply(tree: tpd.Tree): Option[tpd.Tree] = {
         tree.exists {
-          case q"$fun[$tp]($v)" if isUnlift(fun.tpe) => true
+          case ApplySeq(ApplyType(fun, tp :: Nil), (v :: Nil) :: Nil) if isUnlift(fun.tpe) => true
         } match {
           case true => None
           case false => Some(tree)
@@ -187,13 +188,13 @@ object Transformer {
 
         case If(cond, ifTrue, ifFalse) => TransformIf.unapply(tree)
 
-        case q"$fun[$tp]($v)" if isUnlift(fun.tpe) => Some(v)
+        case ApplySeq(ApplyType(fun, tp :: Nil), (v :: Nil) :: Nil) if isUnlift(fun.tpe) => Some(v)
 
         case tree =>
           val unlifts = collection.mutable.ListBuffer.empty[(tpd.Tree, Symbol, Type)]
           val newTree =
             tree.transform {
-              case tree @ q"$fun[$tp]($v)" if isUnlift(fun.tpe) =>
+              case tree @ ApplySeq(ApplyType(fun, tp :: Nil), (v :: Nil) :: Nil) if isUnlift(fun.tpe) =>
                 val dummy = ValDef(tree).symbol
                 unlifts += ((v, dummy, tp))
                 Ident(dummy)
@@ -244,7 +245,7 @@ object Transformer {
            |defined by the monad instance and its companion object.
         """.stripMargin
 
-      def apply(pos: Pos): tpd.Tree =
+      def apply(pos: Position): tpd.Tree =
         companionMethod(pos, "apply").getOrElse {
           val msg =
             s"""Transformation requires the method `apply` to create a monad instance for a value.
@@ -253,7 +254,7 @@ object Transformer {
           abort(msg, pos)
         }
 
-      def collect(pos: Pos): tpd.Tree =
+      def collect(pos: Position): tpd.Tree =
         companionMethod(pos, "collect").getOrElse {
           val msg =
             s"""Transformation requires the method `collect` to transform List[M[T]] into M[List[T]]. The implementation
@@ -270,7 +271,7 @@ object Transformer {
            |$sourceCompatibilityMessage
         """.stripMargin
 
-      def map(pos: Pos, instance: tpd.Tree): tpd.Tree =
+      def map(pos: Position, instance: tpd.Tree): tpd.Tree =
         instanceMethod(pos, instance, "map").getOrElse {
           val msg =
             s"""Transformation requires the method `map` to transform the result of a monad instance.
@@ -279,7 +280,7 @@ object Transformer {
           abort(msg, pos)
         }
 
-      def flatMap(pos: Pos, instance: tpd.Tree): tpd.Tree =
+      def flatMap(pos: Position, instance: tpd.Tree): tpd.Tree =
         instanceMethod(pos, instance, "flatMap").getOrElse {
           val msg =
             s"""Transformation requires the method `flatMap` to transform the result of a monad instance.
@@ -288,7 +289,7 @@ object Transformer {
           abort(msg, pos)
         }
 
-      def rescue(pos: Pos, instance: tpd.Tree): tpd.Tree =
+      def rescue(pos: Position, instance: tpd.Tree): tpd.Tree =
         instanceMethod(pos, instance, "rescue").getOrElse {
           val msg =
             s"""Transformation requires the method `rescue` to recover from a failure (translate a `catch` clause).
@@ -298,7 +299,7 @@ object Transformer {
           abort(msg, pos)
         }
 
-      def ensure(pos: Pos, instance: tpd.Tree): tpd.Tree =
+      def ensure(pos: Position, instance: tpd.Tree): tpd.Tree =
         instanceMethod(pos, instance, "ensure").getOrElse {
           val msg =
             s"""Transformation requires the method `ensure` to execute code regardless of the outcome of the
@@ -322,18 +323,18 @@ object Transformer {
           |that don't represent a computation and/or don't handle exceptions (e.g. `Option`)
         """.stripMargin
 
-      private def instanceMethod(pos: Pos, instance: tpd.Tree, name: String) =
-        this.method(prefix, prefix.tpe, name).map(t => q"$t($instance)")
+      private def instanceMethod(pos: Position, instance: tpd.Tree, name: String): Option[tpd.Tree] =
+        this.method(prefix, prefix.tpe, name).map(t => t.appliedTo(instance :: Nil))
           .orElse(this.method(instance, m.tpe, name))
 
-      private def companionMethod(pos: Pos, name: String) =
+      private def companionMethod(pos: Position, name: String) =
         method(prefix, prefix.tpe, name)
           .orElse(method(Ident(m.tpe.companion.get.termSymbol.get), m.tpe.companion.get, name))
 
-      private def method(instance: tpd.Tree, tpe: Type, name: String) =
+      private def method(instance: tpd.Tree, tpe: Type, name: String): Option[tpd.Tree] =
         find(tpe, name).map(_ => Select(instance, name))
 
-      private def find(tpe: Type, method: String) =
+      private def find(tpe: Type, method: String): Option[Denotation] =
         tpe.method(method) match {
           case head :: tail => Some(head)
           case Nil => None
@@ -343,7 +344,7 @@ object Transformer {
     validate(tree)
 
     tree match {
-      case PureTree(tree: tpd.Tree) => Apply(Resolve.apply(tree.pos), List(tree.wrap))
+      case PureTree(tree: tpd.Tree) => untpd.Term.Apply(Resolve.apply(tree.pos), List(tree.wrap))
       case tree => Transform(tree)
     }
   }

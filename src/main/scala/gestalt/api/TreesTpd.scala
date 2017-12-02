@@ -164,6 +164,11 @@ object Tpd {
       !impl.tpd.Match.unapply(!tree)
   }
 
+  object Case {
+    def unapply(tree: Tree): Option[(Tree, Option[Tree], Tree)] =
+      !impl.tpd.Case.unapply(!tree)
+  }
+
   object SeqLiteral {
     def apply(trees: List[Tree], tp: Type): Tree =
       !impl.tpd.SeqLiteral(!trees, !tp)

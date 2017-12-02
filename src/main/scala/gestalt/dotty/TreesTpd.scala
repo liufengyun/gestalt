@@ -267,6 +267,15 @@ class Tpd(val toolbox: Toolbox) extends core.Tpd {
     }
   }
 
+  object Case extends CaseImpl {
+    def unapply(tree: Tree): Option[(Tree, Option[Tree], Tree)] = tree match {
+      case t.CaseDef(pat, cond, body) =>
+        val condOpt = if (cond == t.EmptyTree) None else Some(cond)
+        Some((pat, condOpt, body))
+      case _ => None
+    }
+  }
+
   object SeqLiteral extends SeqLiteralImpl {
     def apply(trees: List[Tree], tp: Type): Tree = {
       val tpSeq = ctx.definitions.RepeatedParamType.appliedTo(tp)
