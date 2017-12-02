@@ -2,8 +2,8 @@ package scala.gestalt.core
 
 trait Symbols {
   val toolbox: Toolbox
-  import toolbox.types.{ Type, TypeRef, TermRef }
-  import toolbox.denotations.Denotation
+  import toolbox.types.{ TypeRef, TermRef }
+  import toolbox._
 
   type Symbol <: AnyRef
 

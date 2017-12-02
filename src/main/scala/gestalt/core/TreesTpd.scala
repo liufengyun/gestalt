@@ -2,9 +2,7 @@ package scala.gestalt.core
 
 trait Tpd {
   val toolbox: Toolbox
-  import toolbox.symbols.Symbol
-  import toolbox.types.Type
-  import toolbox.Position
+  import toolbox._
 
   type Tree      >: Null <: AnyRef
   type DefTree   <: Tree

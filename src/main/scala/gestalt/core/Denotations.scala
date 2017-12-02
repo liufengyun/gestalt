@@ -2,8 +2,7 @@ package scala.gestalt.core
 
 trait Denotations {
   val toolbox: Toolbox
-  import toolbox.types.Type
-  import toolbox.symbols.Symbol
+  import toolbox._
 
   type Denotation
 

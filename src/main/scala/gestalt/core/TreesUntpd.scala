@@ -2,10 +2,7 @@ package scala.gestalt.core
 
 trait Untpd {
   val toolbox: Toolbox
-  import toolbox.types.Type
-  import toolbox.tpd
-  import toolbox.Unsafe
-  import toolbox.Position
+  import toolbox._
 
   type Tree     >: Null <: AnyRef
   type TypeTree >: Null <: Tree

@@ -2,9 +2,7 @@ package scala.gestalt.core
 
 trait Types  {
   val toolbox: Toolbox
-  import toolbox.symbols.Symbol
-  import toolbox.denotations.Denotation
-  import toolbox.tpd
+  import toolbox._
 
   type Type >: Null <: AnyRef
   type TermRef <: Type

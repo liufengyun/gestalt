@@ -23,10 +23,10 @@ trait Toolbox extends TypeTags {
   val symbols: Symbols
   val denotations: Denotations
 
+  // type proxy
   type Type       =   types.Type
   type Symbol     =   symbols.Symbol
   type Denotation =   denotations.Denotation
-
 
   /** get the location where the def macro is used */
   def location: Location
