@@ -12,6 +12,16 @@ import scala.gestalt.options.unsafe
 class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
   type Quasi = m.internal.ast.Quasi
 
+  private var isInPattern = false
+
+  def doPattern[T](f: => T): T = {
+    val old = isInPattern
+    isInPattern = true
+    val res = f
+    isInPattern = old
+    res
+  }
+
   // lifted trees
   lazy val scalaNil       = root.select("scala.Nil")
   lazy val scalaList      = root.select("scala.List")
@@ -314,7 +324,10 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
       liftQuasi(quasi)
 
     case m.Lit(value) =>
-      untpd("Term.Lit").appliedTo(Lit(value))
+      if (isInPattern)
+        untpd("Pat.Lit").appliedTo(Lit(value))
+      else
+        untpd("Term.Lit").appliedTo(Lit(value))
 
     // case m.Name.Anonymous() =>
     // case m.Name.Indeterminate(name) =>
@@ -485,7 +498,7 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
       if (!targs.isEmpty)
         error("Type parameters not supported for extractors", enclosingTree.pos)
 
-      untpd("Pat.Unapply").appliedTo(lift(ref), liftSeq(args))
+      doPattern { untpd("Pat.Unapply").appliedTo(lift(ref), liftSeq(args)) }
     case m.Pat.ExtractInfix(lhs, m.Term.Name(op), rhs) =>
       untpd("Pat.Infix").appliedTo(lift(lhs), Lit(op), liftSeq(rhs))
     case m.Pat.Interpolate(m.Term.Name(tag), parts, args) =>
@@ -623,7 +636,7 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
       untpd("Import.Hide").appliedTo(Lit(name))
 
     case m.Case(pat, cond, body) =>
-      untpd("Term.Case").appliedTo(lift(pat), liftOpt(cond), lift(body))
+      untpd("Term.Case").appliedTo(doPattern { lift(pat) }, liftOpt(cond), lift(body))
 
     // case m.Source(stats) =>
     //  selectFullPath("scala.meta.Source").appliedTo(liftSeq(stats))

@@ -1,6 +1,6 @@
 package packaged.macros
 
-import scala.gestalt.api._
+import scala.gestalt._
 
 object ImplicitsForNumbers {
 

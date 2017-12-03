@@ -1,4 +1,4 @@
-import scala.gestalt.api._
+import scala.gestalt._
 import scala.gestalt.options.unsafe
 
 object plusObject {
@@ -14,30 +14,30 @@ object plusObject {
   }
   def poly(a: Any, b: Int): Int = meta {
     a match {
-      case Lit(i:Int) => q"$a + $b"
-      case Lit(s:String) => q"${a.wrap}.toInt + $b"
+      case tpd.Lit(i:Int) => q"$a + $b"
+      case tpd.Lit(s:String) => q"${a.wrap}.toInt + $b"
       case other =>
         error(s"expected String or Interger constants", a.pos)
-        Lit(null)
+        untpd.Term.Lit(null)
     }
   }
 
   def varargs(items: Int*): Int = meta {
     items match {
-      case SeqLiteral(items: Seq[tpd.Tree]) =>
-        items.map(item => item.wrap).reduceLeft[TermTree]((a, b) => q"$a + $b")
-      case q"$items: $_" =>
-        q"$items.reduce((a:Int,b:Int)=> a + b)"
+      case tpd.SeqLiteral(items: Seq[tpd.Tree]) =>
+        items.map(item => item.wrap).reduceLeft[untpd.TermTree]((a, b) => q"$a + $b")
+      case tpd.Ascribe(list, _) =>
+        q"$list.reduce((a:Int,b:Int)=> a + b)"
     }
   }
 
   def deconstructApply(items: Any): Int = meta {
     items match {
-      case q"$prefix(..$items)" =>
-        items.map(item => item.wrap).reduceLeft[TermTree]((a, b) => q"$a + $b")
+      case tpd.ApplySeq(prefix, items :: Nil) =>
+        items.map(item => item.wrap).reduceLeft[untpd.TermTree]((a, b) => q"$a + $b")
       case _ =>
         error("expected application of Ints", items.pos)
-        Lit(null)
+        untpd.Term.Lit(null)
     }
   }
 }
@@ -71,27 +71,27 @@ object ImplicitsForNumbers {
 
 object ImplicitBigInt {
   implicit def string2BigInt(s: String): BigInt = meta {
-    val Lit(str: String) = s
+    val tpd.Lit(str: String) = s
     val bigInt = BigInt(str)
     val radix = Character.MAX_RADIX
     val compressedString = bigInt.toString(radix)
-    q"BigInt(${Lit(compressedString)},${Lit(radix)})"
+    q"BigInt(${untpd.Term.Lit(compressedString)},${untpd.Term.Lit(radix)})"
   }
 }
 
 object scope {
   def is[T](a: Any): Boolean = meta {
-    q"$a.isInstanceOf[${T.tpe}]"
+    q"$a.isInstanceOf[$T]"
   }
 
   def both[S, T](a: Any): Boolean = meta {
-    q"$a.isInstanceOf[${S.tpe}] && $a.isInstanceOf[${T.tpe}]"
+    q"$a.isInstanceOf[$S] && $a.isInstanceOf[$T]"
   }
 
   // test nested method inside macro def -- used to be a problem with @static implementation
   def mapTest(): Int = meta {
     val sum = (1 to 5).map(_ * 2).sum
-    Lit(sum)
+    untpd.Term.Lit(sum)
   }
 }
 
@@ -175,7 +175,7 @@ object Materializer {
 object Locations {
   def currentLine(): Int = meta {
     val pos = location
-    Lit(pos.line)
+    untpd.Term.Lit(pos.line)
   }
 }
 
@@ -187,7 +187,7 @@ object CaseInfo {
       q"scala.Nil"
     }
     else {
-      val fieldTrees = tp.caseFields.map(m => Lit(m.name))
+      val fieldTrees = tp.caseFields.map(m => untpd.Term.Lit(m.name))
       q"List(..$fieldTrees)"
     }
   }
@@ -221,12 +221,12 @@ object Hygiene {
 object Transform {
   def log(x: Int)(f: Int => Int): Int = meta {
     val newfun = f.transform {
-      case call @ ApplySeq(Ident(fsym), args) if args.size > 0 =>
+      case call @ tpd.ApplySeq(tpd.Ident(fsym), args) if args.size > 0 =>
         val name = fsym.name
-        val print = Ident(Type.termRef("scala.Predef")).select("println").appliedTo(Lit(s"calling $name\n") :: Nil)
-        val vdef = ValDef(call)
-        val res = Ident(vdef.symbol)
-        Block(print :: vdef :: Nil, res)
+        val print = tpd.Ident(Type.termRef("scala.Predef")).select("println").appliedTo(tpd.Lit(s"calling $name\n") :: Nil)
+        val vdef = tpd.ValDef(call)
+        val res = tpd.Ident(vdef.symbol)
+        tpd.Block(print :: vdef :: Nil, res)
     }
 
     newfun.appliedTo(x :: Nil)
@@ -235,43 +235,43 @@ object Transform {
 
 object TypedDef {
   def double(x: Int): Int = meta {
-    val mt = MethodType(List("n"))(_ => Type.typeRef("scala.Int") :: Nil, _ => Type.typeRef("scala.Int"))
-    val meth = DefDef("double", mt) { case (_, params :: Nil) =>
-      Block(
+    val mt = Type.MethodType(List("n" -> Type.typeRef("scala.Int")), Type.typeRef("scala.Int"))
+    val meth = tpd.DefDef("double", mt) { case (_, params :: Nil) =>
+      tpd.Block(
         x :: Nil,     // test nested definition
         params(0).select("+").appliedTo(params(0) :: Nil)
       )
     }
-    val v = ValDef(Lit(10))
-    Block(meth :: v :: Nil, Ident(meth.symbol).appliedTo(Ident(v.symbol) :: Nil))
+    val v = tpd.ValDef(tpd.Lit(10))
+    tpd.Block(meth :: v :: Nil, tpd.Ident(meth.symbol).appliedTo(tpd.Ident(v.symbol) :: Nil))
   }
 
   def annoyAdd(x: Int): Int => Int = meta {
     val scalaInt = Type.typeRef("scala.Int")
-    val mt = MethodType(List("v"))(_ => scalaInt :: Nil, _ => scalaInt)
+    val mt = Type.MethodType(List("v" -> scalaInt), scalaInt)
 
     val parent = Type.typeRef("scala.Function1").appliedTo(scalaInt, scalaInt)
-    val meth = DefDef("apply", mt) {
+    val meth = tpd.DefDef("apply", mt) {
       case (_, params :: Nil) =>
         params(0).select("+").appliedTo(x :: Nil)
     }
-    NewAnonymClass(parent :: Nil, meth :: Nil)
+    tpd.NewAnonymClass(parent :: Nil, meth :: Nil)
   }
 }
 
 object Owners {
   def mywhile(cond: Boolean)(f: Unit): Int  = meta {
-    val vdef = ValDef(Lit(5)) // owner now is the ctx
-    val whileTree = While(cond, Block(vdef :: Nil, f))  // owner now is $while
+    val vdef = tpd.ValDef(tpd.Lit(5)) // owner now is the ctx
+    val whileTree = tpd.While(cond, tpd.Block(vdef :: Nil, f))  // owner now is $while
 
     val scalaInt = Type.typeRef("scala.Int")
     val parent = Type.typeRef("scala.Function1").appliedTo(scalaInt, scalaInt)
-    val mt = MethodType(List("v"))(_ => scalaInt :: Nil, _ => scalaInt)
-    val meth = DefDef("apply", mt) { case (_, params :: Nil) =>
+    val mt = Type.MethodType(List("v" -> scalaInt), scalaInt)
+    val meth = tpd.DefDef("apply", mt) { case (_, params :: Nil) =>
       params(0).select("+").appliedTo(params(0) :: Nil)
     }
-    val anonTree = NewAnonymClass(parent :: Nil, meth :: whileTree :: Nil)
+    val anonTree = tpd.NewAnonymClass(parent :: Nil, meth :: whileTree :: Nil)
 
-    Block(anonTree :: Nil, Lit(5))
+    tpd.Block(anonTree :: Nil, tpd.Lit(5))
   }
 }

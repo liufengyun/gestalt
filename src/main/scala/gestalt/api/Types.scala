@@ -99,5 +99,8 @@ object Types  {
              (paramInfosExp: List[ParamRef] => List[Type],
               resultTypeExp: List[ParamRef] => Type): MethodType =
       !impl.types.MethodType(paramNames)(!paramInfosExp, !resultTypeExp)
+
+    def apply(params: List[(String, Type)], resTp: Type): MethodType =
+      MethodType(params.map(_._1))(_ => params.map(_._2), _ => resTp)
   }
 }

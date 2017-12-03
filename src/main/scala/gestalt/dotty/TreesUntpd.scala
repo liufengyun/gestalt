@@ -199,7 +199,7 @@ class Untpd(val toolbox: Toolbox) extends core.Untpd {
     def Ident(name: String)(implicit unsafe: Unsafe): Ident =
       d.Ident(name.toTermName).withPosition
 
-    def Lit(value: Any): TermTree = t.Literal(Constant(value))
+    def Lit(value: Any): TermTree = t.Literal(Constant(value)).withPosition
 
 
     def This(qual: String): TermTree = d.This(d.Ident(qual.toTypeName)).withPosition

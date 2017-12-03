@@ -5,7 +5,7 @@ object Driver {
 
   def main(args: Array[String]): Unit = {
     // setup tests
-    new AnnotationMacroTest
+    // new AnnotationMacroTest
     new DefMacroTest
     new JsonMacroTest
     new QuasiquoteTest
