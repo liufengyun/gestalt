@@ -118,11 +118,8 @@ class Types(val toolbox: Toolbox) extends core.Types  {
 
   /** Infer an implicit instance of the given type */
   def infer(tp: Type): Option[tpd.Tree] = {
-    var hasError = false
-    def implicitArgError(msg: String => String) = hasError = true
-
-    val res = ctx.typer.inferImplicitArg(tp, implicitArgError, enclosingPosition)
-    if (hasError) None
+    val res = ctx.typer.inferImplicitArg(tp, enclosingPosition)
+    if (res.tpe.isError) None
     else Some(res)
   }
 

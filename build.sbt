@@ -1,6 +1,6 @@
 lazy val metaVersion = "1.6.0"
 lazy val dottyOrg = "me.fengy"
-lazy val dottyVersion = "0.4.0-bin-SNAPSHOT"
+lazy val dottyVersion = "0.6.0-bin-SNAPSHOT"
 
 lazy val common = Seq(
   resolvers ++= Seq(
@@ -12,7 +12,7 @@ lazy val common = Seq(
 
 lazy val gestaltSetting = Seq(
   name := "gestalt",
-  version := "0.3.0",
+  version := "0.3.1",
   organization := "me.fengy",
 
   scalaOrganization := dottyOrg,
