@@ -15,7 +15,7 @@ trait Monadless[Monad[_]] {
   */
 
   def lift[T](body: T)(implicit m: WeakTypeTag[Monad[_]]): Monad[T] = meta {
-    val tree = Transformer(this, body)(m.asInstanceOf[WeakTypeTag[_]])
+    val tree = Transformer(this, body, m.tpe)
 
     val unliftSym = this.tpe.method("unlift").headOption.map(_.symbol)
     def isUnlift(tp: Type) = tp.denot.map(_.symbol) == unliftSym
@@ -34,7 +34,7 @@ object Monadless {
 
 object Transformer {
 
-  def apply(prefix: tpd.Tree, tree: tpd.Tree)(implicit m: WeakTypeTag[_]): untpd.Tree = {
+  def apply(prefix: tpd.Tree, tree: tpd.Tree, monadType: Type): untpd.Tree = {
     val unliftSym = prefix.tpe.method("unlift").headOption.map(_.symbol)
     def isUnlift(tp: Type) = tp.denot.map(_.symbol) == unliftSym
 
@@ -237,7 +237,7 @@ object Transformer {
 
     object Resolve {
 
-      private val monadTypeName = m.tpe.show
+      private val monadTypeName = monadType.show
       private val sourceCompatibilityMessage =
         s"""For instance, it's possible to add implicits or default parameters to the method
            |without breaking source compatibility.
@@ -265,7 +265,7 @@ object Transformer {
         }
 
       private def companionMethodErrorMessage(signature: String) =
-        s"""Please add the method to `${m.tpe}`'s companion object or to `${prefix}`.
+        s"""Please add the method to `${monadType}`'s companion object or to `${prefix}`.
            |It needs to be source compatible with the following signature:
            |`$signature`
            |$sourceCompatibilityMessage
@@ -311,9 +311,9 @@ object Transformer {
         }
 
       private def instanceMethodErrorMessage(name: String, parameter: String, result: String) =
-        s"""Please add the method to `${m.tpe}` or to `$prefix`.
+        s"""Please add the method to `${monadType}` or to `$prefix`.
            |It needs to be source compatible with the following signature:
-           |As a `${m.tpe}` method: `def $name($parameter): $result`
+           |As a `${monadType}` method: `def $name($parameter): $result`
            |As a `$prefix` method: `def $name[T](m: $monadTypeName[T])($parameter): $result`
            |$sourceCompatibilityMessage
         """.stripMargin
@@ -325,11 +325,11 @@ object Transformer {
 
       private def instanceMethod(pos: Position, instance: tpd.Tree, name: String): Option[tpd.Tree] =
         this.method(prefix, prefix.tpe, name).map(t => t.appliedTo(instance :: Nil))
-          .orElse(this.method(instance, m.tpe, name))
+          .orElse(this.method(instance, monadType, name))
 
       private def companionMethod(pos: Position, name: String) =
         method(prefix, prefix.tpe, name)
-          .orElse(method(Ident(m.tpe.companion.get.termSymbol.get), m.tpe.companion.get, name))
+          .orElse(method(Ident(monadType.companion.get.termSymbol.get), monadType.companion.get, name))
 
       private def method(instance: tpd.Tree, tpe: Type, name: String): Option[tpd.Tree] =
         find(tpe, name).map(_ => Select(instance, name))
