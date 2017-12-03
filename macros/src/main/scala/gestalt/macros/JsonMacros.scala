@@ -1,6 +1,5 @@
 import scala.gestalt._
 import untpd.Term.{ Ident, Tuple, Lit, NewInstance }
-import untpd.Defn.{ ValDef }
 
 object JsonMacros {
 

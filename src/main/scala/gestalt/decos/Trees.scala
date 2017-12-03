@@ -19,7 +19,7 @@ trait Trees {
         Term.Select(prefix, name)
       }
 
-      untpd.Type.Select(prefix, parts.last)
+      untpd.TypeTree.Select(prefix, parts.last)
     }
 
     def select(path: String): TermTree = {

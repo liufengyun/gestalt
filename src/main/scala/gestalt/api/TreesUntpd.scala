@@ -39,7 +39,7 @@ object Untpd {
     !impl.untpd.TypedSplice(!tree)
 
   // type trees
-  object Type {
+  object TypeTree {  // avoid conflicting with Type when imported
     def Ident(name: String)(implicit unsafe: Unsafe): TypeTree =
       !impl.untpd.Type.Ident(name)(!unsafe)
 
