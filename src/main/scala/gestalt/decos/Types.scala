@@ -2,8 +2,6 @@ package scala.gestalt
 package decos
 
 trait Types {
-  def MethodType(params: List[(String, Type)], retTp: Type): Type =
-    Type.MethodType(params.map(_._1))(_ => params.map(_._2), _ => retTp)
 
   implicit class TypeOps(tp: Type) {
     def =:=(tp2: Type) = Type.=:=(tp, tp2)

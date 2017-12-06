@@ -1,7 +1,10 @@
 package scala.gestalt.api
 
+import scala.gestalt.{ toolbox => impl, _ }
+
 object Symbols {
-  import scala.gestalt.{ toolbox => impl, _ }
+
+  type Symbol >: Null <: AnyRef
 
   /** name of a member */
   def name(mem: Symbol): String = impl.symbols.name(!mem)

@@ -1,8 +1,10 @@
 package scala.gestalt.api
 
-object Types  {
-  import scala.gestalt.{ toolbox => impl, _ }
+import scala.gestalt.{ toolbox => impl, _ }
 
+object Types  {
+
+  type Type >: Null <: AnyRef
   type TermRef <: Type
   type TypeRef <: Type
   type MethodType >: Null <: Type

@@ -1,8 +1,8 @@
 package scala.gestalt.api
 
-object Tpd {
-  import scala.gestalt.{ toolbox => impl, _ }
+import scala.gestalt.{ toolbox => impl, _ }
 
+object Tpd {
   type Tree      >: Null <: AnyRef
   type DefTree   <: Tree
   type RefTree   <: Tree

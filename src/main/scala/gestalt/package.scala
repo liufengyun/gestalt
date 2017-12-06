@@ -33,13 +33,13 @@ package object gestalt extends decos.Trees
 
   type WeakTypeTag = api.WeakTypeTag
 
-  type Type >: Null <: AnyRef
+  type Type = api.Types.Type
   val Type: api.Types.type = api.Types
 
-  type Symbol >: Null <: AnyRef
+  type Symbol = api.Symbols.Symbol
   val Symbol: api.Symbols.type = api.Symbols
 
-  type Denotation >: Null <: AnyRef
+  type Denotation = api.Denotations.Denotation
   val Denotation: api.Denotations.type = api.Denotations
 
   val tpd: api.Tpd.type = api.Tpd

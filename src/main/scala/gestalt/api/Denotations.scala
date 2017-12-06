@@ -1,7 +1,9 @@
 package scala.gestalt.api
 
+import scala.gestalt.{ toolbox => impl, _ }
+
 object Denotations {
-  import scala.gestalt.{ toolbox => impl, _ }
+  type Denotation >: Null <: AnyRef
 
   def name(denot: Denotation): String = impl.denotations.name(!denot)
 
