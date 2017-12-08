@@ -303,6 +303,16 @@ class Tpd(val toolbox: Toolbox) extends core.Tpd {
     }
   }
 
+  object Interpolate extends InterpolateImpl {
+    def unapply(tree: Tree): Option[(List[String], List[Tree])] = tree match {
+      case t.Apply(t.Select(t.Apply(t.Ident(nme.StringContext), parts), name), args) =>
+        val strs = for(t.Literal(Constant(v: String)) <- parts) yield v
+        Some((strs, args))
+      case _ =>
+        None
+    }
+  }
+
   object ValDef extends ValDefImpl {
     def apply(rhs: Tree, tpOpt: Option[Type], mutable: Boolean): DefTree = {
       val flags = if (mutable) Flags.Mutable else Flags.EmptyFlags

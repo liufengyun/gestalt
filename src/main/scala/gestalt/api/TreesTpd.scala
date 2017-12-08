@@ -177,6 +177,12 @@ object Tpd {
       !impl.tpd.SeqLiteral.unapply(!tree)
   }
 
+  // only for interpolate that are expressions (not patterns)
+  object Interpolate {
+    def unapply(tree: Tree): Option[(List[String], List[Tree])] =
+      !impl.tpd.Interpolate.unapply(!tree)
+  }
+
   object ValDef {
     def apply(rhs: Tree, tpOpt: Option[Type] = None, mutable: Boolean = false): DefTree =
       !impl.tpd.ValDef.apply(!rhs, !tpOpt, mutable)
