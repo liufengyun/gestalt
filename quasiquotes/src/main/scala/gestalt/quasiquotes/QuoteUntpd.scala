@@ -8,7 +8,7 @@ import untpd._
 import scala.gestalt.options.unsafe
 
 /** Lift scala.meta trees as trees */
-class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
+class QuoteUntpd(args: List[Tree], enclosingPos: Position) {
   type Quasi = m.internal.ast.Quasi
 
   private var isInPattern = false
@@ -52,11 +52,7 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
           })), Nil)
         } else {
           require(prefix.isEmpty)
-          if (isTerm) loop(rest, Some(Infix(acc.get, "++", liftQuasi(quasi))), Nil)
-          else {
-            error(m.internal.parsers.Messages.QuasiquoteAdjacentEllipsesInPattern(quasi.rank), enclosingTree.pos)
-            Lit(null)
-          }
+          loop(rest, Some(Infix(acc.get, "++", liftQuasi(quasi))), Nil)
         }
       case other +: rest =>
         if (acc.isEmpty) loop(rest, acc, prefix :+ other)
@@ -85,11 +81,11 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
       if (treess.flatten.length == 1) liftQuasi(tripleDotQuasis(0))
       else {
         error("implementation restriction: can't mix ...$ with anything else in parameter lists." +
-          EOL + "See https://github.com/scalameta/scalameta/issues/406 for details.", enclosingTree.pos)
+          EOL + "See https://github.com/scalameta/scalameta/issues/406 for details.", enclosingPos)
         Lit(null)
       }
     } else {
-      error(m.internal.parsers.Messages.QuasiquoteAdjacentEllipsesInPattern(2), enclosingTree.pos)
+      error(m.internal.parsers.Messages.QuasiquoteAdjacentEllipsesInPattern(2), enclosingPos)
       Lit(null)
     }
   }
@@ -106,8 +102,6 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
 
   /**{{{(treesOpt: Option[Seq[m.Tree[A]]]) => Tree[Seq[Tree[A]}}} */
   def liftOptSeq(treesOpt: Option[Seq[m.Tree]]): TermTree = treesOpt match {
-    case Some(Seq(quasi: Quasi)) if quasi.rank > 0 && !isTerm =>
-      liftQuasi(quasi)
     case Some(trees) =>
       liftSeq(trees)
     case None =>
@@ -222,7 +216,7 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
     }
     else {
       if (isDecl)
-        abort("SeqDecl not supported", enclosingTree.pos)
+        abort("SeqDecl not supported", enclosingPos)
       else {
         val names = pats.flatMap {
           case m.Pat.Var.Term(m.Term.Name(name)) => List(name)
@@ -230,9 +224,9 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
         }
 
         if (names.length != pats.length)
-          error("Patterns not supported in seqence definition", enclosingTree.pos)
+          error("Patterns not supported in seqence definition", enclosingPos)
 
-        abort("SeqDef not supported", enclosingTree.pos)
+        abort("SeqDef not supported", enclosingPos)
       }
     }
   }
@@ -260,10 +254,6 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
     mods match {
       case Seq(quasi: Quasi) => return liftQuasi(quasi)
       case _ =>
-        if (!isTerm) {
-          error("Match modifiers in syntax is problematic and not supported. Match the modifiers with a variable instead or $_ to ignore them.", enclosingTree.pos)
-          return untpd("Pat.Var").appliedTo(Lit("_"))
-        }
     }
 
     val zero: TermTree = untpd("emptyMods")
@@ -421,7 +411,7 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
       // anonym: Tree[Tree[C]]
       untpd("NewAnonymClass").appliedTo(parentCalls, liftSelf(self), liftOptSeq(stats))
     case m.Term.Placeholder() =>
-      if (isTerm) error("placeholder is not supported", enclosingTree.pos)
+      error("placeholder is not supported", enclosingPos)
       untpd("Ident").appliedTo(Lit("_"))
     case m.Term.Eta(expr) =>
       untpd("Postfix").appliedTo(lift(expr), Lit("_"))
@@ -495,13 +485,13 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
       untpd("Pat.Tuple").appliedTo(liftSeq(args))
     case m.Pat.Extract(ref, targs, args) =>
       if (!targs.isEmpty)
-        error("Type parameters not supported for extractors", enclosingTree.pos)
+        error("Type parameters not supported for extractors", enclosingPos)
 
       doPattern { untpd("Pat.Unapply").appliedTo(lift(ref), liftSeq(args)) }
     case m.Pat.ExtractInfix(lhs, m.Term.Name(op), rhs) =>
       untpd("Pat.Infix").appliedTo(lift(lhs), Lit(op), liftSeq(rhs))
     case m.Pat.Interpolate(m.Term.Name(tag), parts, args) =>
-      error("Interpolaters not supported for patterns", enclosingTree.pos)
+      error("Interpolaters not supported for patterns", enclosingPos)
       untpd("Interpolate").appliedTo(Lit(tag), liftSeq(parts), liftSeq(args))
     // case m.PaXml(parts, args) =>
     case m.Pat.Typed(m.Pat.Var.Term(m.Term.Name(name)), rhs) =>
@@ -551,7 +541,7 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
     case m.Defn.Var(mods, pats, tpe, rhsOpt) =>
       val rhs: m.Tree = rhsOpt match {
         case Some(t) => t
-        case _       => abort("only var definitions with right-hand side supported", enclosingTree.pos)
+        case _       => abort("only var definitions with right-hand side supported", enclosingPos)
       }
 
       require(pats.size > 0)
@@ -605,7 +595,7 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
     // case m.Pkg.Object(mods, name, templ) =>
 
     case m.Ctor.Secondary(mods, name, paramss, body) =>
-      abort("second constructor not supported for patterns", enclosingTree.pos)
+      abort("second constructor not supported for patterns", enclosingPos)
     // case m.Ctor.Ref.Name(v) =>                       // handled by liftInitCall
     // case m.Ctor.Ref.Select(qual, name) =>
     // case m.Ctor.Ref.Project(qual, name) =>

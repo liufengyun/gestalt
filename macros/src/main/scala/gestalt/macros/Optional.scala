@@ -1,4 +1,5 @@
 import scala.gestalt._
+import quasiquotes._
 
 final class Optional[+A >: Null](val value: A) extends AnyVal {
   def get: A = value

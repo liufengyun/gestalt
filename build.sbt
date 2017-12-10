@@ -1,27 +1,13 @@
-lazy val metaVersion = "1.6.0"
 lazy val dottyOrg = "me.fengy"
 lazy val dottyVersion = "0.6.0-bin-SNAPSHOT"
 
-lazy val common = Seq(
-  resolvers ++= Seq(
-    Resolver.sonatypeRepo("snapshots"),
-    Resolver.sonatypeRepo("releases"),
-    Resolver.typesafeIvyRepo("releases")
-  )
-)
-
-lazy val gestaltSetting = Seq(
+lazy val commonSetting = Seq(
   name := "gestalt",
-  version := "0.3.2",
+  version := "0.4.0",
   organization := "me.fengy",
 
   scalaOrganization := dottyOrg,
   scalaVersion := dottyVersion,
-
-  libraryDependencies ++= Seq(
-    ("org.scalameta" %% "scalameta" % metaVersion).withDottyCompat(),
-    dottyOrg %% "dotty" % dottyVersion % "provided"
-  ),
 
   credentials += Credentials(Path.userHome / ".sbt" / ".credentials"),
 
@@ -56,10 +42,26 @@ lazy val gestaltSetting = Seq(
       </developer>
     </developers>
   )
-) ++ common
+)
 
 lazy val gestalt = (project in file(".")).
-  settings(gestaltSetting: _*)
+  settings(commonSetting: _*)
+
+lazy val quasiquotes = (project in file("quasiquotes"))
+  .dependsOn(gestalt)
+  .settings(commonSetting: _*)
+  .settings(
+    name := "quasiquotes",
+    libraryDependencies += ("org.scalameta" %% "scalameta" % "1.6.0").withDottyCompat()
+  )
+
+lazy val `dotty-backend` = (project in file("dotty"))
+  .dependsOn(gestalt)
+  .settings(commonSetting: _*)
+  .settings(
+    name := "dotty-backend",
+    libraryDependencies += dottyOrg %% "dotty" % dottyVersion % "provided"
+  )
 
 lazy val macrosSetting = Seq(
   // scalacOptions := Seq("-Xprint:frontend,parser", "-Ycheck:all"), // "-Yplain-printer", "-Xprint:frontend,parser", "-Ylog:frontend",
@@ -69,10 +71,8 @@ lazy val macrosSetting = Seq(
   // Dotty version
   scalaVersion := dottyVersion,
   scalaOrganization := dottyOrg
+)
 
-) ++ common
-
-lazy val macros = (project in file("macros")).
-  settings(macrosSetting: _*).
-  dependsOn(gestalt)
-
+lazy val macros = (project in file("macros"))
+  .dependsOn(gestalt, quasiquotes, `dotty-backend`)
+  .settings(macrosSetting: _*)

@@ -58,14 +58,13 @@ class Tpd(val toolbox: Toolbox) extends core.Tpd {
     }
   }
 
-
   // new qual.T[A, B](x, y)(z)
   object NewInstance extends NewInstanceImpl {
-    def apply(tp: Type, argss: List[List[Tree]]): Tree = {
-      argss match {
-        case head :: tail => tail.foldLeft[Tree](t.New(tp, head)) { (acc, args) => Apply(acc, args) }
-        case Nil => t.New(tp)
-      }
+    def apply(tp: Type, argss: List[List[Tree]]): Tree = argss match {
+      case head :: tail =>
+        tail.foldLeft[Tree](t.New(tp, head)) { (acc, args) => Apply(acc, args) }
+      case Nil =>
+        t.New(tp)
     }
   }
 

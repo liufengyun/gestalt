@@ -62,19 +62,6 @@ package object gestalt extends decos.Trees
   def fresh(prefix: String = "$local"): String  = toolbox.fresh(prefix)
 
   /**--------------------- misc ---------------------------------*/
-  /** Placeholder of quasiquotes for type checking
-   */
-  implicit class QuasiquoteHelper(val sc: StringContext) {
-    object q {
-      def apply(args: Any*): untpd.Tree = ???
-      def unapply(tree: untpd.Tree): Any = ???
-    }
-
-    object t {
-      def apply(args: Any*): untpd.Tree = ???
-      def unapply(tree: untpd.Tree): Any = ???
-    }
-  }
 
   /** Avoid JVM same signature problem */
   implicit val dummy: core.Dummy = null

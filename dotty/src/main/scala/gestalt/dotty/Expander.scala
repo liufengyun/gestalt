@@ -43,21 +43,6 @@ object Expander {
     }
   }
 
-  def expandQuasiquote(tree: untpd.Tree, isTerm: Boolean)(implicit ctx: Context): untpd.Tree = {
-    val (tag, parts, args) = tree match {
-      case t.Apply(t.Select(t.Apply(t.Ident(nme.StringContext), parts), name), args) =>
-        (name.toString, parts, args)
-      case t.UnApply(t.Select(t.Select(t.Apply(t.Select(t.Ident(nme.StringContext), nme.apply), List(t.Typed(t.SeqLiteral(parts, _), _))), name), nme.unapply), _, pats) =>
-        (name.toString, parts, pats)
-    }
-    val strs = for(t.Literal(Constant(v: String)) <- parts) yield v
-
-    gestalt.withToolbox(new Toolbox(tree.pos)) {
-      gestalt.quasiquotes.expand(tag, tree.asInstanceOf[gestalt.untpd.Tree], strs, args.asInstanceOf[List[gestalt.untpd.Tree]], !isTerm).asInstanceOf[untpd.Tree]
-    }
-
-  }
-
   /** Expand annotation macros */
   def expandAnnotMacro(mdef: untpd.MemberDef)(implicit ctx: Context): untpd.Tree = {
     val ann = mdef.mods.annotations.filter(macros.isAnnotMacro).headOption

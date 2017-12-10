@@ -2,6 +2,7 @@ import scala.annotation.StaticAnnotation
 import scala.collection.immutable.Seq
 
 import scala.gestalt._
+import quasiquotes._
 import scala.gestalt.options.unsafe
 
 import untpd._

@@ -1,6 +1,7 @@
 package packaged
 
 import scala.gestalt._
+import quasiquotes._
 
 package object macros {
   def plus(a: Int, b: Int): Int = meta {

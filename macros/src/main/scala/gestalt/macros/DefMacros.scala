@@ -1,4 +1,5 @@
 import scala.gestalt._
+import quasiquotes._
 import scala.gestalt.options.unsafe
 
 object plusObject {

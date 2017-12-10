@@ -1,6 +1,7 @@
 package packaged.macros
 
 import scala.gestalt._
+import quasiquotes._
 
 class InnerClassMacro {
   def createInner = new Inner()
