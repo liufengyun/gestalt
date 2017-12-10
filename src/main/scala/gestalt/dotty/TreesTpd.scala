@@ -193,7 +193,6 @@ class Tpd(val toolbox: Toolbox) extends core.Tpd {
     def apply(fun: Tree, args: List[Tree]): Tree = typedApply(fun, args)
 
     def unapply(tree: Tree): Option[(Tree, List[Tree])] = tree match {
-      case t.Apply(fun, Seq(t.Typed(t.SeqLiteral(args, _), _))) => Some((fun, args))
       case t.Apply(fun, args) => Some((fun, args))
       case _ => None
     }
@@ -300,16 +299,6 @@ class Tpd(val toolbox: Toolbox) extends core.Tpd {
     def unapply(tree: Tree): Option[(Tree, List[Type])] = tree match {
       case t.TypeApply(fun, targs) => Some((fun, targs.map(_.tpe)))
       case _ => None
-    }
-  }
-
-  object Interpolate extends InterpolateImpl {
-    def unapply(tree: Tree): Option[(List[String], List[Tree])] = tree match {
-      case t.Apply(t.Select(t.Apply(t.Ident(nme.StringContext), parts), name), args) =>
-        val strs = for(t.Literal(Constant(v: String)) <- parts) yield v
-        Some((strs, args))
-      case _ =>
-        None
     }
   }
 

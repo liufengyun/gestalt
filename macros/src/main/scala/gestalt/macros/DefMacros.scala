@@ -24,17 +24,15 @@ object plusObject {
 
   def varargs(items: Int*): Int = meta {
     items match {
-      case tpd.SeqLiteral(items: Seq[tpd.Tree]) =>
-        items.map(item => item.wrap).reduceLeft[untpd.TermTree]((a, b) => q"$a + $b")
       case tpd.Ascribe(list, _) =>
         q"$list.reduce((a:Int,b:Int)=> a + b)"
     }
   }
 
-  def deconstructApply(items: Any): Int = meta {
+  def deconstructApply(items: Int*): Int = meta {
     items match {
-      case tpd.ApplySeq(prefix, items :: Nil) =>
-        items.map(item => item.wrap).reduceLeft[untpd.TermTree]((a, b) => q"$a + $b")
+      case tpd.Ascribe(list, _) =>
+        q"$list.reduce((a:Int,b:Int)=> a + b)"
       case _ =>
         error("expected application of Ints", items.pos)
         untpd.Term.Lit(null)
@@ -273,5 +271,29 @@ object Owners {
     val anonTree = tpd.NewAnonymClass(parent :: Nil, meth :: whileTree :: Nil)
 
     tpd.Block(anonTree :: Nil, tpd.Lit(5))
+  }
+}
+
+object Interpolater {
+  implicit class QuasiquoteHelper(val sc: StringContext) {
+    def url(any: Any*): String = meta {
+      val tpd.SeqLiteral(largs) = any
+      val tpd.Apply(_, tpd.Apply(_, tpd.SeqLiteral(parts) :: Nil) :: Nil) = prefix
+
+      val res = parts.tail.zip(largs).foldLeft(parts.head) { case (acc, (part, arg)) =>
+        acc.select("+").appliedTo(arg.select("+").appliedTo(part :: Nil) :: Nil)
+      }
+
+      if (largs.nonEmpty) {
+        warn("can't verify url with dynamic values", largs.head.pos)
+        res
+      }
+      else {
+        val str = parts.foldLeft("") { case (acc, tpd.Lit(part)) => acc + part }
+        if (str.startsWith("http://") || str.startsWith("https://")) res
+        else tpd.Lit("error")  // for testing purpose, not produce error
+      }
+
+    }
   }
 }

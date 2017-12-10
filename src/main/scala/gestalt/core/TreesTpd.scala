@@ -132,12 +132,6 @@ trait Tpd {
     def unapply(tree: Tree): Option[List[Tree]]
   }
 
-  // only for interpolate that are expressions (not patterns)
-  def Interpolate: InterpolateImpl
-  trait InterpolateImpl {
-    def unapply(tree: Tree): Option[(List[String], List[Tree])]
-  }
-
   def ValDef: ValDefImpl
   trait ValDefImpl {
     def apply(rhs: Tree, tpOpt: Option[Type] = None, mutable: Boolean = false): DefTree

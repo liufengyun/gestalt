@@ -31,11 +31,14 @@ trait Toolbox {
   /** get the location where the def macro is used */
   def location: Location
 
-  /** diagnostics */
+  /** produce an error */
   def error(message: String, pos: Position): Unit
 
   /** stop macro transform */
   def abort(message: String, pos: Position): Nothing
+
+  /** produce a warning */
+  def warn(message: String, pos: Position): Unit
 
   /** generate fresh unique name */
   def fresh(prefix: String = "$local"): String

@@ -23,9 +23,11 @@ class Toolbox(val enclosingPosition: Position)(implicit val ctx: Contexts.Contex
   def fresh(prefix: String = "$local"): String = NameKinds.UniqueName.fresh(prefix.toTermName).toString
 
   // diagnostics - the implementation takes the position from the tree
-  def error(message: String, pos: Position): Unit = {
+  def error(message: String, pos: Position): Unit =
     ctx.error(message, pos)
-  }
+
+  def warn(message: String, pos: Position): Unit =
+    ctx.warning(message, pos)
 
   /** stop macro transform - the implementation takes the position from the tree */
   def abort(message: String, pos: Position): Nothing = {

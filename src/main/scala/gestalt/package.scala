@@ -48,12 +48,15 @@ package object gestalt extends decos.Trees
   /**------------------------------------------------*/
   def location: core.Location = toolbox.location
 
-  def error(message: String, pos: Position) =
+  def error(message: String, pos: Position): Unit =
     toolbox.error(message, !pos)
 
   /** stop macro transform */
   def abort(message: String, pos: Position): Nothing =
     toolbox.abort(message, !pos)
+
+  def warn(message: String, pos: Position): Unit =
+    toolbox.warn(message, !pos)
 
   /** generate fresh unique name */
   def fresh(prefix: String = "$local"): String  = toolbox.fresh(prefix)

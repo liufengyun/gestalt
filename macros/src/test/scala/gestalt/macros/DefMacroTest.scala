@@ -1,3 +1,5 @@
+import Decorators._
+
 class DefMacroTest extends TestSuite {
   test("plusObject") {
     assert(plusObject(3, 5) == 8)
@@ -119,10 +121,7 @@ class DefMacroTest extends TestSuite {
 
   test("deconstructApply") {
     import plusObject.deconstructApply
-    def fun(x: Int, y: Int, z: Int) = ???
-    assert(deconstructApply(Seq(1, 2, 1, 3)) == 7)
-    assert(deconstructApply(List[Int](1, 2, 1, 3)) == 7)
-    assert(deconstructApply(fun(1, 2, 4)) == 7)
+    assert(deconstructApply(1, 2, 1, 3) == 7)
   }
 
   test("def with type parameters") {
@@ -175,7 +174,7 @@ class DefMacroTest extends TestSuite {
   test("location") {
     import Locations._
     val line = currentLine()
-    assert(line == 176) // starts from 0
+    assert(line === 175) // starts from 0
   }
 
   test("case info") {
@@ -256,5 +255,14 @@ class DefMacroTest extends TestSuite {
     }
     assert(n == 0)
     assert(x == 5)
+  }
+
+  test("interpolate") {
+    import Interpolater._
+    val prefix = "http://"
+    assert(url"abc" === "error")
+    assert(url"http://url" === "http://url")
+    assert(url"https://url" === "https://url")
+    assert(url"${prefix}url" === "http://url")
   }
 }
