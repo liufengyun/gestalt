@@ -6,6 +6,12 @@ lazy val commonSetting = Seq(
   version := "0.4.0",
   organization := "me.fengy",
 
+  resolvers ++= Seq(
+    Resolver.sonatypeRepo("snapshots"),
+    Resolver.sonatypeRepo("releases"),
+    Resolver.typesafeIvyRepo("releases")
+  ),
+
   scalaOrganization := dottyOrg,
   scalaVersion := dottyVersion,
 
@@ -65,6 +71,12 @@ lazy val `dotty-backend` = (project in file("dotty"))
 
 lazy val macrosSetting = Seq(
   // scalacOptions := Seq("-Xprint:frontend,parser", "-Ycheck:all"), // "-Yplain-printer", "-Xprint:frontend,parser", "-Ylog:frontend",
+
+  resolvers ++= Seq(
+    Resolver.sonatypeRepo("snapshots"),
+    Resolver.sonatypeRepo("releases"),
+    Resolver.typesafeIvyRepo("releases")
+  ),
 
   traceLevel := 0,
 
