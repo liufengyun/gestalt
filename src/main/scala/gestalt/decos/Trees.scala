@@ -2,7 +2,7 @@ package scala.gestalt
 package decos
 
 trait Trees {
-  import untpd.{ Tree, TermTree, Term, Splice, TypeTree }
+  import untpd._
 
   implicit class UntypedTreeOps(tree: Tree) {
     def pos: Position = untpd.pos(tree)
@@ -11,21 +11,21 @@ trait Trees {
   }
 
   implicit class UntypedTermTreeOps(tree: TermTree) {
-    def appliedTo(args: TermTree*): TermTree = Term.Apply(tree, args.toList)
+    def appliedTo(args: TermTree*): TermTree = Apply(tree, args.toList)
     def selectType(path: String): TypeTree = {
       val parts = path.split('.')
 
       val prefix = parts.init.foldLeft[TermTree](tree) { (prefix, name) =>
-        Term.Select(prefix, name)
+        Select(prefix, name)
       }
 
-      untpd.TypeTree.Select(prefix, parts.last)
+      untpd.TypeSelect(prefix, parts.last)
     }
 
     def select(path: String): TermTree = {
       val parts = path.split('.')
       parts.foldLeft[TermTree](tree) { (prefix, name) =>
-        Term.Select(prefix, name)
+        Select(prefix, name)
       }
     }
   }

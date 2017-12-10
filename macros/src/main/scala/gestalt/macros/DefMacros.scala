@@ -18,7 +18,7 @@ object plusObject {
       case tpd.Lit(s:String) => q"${a.wrap}.toInt + $b"
       case other =>
         error(s"expected String or Interger constants", a.pos)
-        untpd.Term.Lit(null)
+        untpd.Lit(null)
     }
   }
 
@@ -35,7 +35,7 @@ object plusObject {
         q"$list.reduce((a:Int,b:Int)=> a + b)"
       case _ =>
         error("expected application of Ints", items.pos)
-        untpd.Term.Lit(null)
+        untpd.Lit(null)
     }
   }
 }
@@ -73,7 +73,7 @@ object ImplicitBigInt {
     val bigInt = BigInt(str)
     val radix = Character.MAX_RADIX
     val compressedString = bigInt.toString(radix)
-    q"BigInt(${untpd.Term.Lit(compressedString)},${untpd.Term.Lit(radix)})"
+    q"BigInt(${untpd.Lit(compressedString)},${untpd.Lit(radix)})"
   }
 }
 
@@ -89,7 +89,7 @@ object scope {
   // test nested method inside macro def -- used to be a problem with @static implementation
   def mapTest(): Int = meta {
     val sum = (1 to 5).map(_ * 2).sum
-    untpd.Term.Lit(sum)
+    untpd.Lit(sum)
   }
 }
 
@@ -173,7 +173,7 @@ object Materializer {
 object Locations {
   def currentLine(): Int = meta {
     val pos = location
-    untpd.Term.Lit(pos.line)
+    untpd.Lit(pos.line)
   }
 }
 
@@ -185,7 +185,7 @@ object CaseInfo {
       q"scala.Nil"
     }
     else {
-      val fieldTrees = tp.caseFields.map(m => untpd.Term.Lit(m.name))
+      val fieldTrees = tp.caseFields.map(m => untpd.Lit(m.name))
       q"List(..$fieldTrees)"
     }
   }

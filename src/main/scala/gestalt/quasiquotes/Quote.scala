@@ -5,7 +5,6 @@ import scala.{meta => m}
 import scala.compat.Platform.EOL
 import scala.gestalt._
 import untpd._
-import Term.{ Ident, Select, Infix, Lit }
 import scala.gestalt.options.unsafe
 
 /** Lift scala.meta trees as trees */
@@ -155,13 +154,13 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
 
   private def composeType(qualOpt: Option[m.Tree], name: String, targs: Seq[m.Tree]): TermTree = qualOpt match {
     case Some(qual) =>
-      val pre = untpd("TypeTree.Select").appliedTo(lift(qual), Lit(name))
+      val pre = untpd("TypeSelect").appliedTo(lift(qual), Lit(name))
       if (targs.isEmpty) pre
-      else untpd("TypeTree.Apply").appliedTo(pre, liftSeq(targs))
+      else untpd("TypeApply").appliedTo(pre, liftSeq(targs))
     case None       =>
-      val pre = untpd("TypeTree.Ident").appliedTo(Lit(name))
+      val pre = untpd("TypeIdent").appliedTo(Lit(name))
       if (targs.isEmpty) pre
-      else untpd("TypeTree.Apply").appliedTo(pre, liftSeq(targs))
+      else untpd("TypeApply").appliedTo(pre, liftSeq(targs))
   }
 
   /** Lift initcall : {{{qual.T[A, B](x, y)(z)}}}
@@ -169,13 +168,13 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
   def liftInitCall(tree: m.Tree): TermTree = {
     val Argss(TypeArguments(Qualifier(m.Ctor.Ref.Name(name), qualOpt), targs), argss) = tree
     val tp = composeType(qualOpt, name, targs)
-    untpd("Defn.InitCall").appliedTo(tp, liftSeqSeq(argss))
+    untpd("InitCall").appliedTo(tp, liftSeqSeq(argss))
   }
 
   def liftNewInstance(tree: m.Tree): TermTree = {
     val Argss(TypeArguments(Qualifier(m.Ctor.Ref.Name(name), qualOpt), targs), argss) = tree
     val tp = composeType(qualOpt, name, targs)
-    untpd("Term.NewInstance").appliedTo(tp, liftSeqSeq(argss))
+    untpd("NewInstance").appliedTo(tp, liftSeqSeq(argss))
   }
 
   /** {{{(trees: Seq[Tree[Tree[A]]]) => Tree[Seq[Tree[A]]]}}} */
@@ -215,11 +214,11 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
       }
 
       if (isDecl)
-        untpd("Defn.ValDecl").appliedTo(mods, left, tpe)
+        untpd("ValDecl").appliedTo(mods, left, tpe)
       else if (isPatDef)
-        untpd("Defn.PatDef").appliedTo(mods, left, tpe, rhs)
+        untpd("PatDef").appliedTo(mods, left, tpe, rhs)
       else
-        untpd("Defn.ValDef").appliedTo(mods, left, tpe, rhs)
+        untpd("ValDef").appliedTo(mods, left, tpe, rhs)
     }
     else {
       if (isDecl)
@@ -244,9 +243,9 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
     case m.Term.Param(_, m.Name.Anonymous(), _, _) =>
       scalaNone
     case m.Term.Param(_, m.Term.Name(name), Some(tp), _) =>
-      scalaSome appliedTo untpd("Defn.Self").appliedTo(Lit(name), lift(tp))
+      scalaSome appliedTo untpd("Self").appliedTo(Lit(name), lift(tp))
     case m.Term.Param(_, m.Term.Name(name), _, _) =>
-      scalaSome appliedTo untpd("Defn.Self").appliedTo(Lit(name))
+      scalaSome appliedTo untpd("Self").appliedTo(Lit(name))
   }
 
   /** lift name to either Lit or Quasi
@@ -327,7 +326,7 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
       if (isInPattern)
         untpd("Pat.Lit").appliedTo(Lit(value))
       else
-        untpd("Term.Lit").appliedTo(Lit(value))
+        untpd("Lit").appliedTo(Lit(value))
 
     // case m.Name.Anonymous() =>
     // case m.Name.Indeterminate(name) =>
@@ -338,7 +337,7 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
         case m.Name.Indeterminate(name) => name
       }
 
-      untpd("Term.This").appliedTo(Lit(name))
+      untpd("This").appliedTo(Lit(name))
     case m.Term.Super(thisp, superp) =>
       val qual = thisp match {
         case m.Name.Anonymous() => ""
@@ -349,67 +348,67 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
         case m.Name.Anonymous() => ""
         case m.Name.Indeterminate(name) => name
       }
-      untpd("Term.Super").appliedTo(Lit(qual), Lit(mix))
+      untpd("Super").appliedTo(Lit(qual), Lit(mix))
     case m.Term.Name(name) =>
-      untpd("Term.Ident").appliedTo(Lit(name))
+      untpd("Ident").appliedTo(Lit(name))
     case m.Term.Select(qual, quasi: Quasi) =>
-      untpd("Term.Select").appliedTo(lift(qual), liftQuasi(quasi))
+      untpd("Select").appliedTo(lift(qual), liftQuasi(quasi))
     case m.Term.Select(qual, m.Term.Name(name)) =>
-      untpd("Term.Select").appliedTo(lift(qual), Lit(name))
+      untpd("Select").appliedTo(lift(qual), Lit(name))
     case m.Term.Interpolate(m.Term.Name(tag), parts, args) =>
-      untpd("Term.Interpolate").appliedTo(Lit(tag), liftSeq(parts), liftSeq(args))
+      untpd("Interpolate").appliedTo(Lit(tag), liftSeq(parts), liftSeq(args))
     // case m.Term.Xml(parts, args) =>
     case m.Term.Apply(fun, args) =>
       // magic happens here with ...$args
       args match {
         case Seq(quasi: Quasi) if quasi.rank == 2 =>
-          untpd("Term.ApplySeq").appliedTo(lift(fun), liftQuasi(quasi))
+          untpd("ApplySeq").appliedTo(lift(fun), liftQuasi(quasi))
         case _ =>
-          untpd("Term.Apply").appliedTo(lift(fun), liftSeq(args))
+          untpd("Apply").appliedTo(lift(fun), liftSeq(args))
       }
     case m.Term.ApplyInfix(lhs, m.Term.Name(name), targs, args) =>
       require(targs.length == 0) // no targs for now
       if (args.size == 1)
-        untpd("Term.Infix").appliedTo(lift(lhs), Lit(name), lift(args(0)))
+        untpd("Infix").appliedTo(lift(lhs), Lit(name), lift(args(0)))
       else
-        untpd("Term.Infix").appliedTo(lift(lhs), Lit(name), untpd("Term.Tuple").appliedTo(liftSeq(args)))
+        untpd("Infix").appliedTo(lift(lhs), Lit(name), untpd("Tuple").appliedTo(liftSeq(args)))
     case m.Term.ApplyType(fun, targs) =>
-      untpd("Term.ApplyType").appliedTo(lift(fun), liftSeq(targs))
+      untpd("ApplyType").appliedTo(lift(fun), liftSeq(targs))
     case m.Term.ApplyUnary(m.Term.Name(op), arg) =>
-      untpd("Term.Prefix").appliedTo(Lit(op), lift(arg))
+      untpd("Prefix").appliedTo(Lit(op), lift(arg))
     case m.Term.Assign(lhs, rhs) =>
-      untpd("Term.Assign").appliedTo(lift(lhs), lift(rhs))
+      untpd("Assign").appliedTo(lift(lhs), lift(rhs))
     case m.Term.Update(fun, argss, rhs) =>
       require(argss.size > 0)
-      untpd("Term.Update").appliedTo(lift(fun), liftSeqSeq(argss), lift(rhs))
+      untpd("Update").appliedTo(lift(fun), liftSeqSeq(argss), lift(rhs))
     case m.Term.Return(expr) =>
-      untpd("Term.Return").appliedTo(lift(expr))
+      untpd("Return").appliedTo(lift(expr))
     case m.Term.Throw(expr) =>
-      untpd("Term.Throw").appliedTo(lift(expr))
+      untpd("Throw").appliedTo(lift(expr))
     case m.Term.Ascribe(expr, tpe) =>
-      untpd("Term.Ascribe").appliedTo(lift(expr), lift(tpe))
+      untpd("Ascribe").appliedTo(lift(expr), lift(tpe))
     case m.Term.Annotate(expr, annots) =>
-      untpd("Term.Annotated").appliedTo(lift(expr), liftSeq(annots))
+      untpd("Annotated").appliedTo(lift(expr), liftSeq(annots))
     case m.Term.Tuple(args) =>
-      untpd("Term.Tuple").appliedTo(liftSeq(args))
+      untpd("Tuple").appliedTo(liftSeq(args))
     case m.Term.Block(stats) =>
-      untpd("Term.Block").appliedTo(liftSeq(stats))
+      untpd("Block").appliedTo(liftSeq(stats))
     case m.Term.If(cond, thenp, elsep) =>
-      untpd("Term.If").appliedTo(lift(cond), lift(thenp), lift(elsep))
+      untpd("If").appliedTo(lift(cond), lift(thenp), lift(elsep))
     case m.Term.Match(expr, cases) =>
-      untpd("Term.Match").appliedTo(lift(expr), liftSeq(cases))
+      untpd("Match").appliedTo(lift(expr), liftSeq(cases))
     case m.Term.TryWithCases(expr, catchp, finallyp) =>
-      untpd("Term.Try").appliedTo(lift(expr), liftSeq(catchp), liftOpt(finallyp))
+      untpd("Try").appliedTo(lift(expr), liftSeq(catchp), liftOpt(finallyp))
     case m.Term.TryWithTerm(expr, catchp, finallyp) =>
-      untpd("Term.Try").appliedTo(lift(expr), lift(catchp), liftOpt(finallyp))
+      untpd("Try").appliedTo(lift(expr), lift(catchp), liftOpt(finallyp))
     case m.Term.Function(params, body) =>
-      untpd("Term.Function").appliedTo(liftSeq(params), lift(body))
+      untpd("Function").appliedTo(liftSeq(params), lift(body))
     case m.Term.PartialFunction(cases) =>
-      untpd("Term.PartialFunction").appliedTo(liftSeq(cases))
+      untpd("PartialFunction").appliedTo(liftSeq(cases))
     case m.Term.While(expr, body) =>
-      untpd("Term.While").appliedTo(lift(expr), lift(body))
+      untpd("While").appliedTo(lift(expr), lift(body))
     case m.Term.Do(body, expr) =>
-      untpd("Term.DoWhile").appliedTo(lift(body), lift(expr))
+      untpd("DoWhile").appliedTo(lift(body), lift(expr))
     case m.Term.For(enums, body) =>
       Path("For.ForDo").appliedTo(liftSeq(enums), lift(body))
     case m.Term.ForYield(enums, body) =>
@@ -420,56 +419,56 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
       // parentCalls: Tree[Seq[Tree[B]]]
       val parentCalls = liftSeqTrees(parents.map(liftInitCall))
       // anonym: Tree[Tree[C]]
-      untpd("Term.NewAnonymClass").appliedTo(parentCalls, liftSelf(self), liftOptSeq(stats))
+      untpd("NewAnonymClass").appliedTo(parentCalls, liftSelf(self), liftOptSeq(stats))
     case m.Term.Placeholder() =>
       if (isTerm) error("placeholder is not supported", enclosingTree.pos)
-      untpd("Term.Ident").appliedTo(Lit("_"))
+      untpd("Ident").appliedTo(Lit("_"))
     case m.Term.Eta(expr) =>
-      untpd("Term.Postfix").appliedTo(lift(expr), Lit("_"))
+      untpd("Postfix").appliedTo(lift(expr), Lit("_"))
     case m.Term.Arg.Named(m.Term.Name(name), expr) =>
-      untpd("Term.Named").appliedTo(Lit(name), lift(expr))
+      untpd("Named").appliedTo(Lit(name), lift(expr))
     case m.Term.Arg.Repeated(expr) =>
-      untpd("Term.Repeated").appliedTo(lift(expr))
+      untpd("Repeated").appliedTo(lift(expr))
     case m.Term.Param(mods, m.Term.Name(name), tpe, default) =>
-      untpd("Defn.Param").appliedTo(liftMods(mods), Lit(name), liftOpt(tpe), liftOpt(default))
+      untpd("Param").appliedTo(liftMods(mods), Lit(name), liftOpt(tpe), liftOpt(default))
 
     // types
     case m.Type.Name(name) =>
-      untpd("TypeTree.Ident").appliedTo(Lit(name))
+      untpd("TypeIdent").appliedTo(Lit(name))
     case m.Type.Select(qual, m.Type.Name(name)) =>
-      untpd("TypeTree.Select").appliedTo(lift(qual), Lit(name))
+      untpd("TypeSelect").appliedTo(lift(qual), Lit(name))
     // case m.Type.Project(qual, name) =>
     case m.Type.Singleton(ref) =>
-      untpd("TypeTree.Singleton").appliedTo(lift(ref))
+      untpd("TypeSingleton").appliedTo(lift(ref))
     case m.Type.Apply(tpe, args) =>
-      untpd("TypeTree.Apply").appliedTo(lift(tpe), liftSeq(args))
+      untpd("TypeApply").appliedTo(lift(tpe), liftSeq(args))
     case m.Type.ApplyInfix(lhs, m.Type.Name(op), rhs) =>
-      untpd("TypeTree.Infix").appliedTo(lift(lhs), Lit(op), lift(rhs))
+      untpd("TypeInfix").appliedTo(lift(lhs), Lit(op), lift(rhs))
     case m.Type.Function(params, res) =>
-      untpd("TypeTree.Function").appliedTo(liftSeq(params), lift(res))
+      untpd("TypeFunction").appliedTo(liftSeq(params), lift(res))
     case m.Type.Tuple(args) =>
-      untpd("TypeTree.Tuple").appliedTo(liftSeq(args))
+      untpd("TypeTuple").appliedTo(liftSeq(args))
     // case m.Type.With(lhs, rhs) =>
     case m.Type.And(lhs, rhs) =>
-      untpd("TypeTree.And").appliedTo(lift(lhs), lift(rhs))
+      untpd("TypeAnd").appliedTo(lift(lhs), lift(rhs))
     case m.Type.Or(lhs, rhs) =>
-      untpd("TypeTree.Or").appliedTo(lift(lhs), lift(rhs))
+      untpd("TypeOr").appliedTo(lift(lhs), lift(rhs))
     case m.Type.Refine(tpe, stats) =>
       if (tpe.isEmpty)
-        untpd("TypeTree.Refine").appliedTo(liftSeq(stats))
+        untpd("TypeRefine").appliedTo(liftSeq(stats))
       else
-        untpd("TypeTree.Refine").appliedTo(lift(tpe.get), liftSeq(stats))
+        untpd("TypeRefine").appliedTo(lift(tpe.get), liftSeq(stats))
     // case m.Type.Existential(tpe, stats) =>
     case m.Type.Annotate(tpe, annots) =>
-      untpd("TypeTree.Annotated").appliedTo(lift(tpe), liftSeq(annots))
+      untpd("TypeAnnotated").appliedTo(lift(tpe), liftSeq(annots))
     case m.Type.Placeholder(bounds) =>
-      untpd("Defn.TypeParam").appliedTo(Lit("_"), lift(bounds))
+      untpd("TypeParam").appliedTo(Lit("_"), lift(bounds))
     case m.Type.Bounds(lo, hi) =>
-      untpd("TypeTree.Bounds").appliedTo(liftOpt(lo), liftOpt(hi))
+      untpd("TypeBounds").appliedTo(liftOpt(lo), liftOpt(hi))
     case m.Type.Arg.ByName(tpe) =>
-      untpd("TypeTree.ByName").appliedTo(lift(tpe))
+      untpd("TypeByName").appliedTo(lift(tpe))
     case m.Type.Arg.Repeated(tpe) =>
-      untpd("TypeTree.Repeated").appliedTo(lift(tpe))
+      untpd("TypeRepeated").appliedTo(lift(tpe))
     case m.Type.Param(mods, name, tparams, tbounds, vbounds, cbounds) =>
       require(vbounds.size == 0)
       val nameStr = name match {
@@ -477,7 +476,7 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
         case m.Type.Name(name)  => name
       }
 
-      untpd("Defn.Param").appliedTo(
+      untpd("Param").appliedTo(
         liftMods(mods), Lit(nameStr), liftSeq(tparams), lift(tbounds), liftSeq(cbounds)
       )
 
@@ -485,7 +484,7 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
     case m.Pat.Var.Term(m.Term.Name(name)) =>
       untpd("Pat.Var").appliedTo(Lit(name))
     case m.Pat.Var.Type(m.Type.Name(name)) =>
-      untpd("TypeTree.Ident").appliedTo(Lit(name))
+      untpd("TypeIdent").appliedTo(Lit(name))
     case m.Pat.Wildcard() =>
       untpd("Pat.Ident").appliedTo(Lit("_"))
     case m.Pat.Bind(m.Pat.Var.Term(m.Term.Name(name)), expr) =>
@@ -503,34 +502,34 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
       untpd("Pat.Infix").appliedTo(lift(lhs), Lit(op), liftSeq(rhs))
     case m.Pat.Interpolate(m.Term.Name(tag), parts, args) =>
       error("Interpolaters not supported for patterns", enclosingTree.pos)
-      untpd("Term.Interpolate").appliedTo(Lit(tag), liftSeq(parts), liftSeq(args))
+      untpd("Interpolate").appliedTo(Lit(tag), liftSeq(parts), liftSeq(args))
     // case m.PaXml(parts, args) =>
     case m.Pat.Typed(m.Pat.Var.Term(m.Term.Name(name)), rhs) =>
       untpd("Pat.Ascribe").appliedTo(Lit(name), lift(rhs))
     // case m.PaArg.SeqWildcard() =>
     case m.Pat.Type.Wildcard() =>
-      untpd("TypeTree.Ident").appliedTo(Lit("_"))
+      untpd("TypeIdent").appliedTo(Lit("_"))
     // case m.PaType.Project(qual, name) =>
     case m.Pat.Type.Apply(tpe, args) =>
-      untpd("TypeTree.Apply").appliedTo(lift(tpe), liftSeq(args))
+      untpd("TypeApply").appliedTo(lift(tpe), liftSeq(args))
     case m.Pat.Type.ApplyInfix(lhs, op, rhs) =>
-      untpd("TypeTree.Infix").appliedTo(lift(lhs), liftName(op), lift(rhs))
+      untpd("TypeInfix").appliedTo(lift(lhs), liftName(op), lift(rhs))
     case m.Pat.Type.Function(params, res) =>
-      untpd("TypeTree.Function").appliedTo(liftSeq(params), lift(res))
+      untpd("TypeFunction").appliedTo(liftSeq(params), lift(res))
     case m.Pat.Type.Tuple(args) =>
-      untpd("TypeTree.Tuple").appliedTo(liftSeq(args))
+      untpd("TypeTuple").appliedTo(liftSeq(args))
     // case m.PaType.With(lhs, rhs) =>
     case m.Pat.Type.And(lhs, rhs) =>
-      untpd("TypeTree.And").appliedTo(lift(lhs), lift(rhs))
+      untpd("TypeAnd").appliedTo(lift(lhs), lift(rhs))
     case m.Pat.Type.Or(lhs, rhs) =>
-      untpd("TypeTree.Or").appliedTo(lift(lhs), lift(rhs))
+      untpd("TypeOr").appliedTo(lift(lhs), lift(rhs))
     case m.Pat.Type.Refine(tpe, stats) =>
-      untpd("TypeTree.Refine").appliedTo(liftOpt(tpe), liftSeq(stats))
+      untpd("TypeRefine").appliedTo(liftOpt(tpe), liftSeq(stats))
     // case m.PaType.Existential(tpe, stats) =>
     case m.Pat.Type.Annotate(tpe, annots) =>
-      untpd("TypeTree.Annotated").appliedTo(lift(tpe), liftSeq(annots))
+      untpd("TypeAnnotated").appliedTo(lift(tpe), liftSeq(annots))
     case m.Pat.Type.Placeholder(bounds) =>
-      untpd("Defn.TypeParam").appliedTo(Lit("_"), lift(bounds))
+      untpd("TypeParam").appliedTo(Lit("_"), lift(bounds))
 
     case m.Decl.Val(mods, pats, tpe) =>
       require(pats.size > 0)
@@ -541,9 +540,9 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
       val modifiers = Select(liftMods(mods), "setMutable")
       liftValDef(modifiers, pats, lift(tpe), null, isDecl = true)
     case m.Decl.Def(mods, name, tparams, paramss, tpe) =>
-      untpd("Defn.DefDecl").appliedTo(liftMods(mods), liftName(name), liftSeq(tparams), liftSeqSeq(paramss), lift(tpe))
+      untpd("DefDecl").appliedTo(liftMods(mods), liftName(name), liftSeq(tparams), liftSeqSeq(paramss), lift(tpe))
     case m.Decl.Type(mods, name, tparams, bounds) =>
-      untpd("Defn.TypeDecl").appliedTo(liftMods(mods), liftName(name), liftSeq(tparams), scalaSome.appliedTo(lift(bounds)))
+      untpd("TypeDecl").appliedTo(liftMods(mods), liftName(name), liftSeq(tparams), scalaSome.appliedTo(lift(bounds)))
 
     case m.Defn.Val(mods, pats, tpe, rhs) =>
       require(pats.size > 0)
@@ -559,16 +558,16 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
       val modifiers = Select(liftMods(mods), "setMutable")
       liftValDef(modifiers, pats, liftOpt(tpe), lift(rhs), isDecl = false)
     case m.Defn.Def(mods, name, tparams, paramss, tpe, body) =>
-      untpd("Defn.DefDef").appliedTo(liftMods(mods), liftName(name), liftSeq(tparams), liftSeqSeq(paramss), liftOpt(tpe), lift(body))
+      untpd("DefDef").appliedTo(liftMods(mods), liftName(name), liftSeq(tparams), liftSeqSeq(paramss), liftOpt(tpe), lift(body))
     // case m.Defn.Macro(mods, name, tparams, paramss, tpe, body) =>
     case m.Defn.Type(mods, name, tparams, body) =>
-      untpd("Defn.TypeAlias").appliedTo(liftMods(mods), liftName(name), liftSeq(tparams), lift(body))
+      untpd("TypeAlias").appliedTo(liftMods(mods), liftName(name), liftSeq(tparams), lift(body))
     case m.Defn.Class(mods, name, tparams, ctor, m.Template(_, parents, self, stats)) =>
       val (cmods, paramss) = ctor match {
         case m.Ctor.Primary(mods, name, paramss) =>
           (mods, paramss)
       }
-      untpd("Defn.Class").appliedTo(
+      untpd("Class").appliedTo(
         liftMods(mods),
         liftName(name),
         liftSeq(tparams),
@@ -583,7 +582,7 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
         case m.Ctor.Primary(mods, name, paramss) =>
           (mods, paramss)
       }
-      untpd("Defn.Trait").appliedTo(
+      untpd("Trait").appliedTo(
         liftMods(mods),
         liftName(name),
         liftSeq(tparams),
@@ -594,7 +593,7 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
         liftOptSeq(stats)
       )
     case m.Defn.Object(mods, name, m.Template(_, parents, self, stats)) =>
-      untpd("Defn.Object").appliedTo(
+      untpd("Object").appliedTo(
         liftMods(mods),
         liftName(name),
         liftSeqTrees(parents.map(liftInitCall)),
@@ -616,11 +615,11 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
 
 
     case m.Enumerator.Generator(pat, rhs) =>
-      untpd("Term.For.GenFrom").appliedTo(lift(pat), lift(rhs))
+      untpd("For.GenFrom").appliedTo(lift(pat), lift(rhs))
     case m.Enumerator.Val(pat, rhs) =>
-      untpd("Term.For.GenAlias").appliedTo(lift(pat), lift(rhs))
+      untpd("For.GenAlias").appliedTo(lift(pat), lift(rhs))
     case m.Enumerator.Guard(cond) =>
-      untpd("Term.For.Guard").appliedTo(lift(cond))
+      untpd("For.Guard").appliedTo(lift(cond))
 
     case m.Import(importers) =>
       untpd("Import").appliedTo(liftSeq(importers))
@@ -636,7 +635,7 @@ class Quote(args: List[Tree], isTerm: Boolean, enclosingTree: Tree) {
       untpd("Import.Hide").appliedTo(Lit(name))
 
     case m.Case(pat, cond, body) =>
-      untpd("Term.Case").appliedTo(doPattern { lift(pat) }, liftOpt(cond), lift(body))
+      untpd("Case").appliedTo(doPattern { lift(pat) }, liftOpt(cond), lift(body))
 
     // case m.Source(stats) =>
     //  selectFullPath("scala.meta.Source").appliedTo(liftSeq(stats))

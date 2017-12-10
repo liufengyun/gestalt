@@ -61,7 +61,7 @@ class Untpd(val toolbox: Toolbox) extends core.Untpd {
   }
 
   def ApplySeq(fun: TermTree, argss: List[List[TermTree]]): TermTree =
-    argss.foldLeft(fun) { (acc, args) => Term.Apply(acc, args) }
+    argss.foldLeft(fun) { (acc, args) => d.Apply(acc, args) }
 
   /*------------------------------ constructors ------------------------------*/
   def TypedSplice(tree: tpd.Tree): Splice = {
