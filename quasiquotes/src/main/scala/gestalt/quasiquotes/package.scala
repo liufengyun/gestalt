@@ -91,7 +91,7 @@ package object quasiquotes {
       quote.lift(mTree)
     }
 
-    def tq(any: Any*): tpd.Tree = meta {
+    def tq[T](any: Any*): T = meta {
       val tpd.SeqLiteral(args) = any
       val tpd.Apply(_, tpd.Apply(_, tpd.SeqLiteral(parts) :: Nil) :: Nil) = prefix
 

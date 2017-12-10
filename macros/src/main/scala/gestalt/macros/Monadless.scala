@@ -1,4 +1,5 @@
 import scala.gestalt._
+import quasiquotes._
 import tpd._
 
 trait Monadless[Monad[_]] {
@@ -220,7 +221,8 @@ object Transformer {
               val fun = Function(tp :: Nil, newTree.tpe) { refs =>
                 val iter = ValDef(refs.head.select("iterator"))
                 val elements = unlifts.map { case (tree, dummy, tpe) =>
-                  val rhs = Ident(iter.symbol).select("next").appliedTo(Nil).select("asInstanceOf").appliedToTypes(tpe :: Nil)
+                  val ident = Ident(iter.symbol)
+                  val rhs = tq"$ident.next().asInstanceOf[$tpe]"
                   ValDef(rhs)
                 }
 
@@ -324,7 +326,7 @@ object Transformer {
         """.stripMargin
 
       private def instanceMethod(pos: Position, instance: tpd.Tree, name: String): Option[tpd.Tree] =
-        this.method(prefix, prefix.tpe, name).map(t => t.appliedTo(instance :: Nil))
+        this.method(prefix, prefix.tpe, name).map(t => tq"$t($instance)")
           .orElse(this.method(instance, monadType, name))
 
       private def companionMethod(pos: Position, name: String) =

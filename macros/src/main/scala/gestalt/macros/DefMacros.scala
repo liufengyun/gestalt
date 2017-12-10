@@ -15,11 +15,11 @@ object plusObject {
   }
   def poly(a: Any, b: Int): Int = meta {
     a match {
-      case tpd.Lit(i:Int) => q"$a + $b"
-      case tpd.Lit(s:String) => q"${a.wrap}.toInt + $b"
+      case tpd.Lit(i:Int) => tq"$a + $b"
+      case tpd.Lit(s:String) => q"$a.toInt + $b"
       case other =>
         error(s"expected String or Interger constants", a.pos)
-        untpd.Lit(null)
+        q"null"
     }
   }
 
@@ -50,7 +50,7 @@ class plus {
 
 object plusOne {
   def apply(a: Int): Int =  meta {
-    q"$a + 1"
+    tq"$a + 1"
   }
 }
 
@@ -271,7 +271,12 @@ object Owners {
     }
     val anonTree = tpd.NewAnonymClass(parent :: Nil, meth :: whileTree :: Nil)
 
-    tpd.Block(anonTree :: Nil, tpd.Lit(5))
+    tq"""
+    {
+      $anonTree
+      5
+    }
+    """
   }
 }
 

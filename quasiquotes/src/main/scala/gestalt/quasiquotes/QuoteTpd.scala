@@ -121,7 +121,7 @@ class QuoteTpd(args: List[tpd.Tree], enclosingPos: Position) {
           tpd("Apply").appliedTo(lift(fun), liftSeq(args))
       }
     case m.Term.ApplyInfix(lhs, m.Term.Name(name), Nil, arg :: Nil)  =>
-      tpd("Apply").appliedTo(tpd("Select").appliedTo(lift(lhs), untpd.Lit(name)), lift(arg))
+      tpd("Apply").appliedTo(tpd("Select").appliedTo(lift(lhs), untpd.Lit(name)), scalaList.appliedTo(lift(arg)))
     case m.Term.ApplyType(fun, targs) =>
       tpd("ApplyType").appliedTo(lift(fun), liftSeq(targs))
     case m.Term.ApplyUnary(m.Term.Name(op), arg) =>
@@ -140,7 +140,12 @@ class QuoteTpd(args: List[tpd.Tree], enclosingPos: Position) {
     case m.Term.Tuple(args) =>
       tpd("Tuple").appliedTo(liftSeq(args))
     case m.Term.Block(stats) =>
-      tpd("Block").appliedTo(liftSeq(stats))
+      if (stats.size == 0)
+        tpd("Block").appliedTo(scalaNil, tpd("Lit").appliedTo(untpd.Lit(())))
+      else if (stats.size == 1)
+        tpd("Block").appliedTo(scalaNil, lift(stats.head))
+      else
+        tpd("Block").appliedTo(liftSeq(stats.init), lift(stats.last))
     case m.Term.If(cond, thenp, elsep) =>
       tpd("If").appliedTo(lift(cond), lift(thenp), lift(elsep))
     case m.Term.While(expr, body) =>

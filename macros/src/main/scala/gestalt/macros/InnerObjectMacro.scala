@@ -5,13 +5,13 @@ import quasiquotes._
 object InnerObjectMacro {
   class Inner {
     def plus(a: Int, b: Int) = meta {
-      q"$a + $b"
+      tq"$a + $b"
     }
   }
 
   object InnerObject {
     def plus(a: Int, b: Int) = meta {
-      q"$a + $b"
+      tq"$a + $b"
     }
   }
 
