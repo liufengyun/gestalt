@@ -1,9 +1,10 @@
 lazy val dottyOrg = "me.fengy"
 lazy val dottyVersion = "0.6.0-bin-SNAPSHOT"
 
+
 lazy val commonSetting = Seq(
   name := "gestalt",
-  version := "0.4.0",
+  version := "0.4.2",
   organization := "me.fengy",
 
   resolvers ++= Seq(
@@ -50,8 +51,8 @@ lazy val commonSetting = Seq(
   )
 )
 
-lazy val gestalt = (project in file(".")).
-  settings(commonSetting: _*)
+lazy val gestalt = (project in file("."))
+  .settings(commonSetting: _*)
 
 lazy val quasiquotes = (project in file("quasiquotes"))
   .dependsOn(gestalt)
@@ -88,3 +89,21 @@ lazy val macrosSetting = Seq(
 lazy val macros = (project in file("macros"))
   .dependsOn(gestalt, quasiquotes, `dotty-backend`)
   .settings(macrosSetting: _*)
+
+
+/*-------------------- publish artefacts -----------------------*/
+
+commands += Command.command("publishAll") { state =>
+  "gestalt/publishSigned" ::
+    "quasiquotes/publishSigned" ::
+    "dotty-backend/publishSigned" ::
+    "sonatypeReleaseAll" ::
+    state
+}
+
+commands += Command.command("publishAllLocal") { state =>
+  "gestalt/publishLocal" ::
+    "quasiquotes/publishLocal" ::
+    "dotty-backend/publishLocal" ::
+    state
+}

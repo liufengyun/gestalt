@@ -35,154 +35,144 @@ trait Untpd {
 
   def TypedSplice(tree: tpd.Tree): Splice
 
-  // type trees
-  def Type: TypeImpl
-  trait TypeImpl {
-    def Ident(name: String)(implicit unsafe: Unsafe): TypeTree
+  ///////////////////////// type trees
+  def TypeIdent(name: String)(implicit unsafe: Unsafe): TypeTree
 
-    def Select(qual: Tree, name: String): TypeTree
+  def TypeSelect(qual: Tree, name: String): TypeTree
 
-    def Singleton(ref: Tree): TypeTree
+  def TypeSingleton(ref: Tree): TypeTree
 
-    def Apply(tpe: TypeTree, args: List[TypeTree]): TypeTree
+  def TypeApply(tpe: TypeTree, args: List[TypeTree]): TypeTree
 
-    def Infix(lhs: TypeTree, op: String, rhs: TypeTree): TypeTree
+  def TypeInfix(lhs: TypeTree, op: String, rhs: TypeTree): TypeTree
 
-    def Function(params: List[TypeTree], res: TypeTree): TypeTree
+  def TypeFunction(params: List[TypeTree], res: TypeTree): TypeTree
 
-    def Tuple(args: List[TypeTree]): TypeTree
+  def TypeTuple(args: List[TypeTree]): TypeTree
 
-    def And(lhs: TypeTree, rhs: TypeTree): TypeTree
+  def TypeAnd(lhs: TypeTree, rhs: TypeTree): TypeTree
 
-    def Or(lhs: TypeTree, rhs: TypeTree): TypeTree
+  def TypeOr(lhs: TypeTree, rhs: TypeTree): TypeTree
 
-    def Refine(stats: List[Tree]): TypeTree
-    def Refine(tpe: TypeTree, stats: List[Tree]): TypeTree
+  def TypeRefine(stats: List[Tree]): TypeTree
+  def TypeRefine(tpe: TypeTree, stats: List[Tree]): TypeTree
 
-    def Bounds(lo: Option[TypeTree], hi: Option[TypeTree]): TypeTree
+  def TypeBounds(lo: Option[TypeTree], hi: Option[TypeTree]): TypeTree
 
-    def Repeated(tpe: TypeTree): TypeTree
+  def TypeRepeated(tpe: TypeTree): TypeTree
 
-    def ByName(tpe: TypeTree): TypeTree
+  def TypeByName(tpe: TypeTree): TypeTree
 
-    def Annotated(tpe: TypeTree, annots: List[Tree]): TypeTree
+  def TypeAnnotated(tpe: TypeTree, annots: List[Tree]): TypeTree
+
+  ///////////////////////// terms
+  // a + (b, c)  =>  Infix(a, +, Tuple(b, c))
+  def Infix(lhs: TermTree, op: String, rhs: TermTree): TermTree
+
+  def Prefix(op: String, od: TermTree): TermTree
+
+  def Postfix(od: TermTree, op: String): TermTree
+
+  def Throw(expr: TermTree): TermTree
+
+  def Annotated(expr: TermTree, annots: List[Tree]): TermTree
+
+  def If(cond: TermTree, thenp: TermTree, elsep: Option[TermTree]): TermTree
+
+  def Try(expr: Tree, cases: List[Tree], finallyp: Option[TermTree]): TermTree
+  def Try(expr: Tree, handler: Tree, finallyp: Option[TermTree]): TermTree
+
+  // definition trees
+  def NewAnonymClass(parents: List[InitCall], selfOpt: Option[Self], stats: List[Tree]): TermTree
+
+  def NewInstance(typeTree: TypeTree, argss: List[List[TermTree]]): TermTree
+
+  def Function(params: List[Param], body: TermTree): TermTree
+
+  def While(cond: TermTree, body: TermTree): TermTree
+
+  def DoWhile(body: TermTree, cond: TermTree): TermTree
+
+  // for comprehension
+  def For: ForImpl
+  trait ForImpl {
+    def ForDo(enums: List[Tree], body: TermTree): TermTree
+    def ForYield(enums: List[Tree], body: TermTree): TermTree
+    def GenFrom(pat: PatTree, rhs: TermTree): Tree
+    def GenAlias(pat: PatTree, rhs: TermTree): Tree
+    def Guard(cond: TermTree): Tree
   }
 
-  // terms
-  def Term: TermImpl
-  trait TermImpl {
-    // a + (b, c)  =>  Infix(a, +, Tuple(b, c))
-    def Infix(lhs: TermTree, op: String, rhs: TermTree): TermTree
+  // named arguments
+  def Named(name: String, expr: Tree): TermTree
 
-    def Prefix(op: String, od: TermTree): TermTree
+  def Repeated(expr: Tree): TermTree
 
-    def Postfix(od: TermTree, op: String): TermTree
+  def Apply(fun: TermTree, args: List[TermTree]): TermTree
 
-    def Throw(expr: TermTree): TermTree
+  def ApplyType(fun: TermTree, args: List[TypeTree]): TermTree
 
-    def Annotated(expr: TermTree, annots: List[Tree]): TermTree
+  def Ident(name: String)(implicit unsafe: Unsafe): Ident
 
-    def If(cond: TermTree, thenp: TermTree, elsep: Option[TermTree]): TermTree
+  def Lit(value: Any): TermTree
 
-    def Try(expr: Tree, cases: List[Tree], finallyp: Option[TermTree]): TermTree
-    def Try(expr: Tree, handler: Tree, finallyp: Option[TermTree]): TermTree
+  def This(qual: String): TermTree
 
-    // definition trees
-    def NewAnonymClass(parents: List[InitCall], selfOpt: Option[Self], stats: List[Tree]): TermTree
+  def Super(thisp: String, superp: String): TermTree
 
-    def NewInstance(typeTree: TypeTree, argss: List[List[TermTree]]): TermTree
+  def Select(qual: TermTree, name: String): TermTree
 
-    def Function(params: List[Param], body: TermTree): TermTree
+  def Ascribe(expr: TermTree, tpe: TypeTree): TermTree
 
-    def While(cond: TermTree, body: TermTree): TermTree
+  def Assign(lhs: TermTree, rhs: TermTree): TermTree
 
-    def DoWhile(body: TermTree, cond: TermTree): TermTree
+  def Update(fun: TermTree, argss: List[List[TermTree]], rhs: TermTree): TermTree
 
-    // for comprehension
-    def For: ForImpl
-    trait ForImpl {
-      def ForDo(enums: List[Tree], body: TermTree): TermTree
-      def ForYield(enums: List[Tree], body: TermTree): TermTree
-      def GenFrom(pat: PatTree, rhs: TermTree): Tree
-      def GenAlias(pat: PatTree, rhs: TermTree): Tree
-      def Guard(cond: TermTree): Tree
-    }
+  def Return(expr: TermTree): TermTree
+  def Return(): TermTree
 
-    // named arguments
-    def Named(name: String, expr: Tree): TermTree
+  def Block(stats: List[Tree]): TermTree
 
-    def Repeated(expr: Tree): TermTree
+  def PartialFunction(cases: List[Tree]): TermTree
 
-    def Apply(fun: TermTree, args: List[TermTree]): TermTree
+  def Match(expr: TermTree, cases: List[Tree]): TermTree
 
-    def ApplyType(fun: TermTree, args: List[TypeTree]): TermTree
+  def Case(pat: PatTree, cond: Option[TermTree], body: TermTree): Tree
 
-    def Ident(name: String)(implicit unsafe: Unsafe): Ident
+  def Tuple(args: List[TermTree]): TermTree
 
-    def Lit(value: Any): TermTree
+  def Interpolate(prefix: String, parts: List[String], args: List[TermTree]): TermTree
 
-    def This(qual: String): TermTree
+  ///////////////////////// def trees
+  def TypeDecl(mods: Mods, name: String, tparams: List[TypeParam], tbounds: Option[TypeTree]): DefTree
 
-    def Super(thisp: String, superp: String): TermTree
+  def TypeAlias(mods: Mods, name: String, tparams: List[TypeParam], rhs: TypeTree): DefTree
 
-    def Select(qual: TermTree, name: String): TermTree
+  def Param(mods: Mods, name: String, tpe: Option[TypeTree], default: Option[TermTree]): Param
 
-    def Ascribe(expr: TermTree, tpe: TypeTree): TermTree
+  def TypeParam(mods: Mods, name: String, tparams: List[TypeParam], tbounds: Option[TypeTree], cbounds: List[TypeTree]): TypeParam
 
-    def Assign(lhs: TermTree, rhs: TermTree): TermTree
+  def PatDef(mods: Mods, lhs: PatTree, tpe: Option[TypeTree], rhs: Tree): DefTree
 
-    def Update(fun: TermTree, argss: List[List[TermTree]], rhs: TermTree): TermTree
+  // extends qual.T[A, B](x, y)(z)
+  def InitCall(tpe: TypeTree, argss: List[List[TermTree]]): InitCall
 
-    def Return(expr: TermTree): TermTree
-    def Return(): TermTree
+  def Self(name: String, tpe: TypeTree): Self
+  def Self(name: String): Self
 
-    def Block(stats: List[Tree]): TermTree
+  def ValDef(mods: Mods, name: String, tpe: Option[TypeTree], rhs: Tree): ValDef
 
-    def PartialFunction(cases: List[Tree]): TermTree
+  def ValDecl(mods: Mods, name: String, tpe: TypeTree): ValDecl
 
-    def Match(expr: TermTree, cases: List[Tree]): TermTree
+  def DefDef(mods: Mods, name: String, tparams: List[TypeParam], paramss: List[List[Param]], tpe: Option[TypeTree], rhs: Tree): DefDef
 
-    def Case(pat: PatTree, cond: Option[TermTree], body: TermTree): Tree
+  def DefDecl(mods: Mods, name: String, tparams: List[TypeParam], paramss: List[List[Param]], tpe: TypeTree): DefDecl
 
-    def Tuple(args: List[TermTree]): TermTree
+  def Class(mods: Mods, name: String, tparams: List[TypeParam], ctorMods: Mods, paramss: List[List[Param]], parents: List[InitCall], selfOpt: Option[Self], stats: List[Tree]): Class
 
-    def Interpolate(prefix: String, parts: List[String], args: List[TermTree]): TermTree
+  def Trait(mods: Mods, name: String, tparams: List[TypeParam], ctorMods: Mods, paramss: List[List[Param]], parents: List[InitCall], selfOpt: Option[Self], stats: List[Tree]): Trait
 
-  }
-
-  // def trees
-  def Defn: DefnImpl
-  trait DefnImpl {
-    def TypeDecl(mods: Mods, name: String, tparams: List[TypeParam], tbounds: Option[TypeTree]): DefTree
-
-    def TypeAlias(mods: Mods, name: String, tparams: List[TypeParam], rhs: TypeTree): DefTree
-
-    def Param(mods: Mods, name: String, tpe: Option[TypeTree], default: Option[TermTree]): Param
-
-    def TypeParam(mods: Mods, name: String, tparams: List[TypeParam], tbounds: Option[TypeTree], cbounds: List[TypeTree]): TypeParam
-
-    def PatDef(mods: Mods, lhs: PatTree, tpe: Option[TypeTree], rhs: Tree): DefTree
-
-    // extends qual.T[A, B](x, y)(z)
-    def InitCall(tpe: TypeTree, argss: List[List[TermTree]]): InitCall
-
-    def Self(name: String, tpe: TypeTree): Self
-    def Self(name: String): Self
-
-    def ValDef(mods: Mods, name: String, tpe: Option[TypeTree], rhs: Tree): ValDef
-
-    def ValDecl(mods: Mods, name: String, tpe: TypeTree): ValDecl
-
-    def DefDef(mods: Mods, name: String, tparams: List[TypeParam], paramss: List[List[Param]], tpe: Option[TypeTree], rhs: Tree): DefDef
-
-    def DefDecl(mods: Mods, name: String, tparams: List[TypeParam], paramss: List[List[Param]], tpe: TypeTree): DefDecl
-
-    def Class(mods: Mods, name: String, tparams: List[TypeParam], ctorMods: Mods, paramss: List[List[Param]], parents: List[InitCall], selfOpt: Option[Self], stats: List[Tree]): Class
-
-    def Trait(mods: Mods, name: String, tparams: List[TypeParam], ctorMods: Mods, paramss: List[List[Param]], parents: List[InitCall], selfOpt: Option[Self], stats: List[Tree]): Trait
-
-    def Object(mods: Mods, name: String, parents: List[InitCall], selfOpt: Option[Self], stats: List[Tree]): Object
-  }
+  def Object(mods: Mods, name: String, parents: List[InitCall], selfOpt: Option[Self], stats: List[Tree]): Object
 
   // patterns
   def Pat: PatImpl
