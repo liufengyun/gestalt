@@ -232,54 +232,6 @@ object Transform {
   }
 }
 
-object TypedDef {
-  def double(x: Int): Int = meta {
-    val mt = Type.MethodType(List("n" -> Type.typeRef("scala.Int")), Type.typeRef("scala.Int"))
-    val meth = tpd.DefDef("double", mt) { case (_, params :: Nil) =>
-      tpd.Block(
-        x :: Nil,     // test nested definition
-        params(0).select("+").appliedTo(params(0) :: Nil)
-      )
-    }
-    val v = tpd.ValDef(tpd.Lit(10))
-    tpd.Block(meth :: v :: Nil, tpd.Ident(meth.symbol).appliedTo(tpd.Ident(v.symbol) :: Nil))
-  }
-
-  def annoyAdd(x: Int): Int => Int = meta {
-    val scalaInt = Type.typeRef("scala.Int")
-    val mt = Type.MethodType(List("v" -> scalaInt), scalaInt)
-
-    val parent = Type.typeRef("scala.Function1").appliedTo(scalaInt, scalaInt)
-    val meth = tpd.DefDef("apply", mt) {
-      case (_, params :: Nil) =>
-        params(0).select("+").appliedTo(x :: Nil)
-    }
-    tpd.NewAnonymClass(parent :: Nil, meth :: Nil)
-  }
-}
-
-object Owners {
-  def mywhile(cond: Boolean)(f: Unit): Int  = meta {
-    val vdef = tpd.ValDef(tpd.Lit(5)) // owner now is the ctx
-    val whileTree = tpd.While(cond, tpd.Block(vdef :: Nil, f))  // owner now is $while
-
-    val scalaInt = Type.typeRef("scala.Int")
-    val parent = Type.typeRef("scala.Function1").appliedTo(scalaInt, scalaInt)
-    val mt = Type.MethodType(List("v" -> scalaInt), scalaInt)
-    val meth = tpd.DefDef("apply", mt) { case (_, params :: Nil) =>
-      params(0).select("+").appliedTo(params(0) :: Nil)
-    }
-    val anonTree = tpd.NewAnonymClass(parent :: Nil, meth :: whileTree :: Nil)
-
-    tq"""
-    {
-      $anonTree
-      5
-    }
-    """
-  }
-}
-
 object Interpolater {
   implicit class QuasiquoteHelper(val sc: StringContext) {
     def url(any: Any*): String = meta {

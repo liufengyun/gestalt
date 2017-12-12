@@ -35,13 +35,16 @@ trait Trees {
     def pos: Position = tpd.pos(tree)
     def tpe: Type = tpd.typeOf(tree)
     def show: String = tpd.show(tree)
-    def wrap: Splice = untpd.TypedSplice(tree)
+    def splice: untpd.TermTree = tpd.splice(tree)
     def subst(from: List[Symbol], to: List[Symbol]): tpd.Tree = tpd.subst(tree)(from, to)
     def isDef: Boolean = tpd.isDef(tree)
 
     def select(name: String): tpd.Tree = tpd.Select(tree, name)
     def appliedTo(args: List[tpd.Tree]): tpd.Tree = tpd.Apply(tree, args.toList)
     def appliedToTypes(args: List[Type]): tpd.Tree = tpd.ApplyType(tree, args.toList)
+
+    def degrade(pf: PartialFunction[tpd.Tree, untpd.Tree]): untpd.TermTree =
+      tpd.degrade(tree)(pf)
 
     def traverse(pf: PartialFunction[tpd.Tree, Unit]): Unit =
       tpd.traverse(tree)(pf)
@@ -61,8 +64,10 @@ trait Trees {
     def symbol: Symbol = tpd.symbol(tree)
   }
 
-  implicit def tpd2untpd(tree: tpd.Tree): Splice = untpd.TypedSplice(tree)
-  implicit def tpd2untpdList(trees: List[tpd.Tree]): List[TermTree] = trees.map(untpd.TypedSplice.apply)
-  implicit def tpd2untpdListList(treess: List[List[tpd.Tree]]): List[List[TermTree]] = treess.map(_.map(untpd.TypedSplice.apply))
-
+  implicit def tpd2untpd(tree: tpd.Tree): untpd.Splice =
+    tpd.splice(tree)
+  implicit def tpd2untpdList(trees: List[tpd.Tree]): List[untpd.Splice] =
+    trees.map(tpd.splice)
+  implicit def tpd2untpdListList(treess: List[List[tpd.Tree]]): List[List[untpd.Splice]] =
+    treess.map(_.map(tpd.splice))
 }

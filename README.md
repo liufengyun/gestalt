@@ -5,9 +5,8 @@ An experiment and tutorial on how to create a solid and portable macros system b
 Design Goals:
 
 - __Portable__ -- better IDE experience, works both in Scala and Dotty
-- __Solid__ -- compiler crashes to a minimum, no hack required in writing macros
+- __Solid__ --  friendly typing error instead of compiler crashes or hacks
 - __Friendly__ -- no knowledge about compiler internals, no dependent universes
-- __Hygienic__ -- hygiene guaranteed by the type system
 
 ## Examples
 
@@ -21,18 +20,15 @@ object Test {
 }
 ```
 
-## Features
+## Design
 
-Gestalt advances the state of the art of meta-programming in Scala:
+__"Think in source code and compose with trees"__
 
-- Macros are portable among different Scala compilers
-- Better IDE support due to portability
-- Hygienic macros ensured by type system
-- Automatic owner chain management
-- Type system defends against incorrect mixing of typed and untyped trees
-- Friendly semantic APIs
-- No inconvenience related to path-dependent universes
-- Easy to implement by compiler vendors
+- Only blackbox macros
+- Separation of _typed_ and _untyped_ trees
+- Only inspection of _typed trees_
+- Only semantic information for _typed trees_
+- Synthesized tree will be re-typechecked
 
 ## Philosophy
 

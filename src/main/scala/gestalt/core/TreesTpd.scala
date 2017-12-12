@@ -22,15 +22,15 @@ trait Tpd {
   /** subst symbols in tree */
   def subst(tree: Tree)(from: List[Symbol], to: List[Symbol]): Tree
 
+  /** wrap typed tree as untyped tree */
+  def splice(tree: Tree): untpd.Splice
+
+  /** erase typed tree to untyped treee */
+  def degrade(tree: Tree)(pf: PartialFunction[Tree, untpd.Tree]): untpd.TermTree
+
   def traverse(tree: Tree)(pf: PartialFunction[Tree, Unit]): Unit
   def exists(tree: Tree)(pf: PartialFunction[Tree, Boolean]): Boolean
   def transform(tree: Tree)(pf: PartialFunction[Tree, Tree]): Tree
-
-  // definition trees
-  def NewAnonymClass: NewAnonymClassImpl
-  trait NewAnonymClassImpl {
-    def apply(parents: List[Type], stats: List[Tree]): Tree
-  }
 
   def NewInstance: NewInstanceImpl
   trait NewInstanceImpl {
@@ -106,7 +106,6 @@ trait Tpd {
 
   def Return: ReturnImpl
   trait ReturnImpl {
-    def apply(from: Symbol, expr: Tree): Tree
     def unapply(tree: Tree): Option[Tree]
   }
 
@@ -138,10 +137,4 @@ trait Tpd {
     def apply(sym: Symbol, rhs: Tree): DefTree
     def unapply(tree: Tree): Option[(Symbol, Tree)]
   }
-
-  def DefDef: DefDefImpl
-  trait DefDefImpl {
-    def apply(name: String, tp: Type)(body: (Symbol, List[List[RefTree]]) => Tree): DefTree
-  }
-
 }

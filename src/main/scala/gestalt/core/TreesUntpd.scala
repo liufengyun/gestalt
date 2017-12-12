@@ -10,10 +10,6 @@ trait Untpd {
   type DefTree  >: Null <: Tree
   type PatTree  >: Null <: Tree
 
-  type Splice   <: TypeTree with TermTree with DefTree with PatTree
-
-  type Ident    <: TermTree
-
   type Class     <: DefTree
   type Trait     <: DefTree
   type Object    <: DefTree
@@ -26,14 +22,14 @@ trait Untpd {
   type Self      <: DefTree
   type InitCall  <: Tree
 
+  type Splice   <: TypeTree with TermTree with DefTree with PatTree
+
   /*------------------------------- modifiers -------------------------------------*/
 
   type Mods >: Null <: Modifiers
   def emptyMods: Mods
 
   /*------------------------------- constructors -------------------------------------*/
-
-  def TypedSplice(tree: tpd.Tree): Splice
 
   ///////////////////////// type trees
   def TypeIdent(name: String)(implicit unsafe: Unsafe): TypeTree
@@ -112,7 +108,7 @@ trait Untpd {
 
   def ApplyType(fun: TermTree, args: List[TypeTree]): TermTree
 
-  def Ident(name: String)(implicit unsafe: Unsafe): Ident
+  def Ident(name: String)(implicit unsafe: Unsafe): TermTree
 
   def Lit(value: Any): TermTree
 

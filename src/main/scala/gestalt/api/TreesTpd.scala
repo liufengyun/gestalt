@@ -24,6 +24,14 @@ object Tpd {
   def subst(tree: Tree)(from: List[Symbol], to: List[Symbol]): Tree =
     !impl.tpd.subst(!tree)(!from, !to)
 
+  /** wrap typed tree as untyped tree */
+  def splice(tree: Tree): untpd.Splice =
+    !impl.tpd.splice(!tree)
+
+  /** transform typed tree to untyped treee */
+  def degrade(tree: Tree)(pf: PartialFunction[Tree, untpd.Tree]): untpd.TermTree =
+    !impl.tpd.degrade(!tree)(!pf)
+
   def traverse(tree: Tree)(pf: PartialFunction[Tree, Unit]): Unit =
     impl.tpd.traverse(!tree)(!pf)
 
@@ -34,12 +42,6 @@ object Tpd {
     !impl.tpd.transform(!tree)(!pf)
 
   /**-------------------- constructor & extractors ---------------------*/
-
-  // definition trees
-  object NewAnonymClass {
-    def apply(parents: List[Type], stats: List[Tree]): Tree =
-      !impl.tpd.NewAnonymClass(!parents, !stats)
-  }
 
   object NewInstance {
     def apply(tp: Type, argss: List[List[Tree]]): Tree =
@@ -143,9 +145,6 @@ object Tpd {
   }
 
   object Return {
-    def apply(from: Symbol, expr: Tree): Tree =
-      !impl.tpd.Return(!from, !expr)
-
     def unapply(tree: Tree): Option[Tree] =
       !impl.tpd.Return.unapply(!tree)
   }
@@ -186,11 +185,6 @@ object Tpd {
 
     def unapply(tree: Tree): Option[(Symbol, Tree)] =
       !impl.tpd.ValDef.unapply(!tree)
-  }
-
-  object DefDef {
-    def apply(name: String, tp: Type)(body: (Symbol, List[List[RefTree]]) => Tree): DefTree =
-      !impl.tpd.DefDef(name, !tp)(!body)
   }
 
   /**-------------------- helpers ---------------------*/

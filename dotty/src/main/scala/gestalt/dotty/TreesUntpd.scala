@@ -28,11 +28,9 @@ class Untpd(val toolbox: Toolbox) extends core.Untpd {
   type DefTree = d.Tree
   type PatTree = d.Tree
 
-  type Mods = DottyModifiers
-
   type Splice = d.Tree
-  type Ident  = d.Ident
-  type Lit    = d.Literal
+
+  type Mods = DottyModifiers
 
   type Param = d.ValDef
   type TypeParam = d.TypeDef
@@ -62,18 +60,6 @@ class Untpd(val toolbox: Toolbox) extends core.Untpd {
 
   def ApplySeq(fun: TermTree, argss: List[List[TermTree]]): TermTree =
     argss.foldLeft(fun) { (acc, args) => d.Apply(acc, args) }
-
-  /*------------------------------ constructors ------------------------------*/
-  def TypedSplice(tree: tpd.Tree): Splice = {
-    val owners = toolbox.tpd.getOwners(tree)
-
-    // make sure the spliced tree only has one owner
-    val treeNew = if (owners.length > 1) toolbox.tpd.ensureOwner(tree, owners.head) else tree
-
-    val newCtx = if (owners.isEmpty) ctx else ctx.withOwner(owners.head)
-    d.TypedSplice(treeNew)(newCtx)
-  }
-
 
   /*------------------------------- type trees -----------------------------------*/
 
@@ -196,7 +182,7 @@ class Untpd(val toolbox: Toolbox) extends core.Untpd {
   def ApplyType(fun: TermTree, args: List[TypeTree]): TermTree =
     d.TypeApply(fun, args).withPosition
 
-  def Ident(name: String)(implicit unsafe: Unsafe): Ident =
+  def Ident(name: String)(implicit unsafe: Unsafe): TermTree =
     d.Ident(name.toTermName).withPosition
 
   def Lit(value: Any): TermTree = t.Literal(Constant(value)).withPosition
@@ -392,7 +378,6 @@ class Untpd(val toolbox: Toolbox) extends core.Untpd {
     val templ = d.Template(constr, parents, self, stats)
     d.ModuleDef(name.toTermName, templ).withMods(mods).withPosition
   }
-
 
   /*------------------------------- TreeOps-------------------------------------*/
   def pos(tree: Tree): Position = tree.pos

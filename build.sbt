@@ -4,7 +4,7 @@ lazy val dottyVersion = "0.6.0-bin-SNAPSHOT"
 
 lazy val commonSetting = Seq(
   name := "gestalt",
-  version := "0.4.2",
+  version := "0.5.0",
   organization := "me.fengy",
 
   resolvers ++= Seq(
@@ -71,7 +71,7 @@ lazy val `dotty-backend` = (project in file("dotty"))
   )
 
 lazy val macrosSetting = Seq(
-  // scalacOptions := Seq("-Xprint:frontend,parser", "-Ycheck:all"), // "-Yplain-printer", "-Xprint:frontend,parser", "-Ylog:frontend",
+  scalacOptions := Seq("-Xprint:frontend,parser", "-Ycheck:all"), // "-Yplain-printer", "-Xprint:frontend,parser", "-Ylog:frontend",
 
   resolvers ++= Seq(
     Resolver.sonatypeRepo("snapshots"),

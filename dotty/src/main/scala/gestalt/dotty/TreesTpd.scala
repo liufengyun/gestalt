@@ -27,52 +27,23 @@ class Tpd(val toolbox: Toolbox) extends core.Tpd {
   type DefTree = t.Tree
   type RefTree = t.Tree
 
-  implicit class TreeHelper(tree: d.Tree) {
-    def withPosition[T <: Tree] = tree.withPos(enclosingPosition).asInstanceOf[T]
-  }
-
-  object NewAnonymClass extends NewAnonymClassImpl {
-    def apply(parents: List[Type], stats: List[Tree]): Tree = {
-      val owner = ctx.owner
-      val parents1 =
-        if (parents.head.classSymbol.is(Flags.Trait)) parents.head.parents.head :: parents
-        else parents
-      val cls = ctx.newNormalizedClassSymbol(owner, tpnme.ANON_FUN, Flags.Synthetic, parents1, coord = enclosingPosition)
-      val constr = ctx.newConstructor(cls, Flags.Synthetic, Nil, Nil).entered
-
-      val dummy = ctx.newLocalDummy(cls, enclosingPosition)
-
-      val stats2 = stats.map { stat =>
-        val owner = if (stat.isDef) cls else dummy
-        val t.Block(tree :: Nil, _) = ensureOwner(t.Block(stat :: Nil, t.Literal(Constant(()))), owner)
-        if (tree.isDef) tree.symbol.entered
-        tree
-      }
-
-      val cdef: Tree = t.ClassDef(cls, t.DefDef(constr).withPosition, stats2).withPosition
-      val newTree: Tree = t.New(cls.typeRef, Nil).withPosition
-      val tdef: Tree = t.Block(cdef :: Nil, newTree).withPosition
-
-      // fix bug in type assigner: it doesn't avoid type symbols
-      tdef.withType(ctx.typeAssigner.avoid(newTree.tpe, t.localSyms(cdef :: Nil)))
-    }
+  implicit class TreeHelper(tree: t.Tree) {
+    def withPosition: t.Tree = tree.withPos(enclosingPosition)
   }
 
   // new qual.T[A, B](x, y)(z)
   object NewInstance extends NewInstanceImpl {
     def apply(tp: Type, argss: List[List[Tree]]): Tree = argss match {
       case head :: tail =>
-        tail.foldLeft[Tree](t.New(tp, head)) { (acc, args) => Apply(acc, args) }
+        tail.foldLeft[Tree](t.New(tp, head).withPosition) { (acc, args) => Apply(acc, args) }
       case Nil =>
-        t.New(tp)
+        t.New(tp).withPosition
     }
   }
 
   // terms
 
   object Return extends ReturnImpl {
-    def apply(from: Symbol, expr: Tree): Tree = t.Return(expr, t.ref(from))
-
     def unapply(tree: Tree): Option[Tree] = tree match {
       case t.Return(expr, _) => Some(expr)
       case _ => None
@@ -147,8 +118,8 @@ class Tpd(val toolbox: Toolbox) extends core.Tpd {
         DTypes.MethodType(Nil, ctx.definitions.UnitType), coord = cond.pos)
 
       val body2 = ensureOwner(body, sym)
-      val call = t.Apply(t.ref(sym), Nil)
-      val rhs = t.Block(body2 :: Nil, t.If(cond, call, t.Literal(Constant(()))))
+      val call = t.Apply(t.ref(sym).withPosition, Nil).withPosition
+      val rhs = t.Block(body2 :: Nil, t.If(cond, call, t.Literal(Constant(())).withPosition))
       t.Block(List(t.DefDef(sym, rhs)), call)
     }
 
@@ -162,7 +133,7 @@ class Tpd(val toolbox: Toolbox) extends core.Tpd {
   }
 
   object Lit extends LitImpl {
-    def apply(value: Any): Tree = t.Literal(Constant(value))
+    def apply(value: Any): Tree = t.Literal(Constant(value)).withPosition
 
     def unapply(tree: Tree): Option[Any] = tree match {
       case t.Literal(Constant(v)) => Some(v)
@@ -171,7 +142,8 @@ class Tpd(val toolbox: Toolbox) extends core.Tpd {
   }
 
   object Ident extends IdentImpl {
-    def apply(symbol: Symbol): RefTree = t.ref(symbol)
+    def apply(symbol: Symbol): RefTree = t.ref(symbol).withPosition
+
     def unapply(tree: Tree): Option[Symbol] = tree match {
       case id: t.Ident if id.name.isTermName => Some(id.symbol)
       case _ => None
@@ -231,7 +203,7 @@ class Tpd(val toolbox: Toolbox) extends core.Tpd {
 
   object Ascribe extends AscribeImpl {
     def apply(expr: Tree, tpe: Type): Tree =
-      t.Typed(expr, t.TypeTree(tpe))
+      t.Typed(expr, t.TypeTree(tpe)).withPosition
 
     def unapply(tree: Tree): Option[(Tree, Type)] = tree match {
       case t.Typed(expr, tpt) => Some((expr, tpt.tpe))
@@ -240,7 +212,8 @@ class Tpd(val toolbox: Toolbox) extends core.Tpd {
   }
 
   object Assign extends AssignImpl {
-    def apply(lhs: Tree, rhs: Tree): Tree = t.Assign(lhs, rhs)
+    def apply(lhs: Tree, rhs: Tree): Tree =
+      t.Assign(lhs, rhs)
 
     def unapply(tree: Tree): Option[(Tree, Tree)] = tree match {
       case t.Assign(lhs, rhs) => Some((lhs, rhs))
@@ -305,29 +278,18 @@ class Tpd(val toolbox: Toolbox) extends core.Tpd {
     def apply(rhs: Tree, tpOpt: Option[Type], mutable: Boolean): DefTree = {
       val flags = if (mutable) Flags.Mutable else Flags.EmptyFlags
       val vsym = ctx.newSymbol(ctx.owner, NameKinds.UniqueName.fresh("temp".toTermName), flags, tpOpt.getOrElse(rhs.tpe))
-      t.ValDef(vsym, rhs)
+      // also add flags to tree, so that `degrade` works
+      t.ValDef(vsym, rhs).withFlags(flags).asInstanceOf[DefTree]
     }
 
-    def apply(sym: Symbol, rhs: Tree): DefTree = t.ValDef(sym.asTerm, rhs)
+    def apply(sym: Symbol, rhs: Tree): DefTree = {
+      t.ValDef(sym.asTerm, rhs).withFlags(sym.flags).asInstanceOf[DefTree]
+    }
 
     def unapply(tree: Tree): Option[(Symbol, Tree)] = tree match {
       case vdef : t.ValDef =>
         Some((vdef.symbol, vdef.rhs))
       case _ => None
-    }
-  }
-
-  object DefDef extends DefDefImpl {
-    def apply(name: String, tp: Type)(bodyFn: (Symbol, List[List[RefTree]]) => Tree): DefTree = {
-      val meth = ctx.newSymbol(
-        ctx.owner, name.toTermName,
-        Flags.Synthetic | Flags.Method,
-        tp
-      )
-
-      t.DefDef(meth, paramss => {
-        ensureOwner(bodyFn(meth, paramss), meth)
-      }).withPosition
     }
   }
 
@@ -369,6 +331,34 @@ class Tpd(val toolbox: Toolbox) extends core.Tpd {
   /** type associated with the tree */
   def typeOf(tree: Tree): Type = tree.tpe
 
+  /** wrap a typed tree as an untyped tree */
+  def splice(tree: Tree): d.Tree = {
+    val treeNew = toolbox.tpd.ensureOwner(tree, ctx.owner)
+
+    d.TypedSplice(treeNew)(ctx)
+  }
+
+  def degrade(tree: Tree)(pf: PartialFunction[Tree, d.Tree]): d.Tree = new d.TreeMap() {
+    def erase(tree: d.Tree)(implicit ctx: Context): d.Tree = tree match {
+      case t.Typed(tree, _: t.TypeTree) =>
+        super.transform(tree)
+      case tree: t.TypeTree =>
+        // d.TypedSplice(tree)
+        d.TypeTree()
+      case tree: t.Inlined =>
+        d.TypedSplice(tree.call)
+      case While(cond, body) =>
+        d.WhileDo(super.transform(cond), super.transform(body))
+      case DoWhile(body, cond) =>
+        d.DoWhile(super.transform(body), super.transform(cond))
+      case _ =>
+        super.transform(tree)
+    }
+
+    override def transform(tree: d.Tree)(implicit ctx: Context) =
+      pf.lift(tree.asInstanceOf[t.Tree]).getOrElse(erase(tree))
+  }.transform(tree)
+
   /*------------------------------- helpers -------------------------------------*/
 
   def ensureOwner(tree: Tree, owner: Symbol): Tree = {
@@ -376,8 +366,6 @@ class Tpd(val toolbox: Toolbox) extends core.Tpd {
     froms.foldRight(tree) { (from, acc) =>
       if (from eq owner) acc
       else new t.TreeOps(acc).changeOwner(from, owner)
-      //new ast.TreeTypeMap(oldOwners = from :: Nil, newOwners = owner :: Nil).apply(tree)
-      // new t.TreeOps(acc).changeOwner(from, owner)
     }
   }
 

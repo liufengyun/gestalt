@@ -346,7 +346,7 @@ object Transformer {
     validate(tree)
 
     tree match {
-      case PureTree(tree: tpd.Tree) => untpd.Apply(Resolve.apply(tree.pos), List(tree.wrap))
+      case PureTree(tree: tpd.Tree) => untpd.Apply(Resolve.apply(tree.pos), List(tree))
       case tree => Transform(tree)
     }
   }

@@ -1,9 +1,9 @@
 package scala
 
 package object gestalt extends decos.Trees
-               with decos.Types
-               with decos.Symbols
-               with decos.Denotations
+                          with decos.Types
+                          with decos.Symbols
+                          with decos.Denotations
 {
 
   private val toolboxStore: ThreadLocal[core.Toolbox] = new ThreadLocal[core.Toolbox]

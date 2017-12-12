@@ -229,34 +229,6 @@ class DefMacroTest extends TestSuite {
     assert(res == 8)
   }
 
-  test("typed method") {
-    val x = TypedDef.double {
-      val n = 5 + 5
-      n + n
-    }
-
-    println("x = " + x)
-
-    assert(x == 20)
-  }
-
-
-  test("test anony class") {
-    val f = TypedDef.annoyAdd(5)
-    assert(f(3) == 8)
-  }
-
-  test("owner for while") {
-    import Owners._
-
-    var n = 6
-    val x = mywhile(n > 0) {
-      n -= 1
-    }
-    assert(n == 0)
-    assert(x == 5)
-  }
-
   test("interpolate") {
     import Interpolater._
     val prefix = "http://"

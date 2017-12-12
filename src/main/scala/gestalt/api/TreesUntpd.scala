@@ -10,10 +10,6 @@ object Untpd {
   type DefTree  >: Null <: Tree
   type PatTree  >: Null <: Tree
 
-  type Splice   <: TypeTree with TermTree with DefTree with PatTree
-
-  type Ident    <: TermTree
-
   type Class     <: DefTree
   type Trait     <: DefTree
   type Object    <: DefTree
@@ -26,6 +22,8 @@ object Untpd {
   type Self      <: DefTree
   type InitCall  <: Tree
 
+  type Splice   <: TypeTree with TermTree with DefTree with PatTree with InitCall
+
   /*----------------------------------- modifiers ------------------------------------*/
 
   type Mods = core.Modifiers
@@ -35,9 +33,6 @@ object Untpd {
 
   def root: TermTree = Ident("_root_")
   def empty: TermTree = Ident("_empty_")
-
-  def TypedSplice(tree: Tpd.Tree): Splice =
-    !impl.untpd.TypedSplice(!tree)
 
   ////////////////////////////// terms
   // a + (b, c)  =>  Infix(a, +, Tuple(b, c))
@@ -123,7 +118,7 @@ object Untpd {
   def ApplyType(fun: TermTree, args: List[TypeTree]): TermTree =
     !impl.untpd.ApplyType(!fun, !args)
 
-  def Ident(name: String)(implicit unsafe: Unsafe): Ident =
+  def Ident(name: String)(implicit unsafe: Unsafe): TermTree =
     !impl.untpd.Ident(name)(!unsafe)
 
   def Lit(value: Any): TermTree =

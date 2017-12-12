@@ -1,5 +1,6 @@
 import scala.gestalt._
 import quasiquotes._
+import scala.gestalt.options.unsafe
 import untpd.{ Ident, Tuple, Lit, NewInstance }
 
 object JsonMacros {
@@ -25,7 +26,6 @@ object JsonMacros {
     * @return new anonymous Format class
     */
   def format[T](): Format[T] = meta {
-    import scala.gestalt.options.unsafe
     val tpe: Type = T.tpe
     if (!tpe.isCaseClass) {
       error("Not a case class", T.pos)
@@ -36,7 +36,7 @@ object JsonMacros {
         f => f-> f.info
       }
 
-      case class JsonItem(name: String, value: untpd.Ident, pairOut: untpd.TermTree, readOption: untpd.ValDef, implicitFormat: Option[untpd.ValDef])
+      case class JsonItem(name: String, value: untpd.TermTree, pairOut: untpd.TermTree, readOption: untpd.ValDef, implicitFormat: Option[untpd.ValDef])
       val jsonItems: List[JsonItem] = fieldsWithTypes.map {
         case (field, stringType) if stringType =:= Type.typeRef("java.lang.String") =>
           val name = field.name
@@ -57,24 +57,26 @@ object JsonMacros {
             implicitFormat = Some(q"val $implFormaterName=implicitly[Format[${otherType.toTree}]]")
           )
       }
-      val allDefined = q"${jsonItems.map(i => q"${i.value}.isDefined").reduceLeft((a, b) => q"$a && $b")}"
+      val allDefined = jsonItems.map(i => q"${i.value}.isDefined").reduceLeft((a, b) => q"$a && $b")
       val construction = NewInstance(T, List(jsonItems.map(i => q"${i.value}.get")))
+      val items = jsonItems.map(_.readOption) :+ q"if($allDefined) Some($construction) else None"
+
       val fromJson =
         q"""json match{
               case obj: JsObject =>
-               {..${
-          jsonItems.map(_.readOption) :+
-            q"if($allDefined) Some($construction) else None"
-        }}
+                { ..$items }
               case other => None
             }"""
+
+      val methods = jsonItems.flatMap(_.implicitFormat).toList :+
+        q"def toJson(o: $T) = JsObject(Seq(..${jsonItems.map(_.pairOut)}))" :+
+        q"def fromJson(json: JsValue) = $fromJson"
+
       q"""
           import JsonMacros._
-          new Format[$T]{..${
-        jsonItems.flatMap(_.implicitFormat).toList :+
-          q"def toJson(o: $T) = JsObject(Seq(..${jsonItems.map(_.pairOut)}))" :+
-          q"def fromJson(json: JsValue) = $fromJson"
-      }}
+          new Format[$T] {
+            ..$methods
+          }
         """
     }
   }
