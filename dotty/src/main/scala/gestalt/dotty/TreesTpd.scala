@@ -341,16 +341,23 @@ class Tpd(val toolbox: Toolbox) extends core.Tpd {
   def degrade(tree: Tree)(pf: PartialFunction[Tree, d.Tree]): d.Tree = new d.TreeMap() {
     def erase(tree: d.Tree)(implicit ctx: Context): d.Tree = tree match {
       case t.Typed(tree, _: t.TypeTree) =>
-        super.transform(tree)
+        this.transform(tree)
       case tree: t.TypeTree =>
-        // d.TypedSplice(tree)
-        d.TypeTree()
+        d.TypedSplice(tree)
       case tree: t.Inlined =>
-        d.TypedSplice(tree.call)
+        this.transform(tree.call)
+      case t.Literal(Constant(v)) =>
+        d.Literal(Constant(v))
+      case vdef: t.ValDef =>
+        d.ValDef(vdef.name, this.transform(vdef.tpt), this.transform(vdef.rhs)).withFlags(vdef.symbol.flags &~ Flags.Touched)
+      // case dtree: t.MemberDef =>
+      //   dtree.withFlags(dtree.symbol.flags &~ Flags.Touched)
+      // case t.Ident(name) =>
+      //   d.Ident(name)
       case While(cond, body) =>
-        d.WhileDo(super.transform(cond), super.transform(body))
+        d.WhileDo(this.transform(cond), this.transform(body))
       case DoWhile(body, cond) =>
-        d.DoWhile(super.transform(body), super.transform(cond))
+        d.DoWhile(this.transform(body), this.transform(cond))
       case _ =>
         super.transform(tree)
     }

@@ -255,3 +255,9 @@ object Interpolater {
     }
   }
 }
+
+object degrade {
+  def foo[T](body: => T): T = meta {
+    body.degrade { case _ if false => untpd.Lit(false) }
+  }
+}

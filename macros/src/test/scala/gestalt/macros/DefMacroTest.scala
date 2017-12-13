@@ -237,4 +237,32 @@ class DefMacroTest extends TestSuite {
     assert(url"https://url" === "https://url")
     assert(url"${prefix}url" === "http://url")
   }
+
+  test("degrade") {
+    import degrade._
+
+    foo {
+      var m = 5
+      while (m > 0) {
+        var i = m
+        m -= 1
+        i = m - 1
+      }
+    }
+
+    foo { x: Int =>
+      var i = 0
+      do {
+        var m = 6
+        m -= 1
+        i += 1
+      } while (i < x)
+      i
+    }
+
+    foo {
+      var m: String = null
+      m = "hello"
+    }
+  }
 }
