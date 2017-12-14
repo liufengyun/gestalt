@@ -264,5 +264,12 @@ class DefMacroTest extends TestSuite {
       var m: String = null
       m = "hello"
     }
+
+    foo {
+      Some(5) match {
+        case Some(x) => x
+        case None => 0
+      }
+    }
   }
 }
