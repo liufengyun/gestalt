@@ -277,7 +277,7 @@ class Tpd(val toolbox: Toolbox) extends core.Tpd {
   object ValDef extends ValDefImpl {
     def apply(rhs: Tree, tpOpt: Option[Type], mutable: Boolean): DefTree = {
       val flags = if (mutable) Flags.Mutable else Flags.EmptyFlags
-      val vsym = ctx.newSymbol(ctx.owner, NameKinds.UniqueName.fresh("temp".toTermName), flags, tpOpt.getOrElse(rhs.tpe))
+      val vsym = ctx.newSymbol(ctx.owner, toolbox.fresh("temp").toTermName, flags, tpOpt.getOrElse(rhs.tpe))
       // also add flags to tree, so that `degrade` works
       t.ValDef(vsym, rhs).withFlags(flags).asInstanceOf[DefTree]
     }
@@ -349,9 +349,9 @@ class Tpd(val toolbox: Toolbox) extends core.Tpd {
       case t.Literal(Constant(v)) =>
         d.Literal(Constant(v))
       case vdef: t.ValDef =>
-        d.ValDef(vdef.name, this.transform(vdef.tpt), this.transform(vdef.rhs)).withFlags(vdef.symbol.flags &~ Flags.Touched)
+        d.ValDef(vdef.name, transform(vdef.tpt), this.transform(vdef.rhs)).withFlags(vdef.symbol.flags &~ Flags.Touched)
       case t.UnApply(t.Select(extractor, _), _, pats) =>
-        d.Apply(extractor, pats)
+        d.Apply(erase(extractor), pats.map(erase(_)))
       case t.UnApply(t.TypeApply(t.Select(extractor, _), _), _, pats) =>
         d.Apply(extractor, pats)
       // case dtree: t.MemberDef =>

@@ -20,7 +20,7 @@ class Toolbox(val enclosingPosition: Position)(implicit val ctx: Contexts.Contex
   val symbols: Symbols = new gestalt.dotty.Symbols(this)
   val denotations: Denotations = new gestalt.dotty.Denotations(this)
 
-  def fresh(prefix: String = "$local"): String = NameKinds.UniqueName.fresh(prefix.toTermName).toString
+  def fresh(prefix: String = "_fresh_"): String = NameKinds.UniqueName.fresh(prefix.toTermName).toString
 
   // diagnostics - the implementation takes the position from the tree
   def error(message: String, pos: Position): Unit =
