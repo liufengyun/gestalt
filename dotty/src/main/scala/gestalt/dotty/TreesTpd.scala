@@ -349,11 +349,13 @@ class Tpd(val toolbox: Toolbox) extends core.Tpd {
       case t.Literal(Constant(v)) =>
         d.Literal(Constant(v))
       case vdef: t.ValDef =>
-        d.ValDef(vdef.name, transform(vdef.tpt), this.transform(vdef.rhs)).withFlags(vdef.symbol.flags &~ Flags.Touched)
+        d.ValDef(vdef.name, transform(vdef.tpt), transform(vdef.rhs)).withFlags(vdef.symbol.flags &~ Flags.Touched)
       case t.UnApply(t.Select(extractor, _), _, pats) =>
-        d.Apply(erase(extractor), pats.map(erase(_)))
+        d.Apply(erase(extractor), pats.map(erase))
       case t.UnApply(t.TypeApply(t.Select(extractor, _), _), _, pats) =>
-        d.Apply(extractor, pats)
+        d.Apply(erase(extractor), pats.map(erase))
+      case t.Apply(fun, SeqLiteral(args) :: Nil) =>
+        d.Apply(transform(fun), args.map(transform))
       // case dtree: t.MemberDef =>
       //   dtree.withFlags(dtree.symbol.flags &~ Flags.Touched)
       // case t.Ident(name) =>

@@ -266,10 +266,14 @@ class DefMacroTest extends TestSuite {
     }
 
     foo {
-      Some(5) match {
-        case Some(x) => x
+      Some(Some(5)) match {
+        case Some(Some(x)) => x
         case None => 0
       }
+    }
+
+    foo {
+      List(4, 5)
     }
   }
 }
