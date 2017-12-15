@@ -52,7 +52,6 @@ class Untpd(val toolbox: Toolbox) extends core.Untpd {
   implicit def fromDotty(dottyMods: d.Modifiers): Mods = DottyModifiers(dottyMods)
 
   /*------------------------------ helpers ------------------------------*/
-  def getOrEmpty(treeOpt: Option[Tree]): Tree = treeOpt.getOrElse(d.EmptyTree)
 
   implicit class TreeHelper(tree: d.Tree) {
     def withPosition[T <: Tree] = tree.withPos(enclosingPosition).asInstanceOf[T]
@@ -310,8 +309,8 @@ class Untpd(val toolbox: Toolbox) extends core.Untpd {
   def DefDecl(mods: Mods, name: String, tparams: List[TypeParam], paramss: List[List[Param]], tpe: TypeTree): DefDecl =
     d.DefDef(name.toTermName, tparams, paramss, tpe, d.EmptyTree).withMods(mods).withPosition
 
-  def Param(mods: Mods, name: String, tpe: Option[TypeTree], default: Option[TermTree]): Param = {
-    d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), getOrEmpty(default))
+  def Param(mods: Mods, name: String, tpe: Option[TypeTree], defaultOpt: Option[TermTree]): Param = {
+    d.ValDef(name.toTermName, tpe.getOrElse(d.TypeTree()), defaultOpt.getOrElse(d.EmptyTree))
       .withMods(mods.dottyMods | Flags.TermParam).withPosition
   }
 
