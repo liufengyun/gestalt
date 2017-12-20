@@ -32,7 +32,7 @@ object Untpd {
   /*------------------------------- constructors -------------------------------------*/
 
   def root: TermTree = Ident("_root_")
-  def empty: TermTree = Ident("_empty_")
+  def empty: TermTree = Ident("<empty>")
 
   ////////////////////////////// terms
   // a + (b, c)  =>  Infix(a, +, Tuple(b, c))
@@ -118,23 +118,15 @@ object Untpd {
   def ApplyType(fun: TermTree, args: List[TypeTree]): TermTree =
     !impl.untpd.ApplyType(!fun, !args)
 
-  def Ident(name: String)(implicit unsafe: Unsafe): TermTree =
-    !impl.untpd.Ident(name)(!unsafe)
+  // TODO: add warning if the `name` is from stdlib
+  def Ident(name: String): TermTree =
+    !impl.untpd.Ident(name)
+
+  def Ident(name: "_empty_")(implicit d: core.Dummy): TermTree =
+    !impl.untpd.Ident("<empty>")
 
   def Lit(value: Any): TermTree =
     !impl.untpd.Lit(value)
-
-  def Ident(name: "_root_"): TermTree =
-    !impl.untpd.Ident(name)(!options.unsafe)
-
-  def Ident(name: "scala")(implicit dummy: core.Dummy): TermTree =
-    !impl.untpd.Ident(name)(!options.unsafe)
-
-  def Ident(name: "java")(implicit dummy: core.Dummy1): TermTree =
-    !impl.untpd.Ident(name)(!options.unsafe)
-
-  def Ident(name: "_empty_")(implicit dummy: core.Dummy2): TermTree =
-    !impl.untpd.Ident("<empty>")(!options.unsafe)
 
   def This(qual: String): TermTree =
     !impl.untpd.This(qual)
@@ -183,8 +175,8 @@ object Untpd {
     argss.foldLeft(fun) { (acc, args) => !impl.untpd.Apply(!acc, !args) }
 
   ////////////////////////////// type trees
-  def TypeIdent(name: String)(implicit unsafe: Unsafe): TypeTree =
-    !impl.untpd.TypeIdent(name)(!unsafe)
+  def TypeIdent(name: String): TypeTree =
+    !impl.untpd.TypeIdent(name)
 
   def TypeSelect(qual: Tree, name: String): TypeTree =
     !impl.untpd.TypeSelect(!qual, name)

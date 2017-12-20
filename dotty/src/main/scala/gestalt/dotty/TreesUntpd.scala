@@ -62,7 +62,7 @@ class Untpd(val toolbox: Toolbox) extends core.Untpd {
 
   /*------------------------------- type trees -----------------------------------*/
 
-  def TypeIdent(name: String)(implicit unsafe: Unsafe): TypeTree =
+  def TypeIdent(name: String): TypeTree =
     d.Ident(name.toTypeName).withPosition
 
   def TypeSelect(qual: Tree, name: String): TypeTree =
@@ -181,11 +181,10 @@ class Untpd(val toolbox: Toolbox) extends core.Untpd {
   def ApplyType(fun: TermTree, args: List[TypeTree]): TermTree =
     d.TypeApply(fun, args).withPosition
 
-  def Ident(name: String)(implicit unsafe: Unsafe): TermTree =
+  def Ident(name: String): TermTree =
     d.Ident(name.toTermName).withPosition
 
   def Lit(value: Any): TermTree = t.Literal(Constant(value)).withPosition
-
 
   def This(qual: String): TermTree = d.This(d.Ident(qual.toTypeName)).withPosition
 

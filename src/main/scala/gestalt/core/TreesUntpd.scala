@@ -32,7 +32,7 @@ trait Untpd {
   /*------------------------------- constructors -------------------------------------*/
 
   ///////////////////////// type trees
-  def TypeIdent(name: String)(implicit unsafe: Unsafe): TypeTree
+  def TypeIdent(name: String): TypeTree
 
   def TypeSelect(qual: Tree, name: String): TypeTree
 
@@ -108,7 +108,7 @@ trait Untpd {
 
   def ApplyType(fun: TermTree, args: List[TypeTree]): TermTree
 
-  def Ident(name: String)(implicit unsafe: Unsafe): TermTree
+  def Ident(name: String): TermTree
 
   def Lit(value: Any): TermTree
 

@@ -3,7 +3,6 @@ import scala.collection.immutable.Seq
 
 /*
 import scala.gestalt.api._
-import scala.gestalt.options.unsafe
 
 class main extends StaticAnnotation {
   def apply(defn: Any): Any = meta {

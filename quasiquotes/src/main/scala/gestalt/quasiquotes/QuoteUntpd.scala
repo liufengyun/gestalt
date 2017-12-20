@@ -5,7 +5,6 @@ import scala.{meta => m}
 import scala.compat.Platform.EOL
 import scala.gestalt._
 import untpd._
-import scala.gestalt.options.unsafe
 
 /** Lift scala.meta trees as trees */
 class QuoteUntpd(args: List[Tree], enclosingPos: Position) {
@@ -32,7 +31,7 @@ class QuoteUntpd(args: List[Tree], enclosingPos: Position) {
   private def Path(path: String): TermTree = {
     val parts = path.split('.')
 
-    parts.tail.foldLeft[TermTree](Ident.apply(parts.head)) { (prefix, name) =>
+    parts.tail.foldLeft[TermTree](Ident(parts.head)) { (prefix, name) =>
       prefix.select(name)
     }
   }

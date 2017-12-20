@@ -1,7 +1,6 @@
 import scala.gestalt._
 import quasiquotes._
 import tpd.Lit
-import scala.gestalt.options.unsafe
 
 object TypeToolbox {
   /** are the two types equal? */

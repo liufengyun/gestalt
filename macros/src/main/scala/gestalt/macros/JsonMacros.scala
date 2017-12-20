@@ -1,6 +1,5 @@
 import scala.gestalt._
 import quasiquotes._
-import scala.gestalt.options.unsafe
 import untpd.{ Ident, Tuple, Lit, NewInstance }
 
 object JsonMacros {

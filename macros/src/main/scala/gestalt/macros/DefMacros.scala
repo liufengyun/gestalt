@@ -1,6 +1,5 @@
 import scala.gestalt._
 import quasiquotes._
-import scala.gestalt.options.unsafe
 
 object plusObject {
   def apply(a: Int, b: Int): Int = meta {

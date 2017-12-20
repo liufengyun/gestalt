@@ -1,6 +1,5 @@
 import scala.gestalt._
 import quasiquotes._
-import scala.gestalt.options.unsafe
 
 trait Iso[T, U] {
   def to(t: T) : U

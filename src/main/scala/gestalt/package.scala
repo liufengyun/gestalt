@@ -24,10 +24,6 @@ package object gestalt extends decos.Trees
 
   /*------------------------------- proxies -------------------------------------*/
 
-  // An Unsafe capability is required to call the untyped Ident(name) and TypeIdent
-  // in order to achieve hygiene
-  type Unsafe >: Null <: AnyRef
-
   type Context
   type Position
 
