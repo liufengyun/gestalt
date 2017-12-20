@@ -39,7 +39,7 @@ object Expander {
     if (enclosingPackage.isEffectiveRoot) {
       classSymbol.flatName.toString
     } else {
-      enclosingPackage.showFullName + "." + classSymbol.flatName
+      fullName(enclosingPackage) + "." + classSymbol.flatName
     }
   }
 
@@ -97,6 +97,14 @@ object Expander {
     }
   }
 
+  /** Duplicate Symbol.showFullName, as it is prone to compiler args changes */
+  private def fullName(sym: Symbol)(implicit ctx: Context): String = {
+    if (sym.isRoot || sym == NoSymbol || sym.owner.isEffectiveRoot)
+      sym.name.toString
+    else
+      fullName(sym.effectiveOwner.enclosingClass) + "." + sym.name.toString
+  }
+
   /** Expand def macros */
   def expandDefMacro(tree: tpd.Tree)(implicit ctx: Context): untpd.Tree = tree match {
     case ExtractApply(methodSelect @ MethodSelect(prefix, method), targs, argss) =>
@@ -105,7 +113,7 @@ object Expander {
       val className = if (methodOwner.isPackageObject) {
         // if macro is defined in a package object
         // the implementation is located relative to the package not the `package$` module
-        methodOwner.owner.showFullName + "$" + "$inline"
+        fullName(methodOwner.owner) + "$" + "$inline"
       } else {
         javaClassName(methodOwner) + "$inline"
       }

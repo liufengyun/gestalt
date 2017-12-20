@@ -261,3 +261,12 @@ object degrade {
     body.degrade { case _ if false => untpd.Lit(false) }
   }
 }
+
+object extractors {
+  def isBlock[T](body: => T): Boolean = meta {
+    body match {
+      case tpd.Block(_, _) => untpd.Lit(true)
+      case _ => untpd.Lit(false)
+    }
+  }
+}

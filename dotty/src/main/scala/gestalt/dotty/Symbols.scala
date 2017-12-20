@@ -15,7 +15,7 @@ class Symbols(val toolbox: Toolbox) extends core.Symbols {
   type Symbol = DSymbol
 
   /** name of a member */
-  def name(mem: Symbol): String = mem.showName
+  def name(mem: Symbol): String = mem.name.toString
 
   /** type of a member with respect to a prefix */
   def asSeenFrom(mem: Symbol, prefix: Type): Type = mem.asSeenFrom(prefix).info

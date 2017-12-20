@@ -275,5 +275,28 @@ class DefMacroTest extends TestSuite {
     foo {
       List(4, 5)
     }
+
+    trait Fact {
+      def fact(n: Int): Int
+    }
+
+    foo {
+      val o = new Fact {
+        def fact(n: Int): Int = if (n == 0) 1 else n * fact(n - 1)
+      }
+      o.fact(5)
+    }
+  }
+
+  test("extractors") {
+    import extractors._
+    assert(!isBlock((x: Int) => 1 + x))
+    assert(!isBlock(while (true) { println("loop") }))
+    assert(!isBlock(while (true) { println("loop") }))
+    assert(!isBlock(do { println("loop") } while (true)))
+    assert(!isBlock(5))
+    assert(!isBlock(5 + 3))
+    assert(!isBlock(new AnyRef { def x: Int = 5 }))
+    assert(isBlock({ 5 + 3 }))
   }
 }

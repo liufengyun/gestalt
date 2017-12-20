@@ -226,6 +226,8 @@ class Tpd(val toolbox: Toolbox) extends core.Tpd {
       t.Block(stats, expr)
 
     def unapply(tree: Tree): Option[(List[Tree], Tree)] = tree match {
+      case While(_, _) | DoWhile(_, _) | Function(_, _) => None
+      case t.Block((anon : t.TypeDef) :: Nil, _) if anon.name == tpnme.ANON_CLASS => None
       case block: t.Block => Some((block.stats, block.expr))
       case _ => None
     }
