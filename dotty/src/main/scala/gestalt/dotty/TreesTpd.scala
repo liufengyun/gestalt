@@ -348,6 +348,10 @@ class Tpd(val toolbox: Toolbox) extends core.Tpd {
         d.TypedSplice(tree)
       case tree: t.Inlined =>
         this.transform(tree.call)
+      case t.Return(expr, from) =>
+        d.Return(transform(expr), d.EmptyTree)
+      case t.Ident(name) =>
+        d.Ident(name)
       case t.Literal(Constant(v)) =>
         d.Literal(Constant(v))
       case vdef: t.ValDef =>

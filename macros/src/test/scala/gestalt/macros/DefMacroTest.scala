@@ -282,6 +282,16 @@ class DefMacroTest extends TestSuite {
 
     foo {
       val o = new Fact {
+        class Base {
+          def enter(i: Int): Unit =
+            if (i == 0) op1
+            else if (i == 1) return op2
+            else op3
+
+          def op1: Unit = 45
+          def op2: Unit = 100
+          def op3: Unit = 34
+        }
         def fact(n: Int): Int = if (n == 0) 1 else n * fact(n - 1)
       }
       o.fact(5)
