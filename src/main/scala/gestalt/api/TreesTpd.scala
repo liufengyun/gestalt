@@ -113,9 +113,6 @@ object Tpd {
     def apply(symbol: Symbol): RefTree =
       !impl.tpd.Ident(!symbol)
 
-    def apply(tp: Types.TermRef)(implicit d: core.Dummy): Tree =
-      Ident(Denotations.symbol(Types.denot(tp).get))
-
     def unapply(tree: Tree): Option[Symbol] =
       !impl.tpd.Ident.unapply(!tree)
   }
@@ -127,6 +124,11 @@ object Tpd {
     def unapply(tree: Tree): Option[(Tree, Symbol)] =
       !impl.tpd.Select.unapply(!tree)
   }
+
+  // path should be a top-level term select, e.g. `scala.List`
+  def Term(path: String): RefTree =
+    Ident(Denotations.symbol(Types.denot(Types.termRef(path)).get))
+
 
   object Ascribe {
     def apply(expr: Tree, tpe: Type): Tree =

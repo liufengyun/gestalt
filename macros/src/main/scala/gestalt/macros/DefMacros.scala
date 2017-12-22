@@ -221,7 +221,7 @@ object Transform {
     val newfun = f.transform {
       case call @ tpd.ApplySeq(tpd.Ident(fsym), args) if args.size > 0 =>
         val name = fsym.name
-        val print = tpd.Ident(Type.termRef("scala.Predef")).select("println").appliedTo(tpd.Lit(s"calling $name\n") :: Nil)
+        val print = tpd.Term("scala.Predef.println").appliedTo(tpd.Lit(s"calling $name\n") :: Nil)
         val vdef = tpd.ValDef(call)
         val res = tpd.Ident(vdef.symbol)
         tpd.Block(print :: vdef :: Nil, res)

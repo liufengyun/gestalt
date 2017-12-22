@@ -4,7 +4,7 @@ lazy val dottyVersion = "0.6.0-bin-SNAPSHOT"
 
 lazy val commonSetting = Seq(
   name := "gestalt",
-  version := "0.5.3",
+  version := "0.5.4",
   organization := "me.fengy",
 
   resolvers ++= Seq(
