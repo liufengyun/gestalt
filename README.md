@@ -11,7 +11,7 @@ Design Goals:
 ## Examples
 
 ```Scala
-import scala.gestalt.api._
+import scala.gestalt._
 
 object Test {
   def plus(a: Int, b: Int): Int = meta {
@@ -22,13 +22,10 @@ object Test {
 
 ## Design
 
-__"Think in source code and compose with trees"__
-
 - Only blackbox macros
 - Separation of _typed_ and _untyped_ trees
 - Only inspection of _typed trees_
 - Only semantic information for _typed trees_
-- Synthesized tree will be re-typechecked
 
 ## Philosophy
 
